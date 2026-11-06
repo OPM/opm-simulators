@@ -151,14 +151,17 @@ void FlowLinearSolverParameters::registerParameters()
          "ilu0, dilu, cpr (an alias for cprw), cpr_quasiimpes, "
          "cpr_trueimpes, cpr_trueimpesanalytic, amg or hybrid (experimental). "
          "Alternatively, you can request a configuration to be read from a "
-         "JSON file by giving the filename here, ending with '.json'");
+         "TOML or JSON file by giving the filename here, ending with '.toml' or '.json'. "
+         "Use --write-toml-example=linear-solver to generate a documented example file");
     Parameters::Register<Parameters::NlddLocalLinearSolver>
         ("Configuration of NLDD local linear solver. Valid options are: ilu0 (default), "
             "dilu, cpr_quasiimpes, and amg. "
             "Alternatively, you can request a configuration to be read from a "
-            "JSON file by giving the filename here, ending with '.json'");
+            "TOML or JSON file by giving the filename here, ending with '.toml' or '.json'. "
+            "Use --write-toml-example=nldd-local-linear-solver to generate a documented example file");
     Parameters::Register<Parameters::LinearSolverPrintJsonDefinition>
-        ("Write the JSON definition of the linear solver setup to the DBG file");
+        ("Write the JSON definition of the linear solver setup to the DBG file. "
+         "Use --write-toml-example=linear-solver to get the same setup as a documented TOML file");
     Parameters::Register<Parameters::CprReuseSetup>
         ("Reuse preconditioner setup. Valid options are "
          "0: recreate the preconditioner for every linear solve, "

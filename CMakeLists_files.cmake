@@ -70,6 +70,7 @@ endmacro()
 # originally generated with the command:
 # find opm -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND MAIN_SOURCE_FILES
+  external/tomlc17/tomlc17.c
   opm/models/blackoil/blackoilbioeffectsparams.cpp
   opm/models/blackoil/blackoilbrineparams.cpp
   opm/models/blackoil/blackoilextboparams.cpp
@@ -146,6 +147,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/SimulatorReportBanners.cpp
   opm/simulators/flow/SimulatorSerializer.cpp
   opm/simulators/flow/SolutionContainers.cpp
+  opm/simulators/flow/TomlConfigExamples.cpp
   opm/simulators/flow/TpsaContainer.cpp
   opm/simulators/flow/TracerContainer.cpp
   opm/simulators/flow/Transmissibility.cpp
@@ -553,6 +555,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_stoppedwells.cpp
   tests/test_ThreePointHorizontalSatfuncConsistencyChecks.cpp
   tests/test_timer.cpp
+  tests/test_tomlconfigexamples.cpp
   tests/test_tpsa_conversions.cpp
   tests/test_tpsa_face_properties.cpp
   tests/test_tpsa_localresidual.cpp
@@ -1162,6 +1165,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/TTagFlowProblemTPSA.hpp
   opm/simulators/flow/TTagFlowProblemGasWater.hpp
   opm/simulators/flow/TTagFlowProblemOnePhase.hpp
+  opm/simulators/flow/TomlConfigExamples.hpp
   opm/simulators/flow/TpsaContainer.hpp
   opm/simulators/flow/TracerContainer.hpp
   opm/simulators/flow/TemperatureModel.hpp

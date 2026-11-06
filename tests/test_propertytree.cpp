@@ -41,6 +41,7 @@
 #include <fstream>
 #include <ios>
 #include <limits>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -426,3 +427,273 @@ BOOST_AUTO_TEST_CASE(Malformed_Json_Throws)
 }
 
 BOOST_AUTO_TEST_SUITE_END() // From_Json_String
+
+// ---------------------------------------------------------------------------
+
+BOOST_AUTO_TEST_SUITE(Toml)
+
+namespace {
+
+    class TempTomlFile
+    {
+    public:
+        explicit TempTomlFile(std::string_view content, std::string_view ext = ".toml")
+            : fname_ { std::filesystem::temp_directory_path() /
+                       Opm::unique_path("wrk-%%%%") }
+        {
+            fname_ += std::string { ext };
+            std::ofstream { this->fname_ } << content;
+        }
+
+        ~TempTomlFile()
+        {
+            std::filesystem::remove_all(this->fname_);
+        }
+
+        std::string name() const
+        {
+            return this->fname_.generic_string();
+        }
+
+    private:
+        std::filesystem::path fname_;
+    };
+
+    std::string asJson(const Opm::PropertyTree& t)
+    {
+        auto os = std::ostringstream{};
+        t.write_json(os, false);
+        return os.str();
+    }
+
+    std::string asToml(const Opm::PropertyTree& t,
+                       const Opm::PropertyTree::TomlCommentProvider& comments = {})
+    {
+        auto os = std::ostringstream{};
+        t.write_toml(os, comments);
+        return os.str();
+    }
+
+} // Anonymous namespace
+
+BOOST_AUTO_TEST_CASE(Value_Types)
+{
+    const auto t = Opm::PropertyTree::fromTomlString(R"(
+a = 1234
+b = 123.4
+c = "hello"
+d = true
+e = 1e-5
+f = 'literal \string'
+g = [1, 2, 3]
+h = { x = 1, y = "z" }
+i.j.k = 42
+
+[table]
+x = 2.5
+
+[table.sub]
+y = -7
+)");
+
+    BOOST_CHECK_EQUAL(t.get<int>("a"), 1234);
+    BOOST_CHECK_CLOSE(t.get<double>("b"), 123.4, 1.0e-8);
+    BOOST_CHECK_EQUAL(t.get<std::string>("c"), "hello");
+    BOOST_CHECK_EQUAL(t.get<bool>("d"), true);
+    BOOST_CHECK_EQUAL(t.get<std::string>("d"), "true");
+    BOOST_CHECK_CLOSE(t.get<double>("e"), 1.0e-5, 1.0e-8);
+    BOOST_CHECK_EQUAL(t.get<std::string>("f"), R"(literal \string)");
+    BOOST_CHECK_EQUAL(t.get<int>("h.x"), 1);
+    BOOST_CHECK_EQUAL(t.get<std::string>("h.y"), "z");
+    BOOST_CHECK_EQUAL(t.get<int>("i.j.k"), 42);
+    BOOST_CHECK_CLOSE(t.get<double>("table.x"), 2.5, 1.0e-8);
+    BOOST_CHECK_EQUAL(t.get<int>("table.sub.y"), -7);
+
+    const auto g = t.get_child_items_as_vector<int>("g");
+    BOOST_REQUIRE_MESSAGE(g.has_value(), R"(Node "g" must exist)");
+    const auto expect = std::vector { 1, 2, 3, };
+    BOOST_CHECK_EQUAL_COLLECTIONS(g->begin(), g->end(), expect.begin(), expect.end());
+}
+
+BOOST_AUTO_TEST_CASE(Key_Order_Is_Preserved)
+{
+    const auto t = Opm::PropertyTree::fromTomlString(R"(
+zeta = 1
+alpha = 2
+[features.SGAS]
+[features.PRESSURE]
+[features.AAA]
+)");
+
+    const auto top = t.get_child_keys();
+    BOOST_CHECK_EQUAL(top.size(), std::size_t{3});
+    BOOST_CHECK_EQUAL(top[0], "zeta");
+    BOOST_CHECK_EQUAL(top[1], "alpha");
+    BOOST_CHECK_EQUAL(top[2], "features");
+
+    const auto features = t.get_child("features").get_child_keys();
+    const auto expect = std::vector<std::string> { "SGAS", "PRESSURE", "AAA" };
+    BOOST_CHECK_EQUAL_COLLECTIONS(features.begin(), features.end(),
+                                  expect.begin(), expect.end());
+}
+
+BOOST_AUTO_TEST_CASE(Matches_Json)
+{
+    // A TOML file and a JSON file with the same content must give identical
+    // trees, so that either may be used for the same configuration.
+    const auto toml = TempTomlFile { R"(
+tol = 0.005
+maxiter = 20
+solver = "bicgstab"
+apply = [1, 2]
+
+[preconditioner]
+type = "cprw"
+add_wells = true
+relaxation = 1.0
+)" };
+
+    const auto json = TempTomlFile { R"({
+ "tol" : 0.005,
+ "maxiter" : 20,
+ "solver" : "bicgstab",
+ "apply" : [1, 2],
+ "preconditioner" : {
+   "type" : "cprw",
+   "add_wells" : true,
+   "relaxation" : 1
+ }
+})", ".json" };
+
+    const auto fromToml = Opm::PropertyTree { toml.name() };
+    const auto fromJson = Opm::PropertyTree { json.name() };
+
+    BOOST_CHECK_EQUAL(asJson(fromToml), asJson(fromJson));
+}
+
+BOOST_AUTO_TEST_CASE(Malformed_Toml_Throws)
+{
+    BOOST_CHECK_THROW(Opm::PropertyTree::fromTomlString("a = 1\nb = = 2\n"),
+                      std::runtime_error);
+
+    BOOST_CHECK_THROW(Opm::PropertyTree::fromTomlString("a = 1\na = 2\n"),
+                      std::runtime_error);
+
+    const auto f = TempTomlFile { "a = [1, 2\n" };
+    try {
+        const auto t = Opm::PropertyTree { f.name() };
+        BOOST_ERROR("Parsing malformed TOML file must throw");
+    }
+    catch (const std::runtime_error& e) {
+        const auto msg = std::string { e.what() };
+        BOOST_CHECK_MESSAGE(msg.find(f.name()) != std::string::npos,
+                            "Error message must hold the file name: " << msg);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(File_Names)
+{
+    BOOST_CHECK(Opm::PropertyTree::isTomlFileName("a.toml"));
+    BOOST_CHECK(Opm::PropertyTree::isTomlFileName("dir/a.b.toml"));
+    BOOST_CHECK(!Opm::PropertyTree::isTomlFileName(".toml"));
+    BOOST_CHECK(!Opm::PropertyTree::isTomlFileName("a.json"));
+    BOOST_CHECK(!Opm::PropertyTree::isTomlFileName("toml"));
+
+    BOOST_CHECK(Opm::PropertyTree::isConfigFileName("a.toml"));
+    BOOST_CHECK(Opm::PropertyTree::isConfigFileName("a.json"));
+    BOOST_CHECK(!Opm::PropertyTree::isConfigFileName("cprw"));
+    BOOST_CHECK(!Opm::PropertyTree::isConfigFileName("json"));
+    BOOST_CHECK(!Opm::PropertyTree::isConfigFileName(""));
+}
+
+BOOST_AUTO_TEST_CASE(Write_Round_Trip)
+{
+    auto t = Opm::PropertyTree{};
+    t.put("int", 42);
+    t.put("negative", -3);
+    t.put("double", 0.333333333333);
+    t.put("small", 1.0e-5);
+    t.put("whole", 2.0);
+    t.put("flag", true);
+    t.put("text", std::string { "cprw" });
+    t.put("tricky", std::string { "a \"quoted\" \\ string\nwith newline" });
+    t.put("leading_zero", std::string { "007" });
+    t.put("leading_dot", std::string { ".35" });
+    t.put("empty", std::string {});
+    t.put("a.b.c", 1);
+    t.put("a.b.d", std::string { "x" });
+    t.put("a.e", 3.5);
+    t.put("dotted key", std::string { "needs quotes" });
+
+    const auto toml = asToml(t);
+    BOOST_TEST_MESSAGE("TOML:\n" << toml);
+
+    const auto u = Opm::PropertyTree::fromTomlString(toml);
+
+    BOOST_CHECK_EQUAL(u.get<int>("int"), 42);
+    BOOST_CHECK_EQUAL(u.get<int>("negative"), -3);
+    BOOST_CHECK_CLOSE(u.get<double>("double"), 0.333333333333, 1.0e-12);
+    BOOST_CHECK_CLOSE(u.get<double>("small"), 1.0e-5, 1.0e-12);
+    BOOST_CHECK_CLOSE(u.get<double>("whole"), 2.0, 1.0e-12);
+    BOOST_CHECK_EQUAL(u.get<bool>("flag"), true);
+    BOOST_CHECK_EQUAL(u.get<std::string>("text"), "cprw");
+    BOOST_CHECK_EQUAL(u.get<std::string>("tricky"), "a \"quoted\" \\ string\nwith newline");
+    BOOST_CHECK_EQUAL(u.get<std::string>("leading_zero"), "007");
+    BOOST_CHECK_EQUAL(u.get<std::string>("leading_dot"), ".35");
+    BOOST_CHECK_EQUAL(u.get<std::string>("empty"), "");
+    BOOST_CHECK_EQUAL(u.get<int>("a.b.c"), 1);
+    BOOST_CHECK_EQUAL(u.get<std::string>("a.b.d"), "x");
+    BOOST_CHECK_CLOSE(u.get<double>("a.e"), 3.5, 1.0e-12);
+    BOOST_CHECK_EQUAL(u.get_child_keys().back(), "a");
+
+    // Numbers are written as TOML numbers.  The tree stores 2.0 as "2", so
+    // it is written as an integer.
+    BOOST_CHECK(toml.find("int = 42\n") != std::string::npos);
+    BOOST_CHECK(toml.find("whole = 2\n") != std::string::npos);
+    BOOST_CHECK(toml.find("double = 0.333333333333\n") != std::string::npos);
+    BOOST_CHECK(toml.find("flag = true\n") != std::string::npos);
+    BOOST_CHECK(toml.find("\"dotted key\" = \"needs quotes\"\n") != std::string::npos);
+    BOOST_CHECK(toml.find("[a.b]\n") != std::string::npos);
+}
+
+BOOST_AUTO_TEST_CASE(Write_Arrays)
+{
+    const auto t = Opm::PropertyTree::fromJsonString(R"({
+ "v" : [ 1, 2.5, "x" ],
+ "t" : [ { "a" : 1 }, { "a" : 2 } ],
+ "sub" : { "w" : [ 3, 4 ] }
+})");
+
+    const auto toml = asToml(t);
+    BOOST_TEST_MESSAGE("TOML:\n" << toml);
+
+    const auto u = Opm::PropertyTree::fromTomlString(toml);
+    BOOST_CHECK_EQUAL(asJson(u), asJson(t));
+}
+
+BOOST_AUTO_TEST_CASE(Write_Comments)
+{
+    auto t = Opm::PropertyTree{};
+    t.put("tol", 0.01);
+    t.put("preconditioner.type", std::string { "ilu0" });
+
+    const auto toml = asToml(t, [](const std::string& key) -> std::string
+    {
+        if (key == "tol") {
+            return "Tolerance.\nSecond line.";
+        }
+        if (key == "preconditioner") {
+            return "The preconditioner.";
+        }
+        return {};
+    });
+    BOOST_TEST_MESSAGE("TOML:\n" << toml);
+
+    BOOST_CHECK(toml.find("# Tolerance.\n# Second line.\ntol = 0.01\n") != std::string::npos);
+    BOOST_CHECK(toml.find("# The preconditioner.\n[preconditioner]\ntype = \"ilu0\"\n") != std::string::npos);
+
+    const auto u = Opm::PropertyTree::fromTomlString(toml);
+    BOOST_CHECK_EQUAL(asJson(u), asJson(t));
+}
+
+BOOST_AUTO_TEST_SUITE_END() // Toml

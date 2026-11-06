@@ -498,7 +498,9 @@ void FlowGenericVanguard::registerParameters_()
         ("Configuration of Zoltan partitioner. "
          "Valid options are: graph, hypergraph or scotch. "
          "Alternatively, you can request a configuration to be read "
-         "from a JSON file by giving the filename here, with extension '.json'. "
+         "from a TOML or JSON file by giving the filename here, with extension "
+         "'.toml' or '.json'. Use --write-toml-example=zoltan-params to generate "
+         "a documented example file. "
          "See https://sandialabs.github.io/Zoltan/ug_html/ug.html "
          "for available Zoltan options.");
     Parameters::Register<Parameters::ImbalanceTol<Scalar>>
@@ -510,7 +512,9 @@ void FlowGenericVanguard::registerParameters_()
     Parameters::Register<Parameters::MetisParams>
         ("Configuration of Metis partitioner. "
          "You can request a configuration to be read "
-         "from a JSON file by giving the filename here, with extension '.json'. "
+         "from a TOML or JSON file by giving the filename here, with extension "
+         "'.toml' or '.json'. Use --write-toml-example=metis-params to generate "
+         "a documented example file. "
          "See http://glaros.dtc.umn.edu/gkhome/fetch/sw/metis/manual.pdf "
          "for available METIS options.");
     Parameters::Register<Parameters::ExternalPartition>
