@@ -630,12 +630,8 @@ private:
             const auto vfp_table = (*upbranch).vfp_table();
             if (!vfp_table) {
                 // Table number specified as 9999 in the deck, no pressure loss.
-                if (network_.node(node).as_choke()) {
-                    // Node pressure is set to the group THP.
-                    node_pressures_[node] = well_model_.groupStateHelper().groupState().well_group_thp(node);
-                } else {
-                    node_pressures_[node] = up_press;
-                }
+                // The common THP of a sub-sea manifold group acts on its wells, not on the node.
+                node_pressures_[node] = up_press;
                 auto rates = node_inflows.at(node);
                 branch_data_.try_emplace(node,
                                          node_pressures_[node] - up_press,

@@ -32,6 +32,7 @@
 #include <opm/simulators/wells/RuntimePerforation.hpp>
 #include <opm/simulators/wells/WellIndexFracture.hpp>
 
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <optional>
@@ -130,6 +131,45 @@ public:
     Well::Status wellStatus() { return this->wellStatus_;}
 
     bool wellIsStopped() const { return this->wellStatus_ == Well::Status::STOP; }
+
+    /// Whether the well is kept stopped as it cannot flow at the THP imposed
+    /// on it.  While kept stopped it is not operable, so it is closed at the
+    /// end of the time step.
+    enum class KeptStopped : std::uint8_t {
+        No,
+        /// on a reservoir state not yet converged, may reopen once
+        Provisionally,
+        /// was kept stopped provisionally and has reopened
+        Reopened,
+        /// for the rest of the time step
+        Finally,
+    };
+
+    /// Keep the well stopped for the rest of the time step, or provisionally
+    /// when decided on a reservoir state not yet converged.  A further stop
+    /// after reopening is final.
+    void keepStopped(const bool provisionally)
+    {
+        auto& kept = this->operability_status_.kept_stopped;
+        if (kept == KeptStopped::No && provisionally) {
+            kept = KeptStopped::Provisionally;
+        }
+        else if (kept != KeptStopped::Provisionally) {
+            kept = KeptStopped::Finally;
+        }
+        this->stopWell();
+    }
+
+    /// Let a well kept stopped provisionally reopen.
+    void reopenKeptStopped()
+    {
+        auto& kept = this->operability_status_.kept_stopped;
+        if (kept == KeptStopped::Provisionally) {
+            kept = KeptStopped::Reopened;
+        }
+    }
+
+    KeptStopped keptStopped() const { return this->operability_status_.kept_stopped; }
 
     int currentStep() const { return this->current_step_; }
 
@@ -427,11 +467,17 @@ protected:
     {
         bool isOperableAndSolvable() const
         {
-            if (!operable_under_only_bhp_limit || !solvable || has_negative_potentials) {
+            if (isKeptStopped() || !operable_under_only_bhp_limit || !solvable || has_negative_potentials) {
                 return false;
             }
 
             return isOperableUnderBHPLimit() || isOperableUnderTHPLimit();
+        }
+
+        bool isKeptStopped() const
+        {
+            return kept_stopped == KeptStopped::Provisionally
+                || kept_stopped == KeptStopped::Finally;
         }
 
         bool isOperableUnderBHPLimit() const
@@ -471,6 +517,8 @@ protected:
         mutable bool thp_limit_violated_but_not_switched = false;
 
         bool use_vfpexplicit = false;
+        // not cleared by resetOperability()
+        KeptStopped kept_stopped = KeptStopped::No;
     };
 
     OperabilityStatus operability_status_;
