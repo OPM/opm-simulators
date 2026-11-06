@@ -116,7 +116,8 @@ calculateExplicitQuantities(const Simulator& simulator,
         // Keep each connection's hydrostatic pressure offset fixed for the
         // time step.
         updateConnectionPressureDiffs_(simulator, contents.density,
-                                       fluid_state_scalar.temperature(0));
+                                       fluid_state_scalar.temperature(0),
+                                       well_state.connection_pressure_diffs);
     }
 }
 
@@ -125,7 +126,8 @@ void
 CompWell<TypeTag>::
 updateConnectionPressureDiffs_(const Simulator& simulator,
                                const Scalar wellbore_density,
-                               const Scalar temperature)
+                               const Scalar temperature,
+                               const std::vector<Scalar>& last_diffs)
 {
     // The connections are ordered from the top of the well. The wellbore between
     // a connection and the one above it carries the flow of that connection and
@@ -155,16 +157,25 @@ updateConnectionPressureDiffs_(const Simulator& simulator,
     }
 
     // Without flow, the wellbore holds the fluid above it, and at the top that
-    // of the wellbore node.
+    // of the wellbore node. Each section between two connections is damped on
+    // its own, so that a deep connection does not lag behind the ones above it.
+    const bool damped = std::ssize(last_diffs) == num_conn;
     const Scalar bhp = getValue(this->primary_variables_.getBhp());
     Scalar density = wellbore_density;
     Scalar depth_above = this->reference_depth_;
     Scalar diff_above = 0.;
+    Scalar last_diff_above = 0.;
     for (int con_idx = 0; con_idx < num_conn; ++con_idx) {
         const Scalar pressure = bhp + this->connection_pressure_diffs_[con_idx];
         density = streamDensity_(flow_up[con_idx], pressure, temperature).value_or(density);
         const Scalar depth = this->connection_depths_[con_idx];
-        diff_above += density * gravity * (depth - depth_above);
+        Scalar section_diff = density * gravity * (depth - depth_above);
+        if (damped) {
+            section_diff = connection_diff_weight_ * section_diff
+                + (1. - connection_diff_weight_) * (last_diffs[con_idx] - last_diff_above);
+            last_diff_above = last_diffs[con_idx];
+        }
+        diff_above += section_diff;
         depth_above = depth;
         this->connection_pressure_diffs_[con_idx] = diff_above;
     }
@@ -888,6 +899,7 @@ updateConnectionQuantities(const Simulator& simulator,
         // Report the connection pressure used in the flow calculation.
         conn_data.pressure[con] = well_state.bhp + this->connection_pressure_diffs_[con];
     }
+    well_state.connection_pressure_diffs = this->connection_pressure_diffs_;
 }
 
 template <typename TypeTag>
