@@ -97,9 +97,11 @@ macro(opm-simulators_prereqs_hook)
     PUBLIC
       opmcommon
       opmgrid
-      SuiteSparse::UMFPACK
       Boost::date_time
   )
+  if(TARGET SuiteSparse::UMFPACK)
+    target_link_libraries(opmsimulators PUBLIC SuiteSparse::UMFPACK)
+  endif()
 
   if(TARGET ParMETIS::ParMETIS)
     target_link_libraries(opmsimulators PUBLIC ParMETIS::ParMETIS)
