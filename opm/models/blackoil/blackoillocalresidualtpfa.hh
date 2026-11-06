@@ -555,27 +555,35 @@ public:
 
         // deal with diffusion (if present). opm-models expects per area flux (added in the
         // tmpdiffusivity).
+        // Only work if diffusion is enabled run-time by DIFFUSE in the deck. Without
+        // this check the diffusive flux is evaluated on every face of the grid even
+        // though it does not contribute to the residual.
         if constexpr (enableDiffusion) {
-            typename DiffusionModule::ExtensiveQuantities::EvaluationArray
-                effectiveDiffusionCoefficient;
-            DiffusionModule::ExtensiveQuantities::update(
-                effectiveDiffusionCoefficient, intQuantsIn, intQuantsEx);
-            const Scalar diffusivity = nbInfo.diffusivity;
-            const Scalar tmpdiffusivity = diffusivity / faceArea;
-            DiffusionModule::addDiffusiveFlux(
-                flux, intQuantsIn, intQuantsEx, tmpdiffusivity, effectiveDiffusionCoefficient);
+            if (FluidSystem::enableDiffusion()) {
+                typename DiffusionModule::ExtensiveQuantities::EvaluationArray
+                    effectiveDiffusionCoefficient;
+                DiffusionModule::ExtensiveQuantities::update(
+                    effectiveDiffusionCoefficient, intQuantsIn, intQuantsEx);
+                const Scalar diffusivity = nbInfo.diffusivity;
+                const Scalar tmpdiffusivity = diffusivity / faceArea;
+                DiffusionModule::addDiffusiveFlux(
+                    flux, intQuantsIn, intQuantsEx, tmpdiffusivity, effectiveDiffusionCoefficient);
+            }
         }
 
         // deal with dispersion (if present). opm-models expects per area flux (added in the
         // tmpdispersivity).
+        // Only work if dispersion is enabled run-time by DISPERC in the deck.
         if constexpr (enableDispersion) {
-            typename DispersionModule::ExtensiveQuantities::ScalarArray normVelocityAvg;
-            DispersionModule::ExtensiveQuantities::update(
-                normVelocityAvg, intQuantsIn, intQuantsEx);
-            const Scalar dispersivity = nbInfo.dispersivity;
-            const Scalar tmpdispersivity = dispersivity / faceArea;
-            DispersionModule::addDispersiveFlux(
-                flux, intQuantsIn, intQuantsEx, tmpdispersivity, normVelocityAvg);
+            if (FluidSystem::enableDispersion()) {
+                typename DispersionModule::ExtensiveQuantities::ScalarArray normVelocityAvg;
+                DispersionModule::ExtensiveQuantities::update(
+                    normVelocityAvg, intQuantsIn, intQuantsEx);
+                const Scalar dispersivity = nbInfo.dispersivity;
+                const Scalar tmpdispersivity = dispersivity / faceArea;
+                DispersionModule::addDispersiveFlux(
+                    flux, intQuantsIn, intQuantsEx, tmpdispersivity, normVelocityAvg);
+            }
         }
 
         // apply the scaling for the urea equation in MICP
