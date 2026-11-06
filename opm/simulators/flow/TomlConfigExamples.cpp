@@ -903,6 +903,9 @@ writeTomlExamples(const std::string& spec,
     for (const auto& [file, content] : examples) {
         std::ofstream os { file };
         os << content;
+        // Close explicitly, so that failures to flush buffered output, e.g.,
+        // because the disk is full, are detected.
+        os.close();
         if (! os) {
             throw std::runtime_error {
                 fmt::format("Failed to write {}", file.generic_string())
