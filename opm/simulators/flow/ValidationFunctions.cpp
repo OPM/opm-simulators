@@ -20,7 +20,6 @@
 #include <opm/simulators/flow/ValidationFunctions.hpp>
 
 #include <opm/input/eclipse/Deck/Deck.hpp>
-#include <opm/input/eclipse/Parser/ParserKeywords/F.hpp>
 #include <opm/input/eclipse/Parser/ParserKeywords/G.hpp>
 #include <opm/input/eclipse/Parser/ParserKeywords/M.hpp>
 #include <opm/simulators/flow/KeywordValidation.hpp>
@@ -47,40 +46,6 @@ namespace {
             std::nullopt,
             std::string{"The BRINE keyword does not accept any salt name arguments"}}
         );
-    }
-
-    // FACTLI carries one multiplier per equilibration region in a single item,
-    // and the per-item validation only ever inspects the first value.  Flow
-    // labels single phase cells as if every multiplier were one, so every
-    // region has to be checked here.
-    void validateFACTLI(const Opm::Deck&,
-                        const Opm::DeckKeyword& keyword,
-                        std::vector<Opm::KeywordValidation::ValidationError>& errors)
-    {
-        if (keyword.empty()) {
-            return;
-        }
-
-        using Kw = Opm::ParserKeywords::FACTLI;
-
-        const auto& item = keyword.getRecord(0).getItem<Kw::DATA>();
-
-        for (std::size_t i = 0; i < item.data_size(); ++i) {
-            if (item.defaultApplied(i) || item.get<double>(i) == Kw::DATA::defaultValue) {
-                continue;
-            }
-
-            errors.emplace_back(Opm::KeywordValidation::ValidationError {
-                true,
-                keyword.location(),
-                0,  // a single record
-                1,
-                fmt::format("{}", item.get<double>(i)),
-                fmt::format("FACTLI(DATA): the Li phase labelling is not scaled, so only "
-                            "the default multiplier of 1.0 is supported (equilibration "
-                            "region {})", i + 1)}
-            );
-        }
     }
 
     // Flow does not support PARACHOR.  A deck that does not specify MISCIBLE
@@ -155,7 +120,6 @@ std::unordered_map<std::string, ValidationFunction>
 specialValidation()
 {
     return {{"BRINE", validateBRINE},
-            {"FACTLI", validateFACTLI},
             {"GSATPROD", validateGSATPROD},
             {"PARACHOR", validatePARACHOR}};
 }
