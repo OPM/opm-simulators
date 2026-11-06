@@ -161,6 +161,24 @@ TSTEP
 END
 )";
 
+// The reference depth moves from the top of the reservoir to the top
+// connection after three time steps.
+const std::string ref_depth_change = R"(WELSPECS
+PROD FIELD 1 1 0 GAS /
+/
+WCONPROD
+PROD OPEN BHP 5* 70 /
+/
+TSTEP
+3*0.1 /
+WELSPECS
+PROD FIELD 1 1 5 GAS /
+/
+TSTEP
+3*0.1 /
+END
+)";
+
 // the density [kg/m^3] of the wellbore column between two connections
 float columnDensity(const float upper, const float lower)
 {
@@ -229,4 +247,30 @@ BOOST_AUTO_TEST_CASE(ColumnDensityApproachesItsNewValueGradually)
             BOOST_CHECK_CLOSE(*it / *(it - 1), 2.0f / 3.0f, 5.0f);
         }
     }
+}
+
+// The damping keeps the densities of the wellbore, not offsets from the old
+// reference depth, so the connection at the new one is at the BHP from the
+// first time step on.
+BOOST_AUTO_TEST_CASE(OffsetsFollowNewReferenceDepth)
+{
+    const Opm::TemporaryDirectory dir("compwell_connection_pressure_ref_depth");
+    const auto smry = Opm::runDeck<TypeTag>(dir.path(), "REFDEPTH", deck + ref_depth_change);
+
+    const auto& time = smry.get("TIME");
+    const auto& bhp = smry.get("WBHP:PROD");
+    const auto& top = smry.get("CPR:PROD:1,1,1");
+    std::size_t moved = 0;
+    for (std::size_t step = 0; step < time.size(); ++step) {
+        BOOST_TEST_CONTEXT("producer at day " << time[step]) {
+            if (time[step] < 0.35f) {
+                // 5 m of wellbore fluid above the top connection
+                BOOST_CHECK_GT(top[step] - bhp[step], 0.01f);
+            } else {
+                BOOST_CHECK_SMALL(top[step] - bhp[step], 1.0e-4f);
+                ++moved;
+            }
+        }
+    }
+    BOOST_CHECK_EQUAL(moved, 3u);
 }
