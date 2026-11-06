@@ -27,14 +27,17 @@
 
 #include "RunDeckHelper.hpp"
 
+#include <algorithm>
 #include <cstddef>
+#include <iterator>
 #include <string>
+#include <vector>
 
 namespace {
 
 // Three 10 m layers without flow between them: gas, oil and gas again. A
-// producer at its BHP limit is connected to all three, with its reference
-// depth at the top connection.
+// producer is connected to all three, with its reference depth at the top
+// connection.
 const std::string deck = R"(RUNSPEC
 METRIC
 TABDIMS
@@ -133,13 +136,38 @@ PROD FIELD 1 1 1* GAS /
 COMPDAT
 PROD 1 1 1 3 OPEN 2* 0.0151 /
 /
-WCONPROD
+)";
+
+// The producer at its BHP limit.
+const std::string bhp_limit = R"(WCONPROD
 PROD OPEN BHP 2* 100000 2* 70 /
 /
 TSTEP
 5*0.1 /
 END
 )";
+
+// The BHP drops from 70 to 60 bar after three time steps.
+const std::string bhp_drop = R"(WCONPROD
+PROD OPEN BHP 5* 70 /
+/
+TSTEP
+3*0.1 /
+WCONPROD
+PROD OPEN BHP 5* 60 /
+/
+TSTEP
+8*0.1 /
+END
+)";
+
+// the density [kg/m^3] of the wellbore column between two connections
+float columnDensity(const float upper, const float lower)
+{
+    constexpr float gravity = 9.80665f;
+    constexpr float layer_thickness = 10.0f;
+    return (lower - upper) * 1.0e5f / (gravity * layer_thickness);
+}
 
 // The deck has no water phase.
 using TypeTag = Opm::Properties::TTag::FlowCompProblem<3, false>;
@@ -155,13 +183,7 @@ BOOST_GLOBAL_FIXTURE(RunDeckFixture);
 BOOST_AUTO_TEST_CASE(WellboreColumnHoldsTheFluidFlowingPastIt)
 {
     const Opm::TemporaryDirectory dir("compwell_connection_pressure");
-    const auto smry = Opm::runDeck<TypeTag>(dir.path(), "HYDROSTATICS", deck);
-
-    constexpr float gravity = 9.80665f;
-    constexpr float layer_thickness = 10.0f;
-    // the density [kg/m^3] of the column between two connections
-    const auto density = [&](const float upper, const float lower)
-    { return (lower - upper) * 1.0e5f / (gravity * layer_thickness); };
+    const auto smry = Opm::runDeck<TypeTag>(dir.path(), "HYDROSTATICS", deck + bhp_limit);
 
     const auto& time = smry.get("TIME");
     const auto& bhp = smry.get("WBHP:PROD");
@@ -172,11 +194,39 @@ BOOST_AUTO_TEST_CASE(WellboreColumnHoldsTheFluidFlowingPastIt)
     for (std::size_t step = 0; step < time.size(); ++step) {
         BOOST_TEST_CONTEXT("producer at day " << time[step]) {
             BOOST_CHECK_SMALL(top[step] - bhp[step], 1.0e-4f);
-            const float gas_column = density(middle[step], bottom[step]);
-            const float mixed_column = density(top[step], middle[step]);
+            const float gas_column = columnDensity(middle[step], bottom[step]);
+            const float mixed_column = columnDensity(top[step], middle[step]);
             BOOST_CHECK_GT(gas_column, 50.0f);
             BOOST_CHECK_LT(gas_column, 100.0f);
             BOOST_CHECK_GT(mixed_column, 1.15f * gas_column);
+        }
+    }
+}
+
+// The density of each column is explicit and damped: in each time step it
+// moves a third of the way from its last value to the one of the flow past
+// it. After the BHP drops, the gas below the oil gets lighter, and each change
+// of its column density is two thirds of the one before.
+BOOST_AUTO_TEST_CASE(ColumnDensityApproachesItsNewValueGradually)
+{
+    const Opm::TemporaryDirectory dir("compwell_connection_pressure_damping");
+    const auto smry = Opm::runDeck<TypeTag>(dir.path(), "DAMPING", deck + bhp_drop);
+
+    const auto& middle = smry.get("CPR:PROD:1,1,2");
+    const auto& bottom = smry.get("CPR:PROD:1,1,3");
+    std::vector<float> changes;
+    for (std::size_t step = 1; step < middle.size(); ++step) {
+        changes.push_back(columnDensity(middle[step], bottom[step])
+                          - columnDensity(middle[step - 1], bottom[step - 1]));
+    }
+    // The densities are taken at the start of a time step, so they first see
+    // the lower BHP in the second time step at 60 bar.
+    const auto first = std::ranges::find_if(changes, [](const float change)
+                                            { return change < -1.0f; });
+    BOOST_REQUIRE_GE(std::distance(first, changes.end()), 4);
+    for (auto it = first + 1; it != first + 4; ++it) {
+        BOOST_TEST_CONTEXT("time step " << std::distance(first, it) << " after the first change") {
+            BOOST_CHECK_CLOSE(*it / *(it - 1), 2.0f / 3.0f, 5.0f);
         }
     }
 }

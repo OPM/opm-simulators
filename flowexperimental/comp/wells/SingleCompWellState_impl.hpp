@@ -219,6 +219,9 @@ copyRuntimeStateFrom(const SingleCompWellState& other,
     bhp = other.bhp;
     wellbore_water_volume_fraction = other.wellbore_water_volume_fraction;
     total_molar_fractions = other.total_molar_fractions;
+    if (connection_data.cell_index == other.connection_data.cell_index) {
+        connection_pressure_diffs = other.connection_pressure_diffs;
+    }
     // a well that keeps its control also stays stopped; with a new control,
     // it tries to flow again
     if (keep_control) {
