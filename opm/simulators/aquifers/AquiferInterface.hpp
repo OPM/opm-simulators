@@ -133,8 +133,17 @@ private:
                                   FluidSystem::phaseName(phaseIdx)));
         }
 
-        return FluidSystem::canonicalToActiveCompIdx(
-            FluidSystem::solventComponentIndex(phaseIdx));
+        if constexpr (requires {
+                          FluidSystem::solventComponentIndex(0u);
+                          FluidSystem::canonicalToActiveCompIdx(0u);
+                      }) {
+            return FluidSystem::canonicalToActiveCompIdx(
+                FluidSystem::solventComponentIndex(phaseIdx));
+        } else {
+            // Only the analytic aquifers add source terms, and they need the
+            // black-oil component layout.
+            return -1;
+        }
     }
 };
 
