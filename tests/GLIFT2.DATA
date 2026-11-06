@@ -1,0 +1,37 @@
+-- This reservoir simulation deck is made available under the Open Database
+-- License: http://opendatacommons.org/licenses/odbl/1.0/. Any rights in
+-- individual contents of the database are licensed under the Database Contents
+-- License: http://opendatacommons.org/licenses/dbcl/1.0/
+
+-- Copyright (C) 2020 Equinor
+
+-- The model and the first report step are in include/glift_model.inc
+INCLUDE
+  'include/glift_model.inc' /
+
+-- Report step 1: no well events, the ALQ is kept
+DATES
+ 1 FEB 2020 /
+/
+
+-- Report step 2: WLIFTOPT lowers the maximum ALQ, which is no well event
+WLIFTOPT
+-- Well     Optimize  Max_rate  Weight  Min_rate
+ 'B-1H'   YES   20000   1.01   -1.0  /
+/
+
+DATES
+ 1 MAR 2020 /
+/
+
+-- Report step 3: new production target, the ALQ starts over from the default
+WCONPROD
+--  Well_name  Status  Ctrl  Orate   Wrate  Grate Lrate   RFV  FBHP   WHP  VFP Glift
+   'B-1H'      OPEN    ORAT  2000  1*     1*    1*  1*   100.0  30   1   1*  /
+/
+
+DATES
+ 1 APR 2020 /
+/
+
+END

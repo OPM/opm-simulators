@@ -171,24 +171,10 @@ runOptimize(const int iteration_idx)
                     logSuccess_(alq, iteration_idx);
                 auto& ws = this->well_state_.well(this->well_name_);
                 ws.alq_state.set(alq);
-                const auto& pu = this->well_state_.phaseUsageInfo();
                 // since alq is changed we also need to update the well potentials
                 // the well solution itself will be updated by solving the well equation
                 // after the gaslift optimization
-                std::vector<Scalar> well_pot(pu.numActivePhases(), 0.0);
-                if (pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
-                    const int oil_pos = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
-                    well_pot[oil_pos] = state->oilPot();
-                }
-                if (pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
-                    const int water_pos = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
-                    well_pot[water_pos] = state->waterPot();
-                }
-                if (pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
-                    const int gas_pos = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
-                    well_pot[gas_pos] = state->gasPot();
-                }
-                ws.well_potentials = well_pot;
+                setWellStatePotentials_(state->oilPot(), state->gasPot(), state->waterPot());
             }
         }
     }
@@ -206,15 +192,24 @@ wellTestALQ()
     }
 
     Scalar temp_alq = std::max(this->min_alq_, Scalar(0.0));
-    auto cur_alq = temp_alq;
+    const Scalar start_alq = temp_alq;
     Scalar cur_bhp = this->well_state_.well(this->well_name_).bhp;
-    auto init_rates = computeLimitedWellRatesWithALQ_(temp_alq, cur_bhp);
+    // A well that needs lift gas to hold its THP limit has no solution at the
+    // starting ALQ. As in the normal optimization, increase the ALQ until the
+    // well can flow, or the maximum ALQ is reached.
+    auto flowing = findFirstFlowingALQ_(temp_alq, [&](Scalar alq) {
+        return computeLimitedWellRatesWithALQ_(alq, cur_bhp);
+    });
+    auto init_rates = std::move(flowing.first);
+    temp_alq = flowing.second;
+    auto cur_alq = temp_alq;
     if (!init_rates) {
         this->displayDebugMessage_(fmt::format(
-            "wellTestALQ: failed to compute initial rates for ALQ = {}, bhp = {}",
-            temp_alq, cur_bhp));
+            "wellTestALQ: failed to compute initial rates for ALQ = {} to {}, bhp = {}",
+            start_alq, temp_alq, cur_bhp));
         return {cur_alq, false};
     }
+    const bool alq_was_increased = temp_alq > start_alq;
     LimitedRatesAndBhp new_rates = *init_rates;
     std::optional<LimitedRatesAndBhp> rates;
     Scalar old_gradient = 0.0;
@@ -263,6 +258,11 @@ wellTestALQ()
     }
     if (state.it > this->max_iterations_) {
         warnMaxIterationsExceeded_();
+    }
+    // If the ALQ had to be increased before the well could flow, that ALQ is a valid
+    // test ALQ even when a further increase gives no economic gain.
+    if (!success && alq_was_increased) {
+        success = true;
     }
     if (success) {
         this->well_state_.well(this->well_name_).alq_state.update_count(increase);
@@ -397,24 +397,35 @@ checkInitialALQmodified_(Scalar alq, Scalar initial_alq) const
     }
 }
 
+// Try the ALQ, then increase it in steps of the ALQ increment until the probe returns a
+// value or the maximum ALQ is reached. The last step is limited to the maximum ALQ, which
+// is also tried when the increments do not reach it. Returns the result of the probe (empty
+// if no ALQ worked) and the last ALQ that was tried.
+template<typename Scalar, typename IndexTraits>
+template<class Probe>
+auto GasLiftSingleWellGeneric<Scalar, IndexTraits>::
+findFirstFlowingALQ_(Scalar alq, Probe&& probe) const
+    -> std::pair<decltype(probe(alq)), Scalar>
+{
+    auto result = probe(alq);
+    while (!result && this->increment_ > Scalar(0.0) &&
+           alq < this->max_alq_ && !checkALQequal_(alq, this->max_alq_)) {
+        alq = std::min(alq + this->increment_, this->max_alq_);
+        result = probe(alq);
+    }
+    return {std::move(result), alq};
+}
+
 template<typename Scalar, typename IndexTraits>
 std::pair<std::optional<Scalar>,
           Scalar>
 GasLiftSingleWellGeneric<Scalar, IndexTraits>::
 computeConvergedBhpAtThpLimitByMaybeIncreasingALQ_() const
 {
-    auto alq = this->orig_alq_;
-    Scalar bhp = this->well_state_.well(this->well_name_).bhp;
-    Scalar new_alq = alq;
-    std::optional<Scalar> new_bhp;
-    while ((alq < this->max_alq_) || checkALQequal_(alq, this->max_alq_)) {
-        if (new_bhp = computeBhpAtThpLimit_(alq, bhp); new_bhp) {
-            new_alq = alq;
-            break;
-        }
-        alq += this->increment_;
-    }
-    return {new_bhp, new_alq};
+    const Scalar bhp = this->well_state_.well(this->well_name_).bhp;
+    return findFirstFlowingALQ_(this->orig_alq_, [&](Scalar alq) {
+        return computeBhpAtThpLimit_(alq, bhp);
+    });
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -756,8 +767,13 @@ template<typename Scalar, typename IndexTraits>
 std::pair<std::optional<typename GasLiftSingleWellGeneric<Scalar, IndexTraits>::LimitedRatesAndBhp>,
           Scalar>
 GasLiftSingleWellGeneric<Scalar, IndexTraits>::
-getInitialRatesWithLimit_() const
+getInitialRatesWithLimit_()
 {
+    // Rebuilding the rates from the updated well potentials would not give the rates the group
+    // rates were reconciled with, if the rate was limited by a group.
+    if (this->reconciled_initial_rates_) {
+        return {this->reconciled_initial_rates_->first, this->reconciled_initial_rates_->second};
+    }
     std::optional<LimitedRatesAndBhp> limited_rates;
     Scalar initial_alq = this->orig_alq_;
     if (auto [rates, alq] = computeInitialWellRates_(); rates) {
@@ -767,8 +783,14 @@ getInitialRatesWithLimit_() const
         auto temp_rates = getLimitedRatesAndBhp_(*rates);
         RatesAndBhp old_rates = getWellStateRates_();
         limited_rates = updateRatesToGroupLimits_(old_rates, temp_rates);
-
         initial_alq = alq;
+        // The ALQ was reduced to the maximum in limitAlqToMax_(). Move the group rates and the
+        // well potentials to the rates with the reduced ALQ, and keep them as the baseline of
+        // the second pass.
+        if (this->alq_limited_) {
+            reconcileRatesAfterAlqLimit_(old_rates, *limited_rates);
+            this->reconciled_initial_rates_ = std::pair{*limited_rates, initial_alq};
+        }
     }
     return {limited_rates, initial_alq};
 }
@@ -1344,6 +1366,73 @@ std::unique_ptr<GasLiftWellState<Scalar>>
 GasLiftSingleWellGeneric<Scalar, IndexTraits>::tryIncreaseLiftGas_()
 {
     return runOptimizeLoop_(/*increase=*/true);
+}
+
+template<typename Scalar, typename IndexTraits>
+void GasLiftSingleWellGeneric<Scalar, IndexTraits>::
+setWellStatePotentials_(Scalar oil_pot, Scalar gas_pot, Scalar water_pot)
+{
+    const auto& pu = this->well_state_.phaseUsageInfo();
+    std::vector<Scalar> well_pot(pu.numActivePhases(), 0.0);
+    if (pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
+        well_pot[pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx)] = oil_pot;
+    }
+    if (pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
+        well_pot[pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx)] = water_pot;
+    }
+    if (pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
+        well_pot[pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx)] = gas_pot;
+    }
+    this->well_state_.well(this->well_name_).well_potentials = well_pot;
+}
+
+// The group rates and the well potentials of the well state are from before the ALQ
+// was limited, while the rates of the optimization are computed with the limited ALQ.
+// Move the group rates and the well potentials to the rates with the limited ALQ.
+// The rates the well contributed to its groups are the potentials limited by the targets
+// of the well (see GasLiftGroupInfo::getProducerWellRates_()), so the old rates are limited
+// in the same way before they are subtracted.  This is done once, since the caller keeps the
+// reconciled rates in reconciled_initial_rates_ until the ALQ is limited again.
+template<typename Scalar, typename IndexTraits>
+void GasLiftSingleWellGeneric<Scalar, IndexTraits>::
+reconcileRatesAfterAlqLimit_(const RatesAndBhp& old_rates,
+                             const LimitedRatesAndBhp& new_rates)
+{
+    if (this->group_info_.hasWell(this->well_name_)) {
+        updateGroupRates_(getLimitedRatesAndBhp_(old_rates), new_rates, /*delta_alq=*/0.0);
+    }
+    setWellStatePotentials_(new_rates.oil_pot, new_rates.gas_pot, new_rates.water_pot);
+}
+
+// The ALQ of the well can be above the maximum ALQ, for example if the maximum was
+// lowered by WLIFTOPT while the ALQ was kept from the previous report step. The
+// optimization cannot decrease an ALQ above the maximum, so limit it before starting.
+template<typename Scalar, typename IndexTraits>
+void GasLiftSingleWellGeneric<Scalar, IndexTraits>::
+limitAlqToMax_()
+{
+    if (this->orig_alq_ <= this->max_alq_ || checkALQequal_(this->orig_alq_, this->max_alq_)) {
+        return;
+    }
+    const Scalar delta_alq = this->max_alq_ - this->orig_alq_;
+    if (this->debug) {
+        displayDebugMessage_(fmt::format("ALQ {} is above the maximum ALQ {}, reducing it to the maximum",
+                                         this->orig_alq_, this->max_alq_));
+    }
+    this->well_state_.well(this->well_name_).alq_state.set(this->max_alq_);
+    this->orig_alq_ = this->max_alq_;
+    this->alq_limited_ = true;
+    this->reconciled_initial_rates_.reset();
+    // The group rates were initialized with the ALQ of the well state. The group
+    // info is not initialized when the object is only used for a well test.
+    if (!this->group_info_.hasWell(this->well_name_)) {
+        return;
+    }
+    for (const auto& [group_name, efficiency] : this->group_info_.getWellGroups(this->well_name_)) {
+        this->sync_groups_.insert(this->group_info_.getGroupIdx(group_name));
+        this->group_info_.update(group_name, /*delta_oil=*/0.0, /*delta_gas=*/0.0,
+                                 /*delta_water=*/0.0, /*delta_alq=*/efficiency * delta_alq);
+    }
 }
 
 template<typename Scalar, typename IndexTraits>
