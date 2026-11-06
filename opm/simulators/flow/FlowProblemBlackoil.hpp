@@ -31,6 +31,9 @@
 #ifndef OPM_FLOW_PROBLEM_BLACK_HPP
 #define OPM_FLOW_PROBLEM_BLACK_HPP
 
+#include <opm/input/eclipse/Schedule/Events.hpp>
+#include <opm/input/eclipse/Schedule/OilVaporizationProperties.hpp>
+
 #include <opm/models/blackoil/blackoilmodules.hpp>
 
 #include <opm/input/eclipse/EclipseState/Aquifer/AquiferConfig.hpp>
@@ -274,6 +277,7 @@ public:
      */
     void beginEpisode() override
     {
+        checkGpuAssemblySchedule_();
         FlowProblemType::beginEpisode();
 
         auto& simulator = this->simulator();
@@ -490,6 +494,9 @@ public:
                         return vg.gridIdxToEquilGridIdx(i);
                     });
             });
+            // Actions can change coefficients within a report step. Check before
+            // advancing to a new report step, which clears the current events.
+            checkGpuAssemblySchedule_();
         }
     }
 
@@ -1843,6 +1850,22 @@ protected:
     HybridNewton hybridNewton_;
 
 private:
+    void checkGpuAssemblySchedule_() const
+    {
+        if constexpr (getPropValue<TypeTag, Properties::RunAssemblyOnGpu>()) {
+            // Persistent GPU assembly buffers do not refresh these coefficients.
+            // This restriction also applies when the assembly/solver bridge is off.
+            const auto& state = this->simulator().vanguard().schedule()[this->episodeIndex()];
+            if (state.events().hasEvent(ScheduleEvents::GEO_MODIFIER)) {
+                OPM_THROW(std::runtime_error,
+                          "GPU assembly does not support GEO_MODIFIER schedule events.");
+            }
+            if (state.oilvap().getType() == OilVaporizationProperties::OilVaporization::DRSDTCON) {
+                OPM_THROW(std::runtime_error, "GPU assembly does not support DRSDTCON.");
+            }
+        }
+    }
+
     /// Whether or not the current epsiode will end at the end of the
     /// current time step.
     ///
