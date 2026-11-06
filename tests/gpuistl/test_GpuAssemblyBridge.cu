@@ -1,5 +1,5 @@
 /*
-  Copyright 2026 SINTEF AS
+  Copyright 2026 EQUINOR ASA
 
   This file is part of the Open Porous Media project (OPM).
 
