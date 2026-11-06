@@ -269,12 +269,12 @@ macro(opm-simulators_prereqs_hook)
     endif()
   endif()
 
-  if(TARGET dunealugrid)
-    target_link_libraries(opmsimulators PUBLIC dunealugrid)
+  if(TARGET Dune::ALUGrid)
+    target_link_libraries(opmsimulators PUBLIC Dune::ALUGrid)
   endif()
 
-  if(TARGET dunefem)
-    target_link_libraries(opmsimulators PUBLIC dunefem)
+  if(TARGET Dune::Fem)
+    target_link_libraries(opmsimulators PUBLIC Dune::Fem)
   endif()
 
   if(USE_DAMARIS_LIB AND MPI_FOUND)
