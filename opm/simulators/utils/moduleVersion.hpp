@@ -43,6 +43,10 @@ namespace Opm
     /// the binary was compiled.
     std::string compileTimestamp();
 
+    /// Return the CMake build configuration the module was compiled in,
+    /// for example "Release" or "Debug"; empty if it is not known.
+    std::string moduleBuildType();
+
 } // namespace Opm
 
 #endif // OPM_MODULEVERSION_HEADER_INCLUDED
