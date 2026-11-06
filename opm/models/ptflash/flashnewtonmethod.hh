@@ -131,10 +131,14 @@ protected:
         }
 
         constexpr Scalar maxAmountChange = 0.2;
+        // A step lowers a mole fraction by at most 80%, so a component about to leave a
+        // cell, e.g. at a dew point, does not overshoot to the floor and back.
+        constexpr Scalar maxRelativeDecrease = 0.8;
         applyFlashCompositionStep(z, sw, dz, dSw,
                                   IntensiveQuantities::compositionFloor,
                                   IntensiveQuantities::hydrocarbonFloor,
-                                  maxAmountChange);
+                                  maxAmountChange,
+                                  maxRelativeDecrease);
 
         for (unsigned compIdx = 0; compIdx < numComponents - 1; ++compIdx) {
             nextValue[z0Idx + compIdx] = z[compIdx];

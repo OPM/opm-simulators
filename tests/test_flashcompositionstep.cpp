@@ -28,6 +28,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <limits>
 #include <numeric>
 #include <random>
 
@@ -36,6 +37,7 @@ namespace {
 constexpr double compositionFloor = 1.0e-8;
 constexpr double hydrocarbonFloor = 1.0e-8;
 constexpr double maxAmountChange = 0.2;
+constexpr double maxRelativeDecrease = 0.8;
 
 template <std::size_t n>
 struct State
@@ -44,11 +46,15 @@ struct State
     double sw;
 };
 
+// Without a cap on the relative decrease unless one is given, so that a step can reach
+// the floors and the limit on the amounts.
 template <std::size_t n>
-State<n> step(State<n> state, const std::array<double, n>& dz, double dSw)
+State<n> step(State<n> state, const std::array<double, n>& dz, double dSw,
+              double relativeDecrease = std::numeric_limits<double>::infinity())
 {
     Opm::applyFlashCompositionStep(state.z, state.sw, dz, dSw,
-                                   compositionFloor, hydrocarbonFloor, maxAmountChange);
+                                   compositionFloor, hydrocarbonFloor, maxAmountChange,
+                                   relativeDecrease);
     return state;
 }
 
@@ -275,5 +281,88 @@ BOOST_AUTO_TEST_CASE(RandomStepsKeepTheBounds)
         std::normal_distribution<double> swStep(0.0, choose(swStepSizes));
 
         checkBounds(oldState, step(oldState, dz, swStep(gen)));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(VanishingComponentKeepsPartOfItsFraction)
+{
+    // The step would take the whole third component, as it can where a phase is about to
+    // vanish. The component keeps a fifth of its fraction, and the other fractions take
+    // the same share of their steps.
+    const State<3> oldState{{0.95, 0.01, 0.04}, 0.42};
+    const std::array dz{0.03, 0.01, -0.04};
+    const auto newState = step(oldState, dz, 0.0, maxRelativeDecrease);
+
+    checkBounds(oldState, newState);
+    BOOST_CHECK_EQUAL(newState.sw, oldState.sw);
+    for (std::size_t c = 0; c < 3; ++c) {
+        BOOST_CHECK_CLOSE(newState.z[c], oldState.z[c] + 0.8 * dz[c], 1.0e-10);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(CapAppliesToTheChangeOfTheFraction)
+{
+    // In a water-filled cell, the step in z is of order 1/h and z moves by h/h_new of
+    // it. The cap compares that move with z, so the cell still takes the inflow
+    // composition, whose fractions are at least a fifth of the old ones.
+    const State<3> oldState{{0.2, 0.3, 0.5}, 1.0};
+    const std::array zIn{0.5, 0.3, 0.2};
+    const double dShare = 0.1;
+    std::array<double, 3> dz{};
+    for (std::size_t c = 0; c < 3; ++c) {
+        dz[c] = (hydrocarbonFloor + dShare) * (zIn[c] - oldState.z[c]) / hydrocarbonFloor;
+    }
+    const auto newState = step(oldState, dz, -dShare, maxRelativeDecrease);
+
+    BOOST_CHECK_CLOSE(newState.sw, 1.0 - dShare, 1.0e-10);
+    for (std::size_t c = 0; c < 3; ++c) {
+        BOOST_CHECK_CLOSE(newState.z[c], zIn[c], 1.0e-4);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(RandomStepsKeepTheCap)
+{
+    // With Sw fixed, the amounts scale with z, so every fraction above the floor keeps at
+    // least 1 - maxRelativeDecrease of its value. Steps in Sw must keep the bounds.
+    constexpr std::size_t n = 4;
+    constexpr std::array zStepSizes{1.0e-8, 0.03, 0.3, 3.0};
+
+    std::mt19937 gen(7);
+    std::uniform_real_distribution<double> uniform(0.0, 1.0);
+    std::bernoulli_distribution coin(0.5);
+    std::uniform_int_distribution<std::size_t> zStepSize(0, zStepSizes.size() - 1);
+    std::normal_distribution<double> swStep(0.0, 0.3);
+
+    for (int sample = 0; sample < 10000; ++sample) {
+        State<n> oldState{};
+        for (auto& zc : oldState.z) {
+            zc = std::pow(uniform(gen), 4.0);
+        }
+        const double zSum = std::accumulate(oldState.z.begin(), oldState.z.end(), 0.0);
+        for (auto& zc : oldState.z) {
+            zc = compositionFloor + (1.0 - n * compositionFloor) * zc / zSum;
+        }
+        oldState.sw = uniform(gen);
+
+        std::normal_distribution<double> zStep(0.0, zStepSizes[zStepSize(gen)]);
+        std::array<double, n> dz{};
+        for (auto& dzc : dz) {
+            dzc = zStep(gen);
+        }
+        const double dzMean = std::accumulate(dz.begin(), dz.end(), 0.0) / n;
+        for (auto& dzc : dz) {
+            dzc -= dzMean;
+        }
+        const bool fixedSw = coin(gen);
+        const double dSw = fixedSw ? 0.0 : swStep(gen);
+
+        const auto newState = step(oldState, dz, dSw, maxRelativeDecrease);
+        checkBounds(oldState, newState);
+        if (fixedSw) {
+            for (std::size_t c = 0; c < n; ++c) {
+                BOOST_CHECK_GE(newState.z[c],
+                               (1.0 - maxRelativeDecrease) * oldState.z[c] * (1.0 - 1.0e-6));
+            }
+        }
     }
 }
