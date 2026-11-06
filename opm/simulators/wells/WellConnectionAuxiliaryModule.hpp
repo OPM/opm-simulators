@@ -32,6 +32,10 @@
 #include <opm/simulators/utils/MPISerializer.hpp>
 #endif
 
+#include <string>
+#include <unordered_map>
+#include <vector>
+
 namespace Opm {
 
 template<class TypeTag, class Model>
@@ -74,23 +78,28 @@ public:
         Parallel::MpiSerializer ser(lin_comm_);
         ser.broadcast(Parallel::RootRank{0}, possibleFutureConnections);
 #endif
-        // initialize the additional cell connections introduced by wells.
-        for (const auto& well : schedule_wells)
-        {
-            std::vector<int> wellCells = model_.getCellsForConnections(well);
-            // Now add the cells of the possible future connections
-            const auto possibleFutureConnectionSetIt = possibleFutureConnections.find(well.name());
-            if (possibleFutureConnectionSetIt != possibleFutureConnections.end()) {
-                for (const auto& global_index : possibleFutureConnectionSetIt->second) {
-                    int compressed_idx = model_.compressedIndexForInterior(global_index);
-                    if (compressed_idx >= 0) { // Ignore connections in inactive/remote cells.
-                        wellCells.push_back(compressed_idx);
-                    }
+        std::unordered_map<std::string, std::vector<int>> wellCells;
+        for (const auto& well : schedule_wells) {
+            wellCells[well.name()] = model_.getCellsForConnections(well);
+        }
+
+        // Now add the cells of the possible future connections.  A well that
+        // only an action defines is not in the schedule yet, so it gets its
+        // entry here.
+        for (const auto& [wellName, globalIndices] : possibleFutureConnections) {
+            auto& cells = wellCells[wellName];
+            for (const auto& global_index : globalIndices) {
+                int compressed_idx = model_.compressedIndexForInterior(global_index);
+                if (compressed_idx >= 0) { // Ignore connections in inactive/remote cells.
+                    cells.push_back(compressed_idx);
                 }
             }
-            for (int cellIdx : wellCells) {
-                neighbors[cellIdx].insert(wellCells.begin(),
-                                          wellCells.end());
+        }
+
+        // initialize the additional cell connections introduced by wells.
+        for (const auto& [wellName, cells] : wellCells) {
+            for (int cellIdx : cells) {
+                neighbors[cellIdx].insert(cells.begin(), cells.end());
             }
         }
     }
