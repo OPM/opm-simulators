@@ -52,7 +52,7 @@ allocate(const unsigned bufferSize,
                                   if (((tracer.phase == Phase::GAS && FluidSystem::enableDissolvedGas()) ||
                                       (tracer.phase == Phase::OIL && FluidSystem::enableVaporizedOil())) &&
                                       (tracer.solution_concentration.has_value() ||
-                                      tracer.solution_tvdp.has_value()))
+                                      !tracer.solution_tvdp.empty()))
                                   {
                                       solConcentrations_[idx].resize(bufferSize, 0.0);
                                   }

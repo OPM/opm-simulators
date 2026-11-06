@@ -59,6 +59,7 @@
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace Opm {
 
@@ -240,6 +241,34 @@ doInit(bool rst, std::size_t numGridDof,
     freeTracerConcentration_.resize(numTracers);
     solTracerConcentration_.resize(numTracers);
 
+    // Concentration versus depth, from the table of each cell's tracer region
+    const auto& fieldProps = this->eclState_.fieldProps();
+    const auto depthConcentration = [this, &fieldProps, numGridDof]
+        (const std::vector<TracerVdTable>& tables,
+         const std::string& region_array,
+         const std::string& tracer_name)
+    {
+        const auto regions = fieldProps.has_int(region_array)
+            ? fieldProps.get_global_int(region_array)
+            : std::vector<int>{};
+
+        std::vector<Scalar> concentration(numGridDof);
+        for (std::size_t globalDofIdx = 0; globalDofIdx < numGridDof; ++globalDofIdx) {
+            const int region = regions.empty()
+                ? 1 : regions[cartMapper_.cartesianIndex(globalDofIdx)];
+            if (region < 1 || region > static_cast<int>(tables.size())) {
+                throw std::runtime_error(fmt::format("{} has region {}, but tracer {} "
+                                                     "has {} concentration tables",
+                                                     region_array, region, tracer_name,
+                                                     tables.size()));
+            }
+            concentration[globalDofIdx] = tables[region - 1]
+                .evaluate("TRACER_CONCENTRATION", centroids_(globalDofIdx)[2]);
+        }
+
+        return concentration;
+    };
+
     // the phase where the tracer is
     tracerPhaseIdx_.resize(numTracers);
     for (std::size_t tracerIdx = 0; tracerIdx < numTracers; tracerIdx++) {
@@ -274,15 +303,12 @@ doInit(bool rst, std::size_t numGridDof,
             }
         }
         // TVDPF keyword
-        else if (tracer.free_tvdp.has_value()) {
-            const auto& free_tvdp = tracer.free_tvdp.value();
+        else if (!tracer.free_tvdp.empty()) {
+            const auto concentration =
+                depthConcentration(tracer.free_tvdp, tracer.free_region(), tracer.name);
             for (std::size_t globalDofIdx = 0; globalDofIdx < numGridDof; ++globalDofIdx) {
-                tracerConcentration_[tracerIdx][globalDofIdx][0] =
-                    free_tvdp.evaluate("TRACER_CONCENTRATION",
-                                       centroids_(globalDofIdx)[2]);
-                freeTracerConcentration_[tracerIdx][globalDofIdx] =
-                    free_tvdp.evaluate("TRACER_CONCENTRATION",
-                                       centroids_(globalDofIdx)[2]);
+                tracerConcentration_[tracerIdx][globalDofIdx][0] = concentration[globalDofIdx];
+                freeTracerConcentration_[tracerIdx][globalDofIdx] = concentration[globalDofIdx];
             }
         }
         else {
@@ -313,16 +339,14 @@ doInit(bool rst, std::size_t numGridDof,
                 }
             }
             // TVDPS keyword
-            else if (tracer.solution_tvdp.has_value()) {
+            else if (!tracer.solution_tvdp.empty()) {
                 enableSolTracers_[tracerIdx] = true;
-                const auto& solution_tvdp = tracer.solution_tvdp.value();
+                const auto concentration = depthConcentration(tracer.solution_tvdp,
+                                                              tracer.solution_region(),
+                                                              tracer.name);
                 for (std::size_t globalDofIdx = 0; globalDofIdx < numGridDof; ++globalDofIdx) {
-                    tracerConcentration_[tracerIdx][globalDofIdx][1] =
-                        solution_tvdp.evaluate("TRACER_CONCENTRATION",
-                                            centroids_(globalDofIdx)[2]);
-                    solTracerConcentration_[tracerIdx][globalDofIdx] =
-                        solution_tvdp.evaluate("TRACER_CONCENTRATION",
-                                            centroids_(globalDofIdx)[2]);
+                    tracerConcentration_[tracerIdx][globalDofIdx][1] = concentration[globalDofIdx];
+                    solTracerConcentration_[tracerIdx][globalDofIdx] = concentration[globalDofIdx];
                 }
             }
             else {
