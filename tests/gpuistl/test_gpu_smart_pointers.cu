@@ -62,8 +62,7 @@ BOOST_AUTO_TEST_CASE(TestSharedPointer)
 {
     auto sharedPtr = Opm::gpuistl::make_gpu_shared_ptr<int>(1);
 
-    int valueFromDevice = 0;
-    OPM_GPU_SAFE_CALL(cudaMemcpy(&valueFromDevice, sharedPtr.get(), sizeof(int), cudaMemcpyDeviceToHost));
+    const auto valueFromDevice = Opm::gpuistl::copyFromGPU(sharedPtr);
     BOOST_CHECK_EQUAL(valueFromDevice, 1);
 }
 
@@ -71,8 +70,7 @@ BOOST_AUTO_TEST_CASE(TestUniquePointer)
 {
     auto uniquePtr = Opm::gpuistl::make_gpu_unique_ptr<int>(1);
 
-    int valueFromDevice = 0;
-    OPM_GPU_SAFE_CALL(cudaMemcpy(&valueFromDevice, uniquePtr.get(), sizeof(int), cudaMemcpyDeviceToHost));
+    const auto valueFromDevice = Opm::gpuistl::copyFromGPU(uniquePtr);
     BOOST_CHECK_EQUAL(valueFromDevice, 1);
 }
 
@@ -83,27 +81,24 @@ BOOST_AUTO_TEST_CASE(TestPointerView)
 
     setValue<<<1, 1>>>(Opm::gpuistl::make_view(pointerSource), Opm::gpuistl::make_view(pointerDestination));
 
-    double valueFromDevice = 0;
-    OPM_GPU_SAFE_CALL(cudaMemcpy(&valueFromDevice, pointerDestination.get(), sizeof(double), cudaMemcpyDeviceToHost));
+    auto valueFromDevice = Opm::gpuistl::copyFromGPU(pointerDestination);
     BOOST_CHECK_EQUAL(valueFromDevice, 128.5);
 
     auto newSource = Opm::gpuistl::make_gpu_shared_ptr<double>(-1.0);
     setValueGet<<<1, 1>>>(Opm::gpuistl::make_view(newSource), Opm::gpuistl::make_view(pointerDestination));
-    OPM_GPU_SAFE_CALL(cudaMemcpy(&valueFromDevice, pointerDestination.get(), sizeof(double), cudaMemcpyDeviceToHost));
+    valueFromDevice = Opm::gpuistl::copyFromGPU(pointerDestination);
     BOOST_CHECK_EQUAL(valueFromDevice, -1.0);
 
     auto structPtr = Opm::gpuistl::make_gpu_shared_ptr<SomeStruct>();
     callFunction<<<1, 1>>>(Opm::gpuistl::make_view(structPtr));
-    bool isCalled = false;
-    OPM_GPU_SAFE_CALL(cudaMemcpy(&isCalled, structPtr.get(), sizeof(bool), cudaMemcpyDeviceToHost));
+    const auto isCalled = Opm::gpuistl::copyFromGPU(structPtr).isCalled;
     BOOST_CHECK_EQUAL(isCalled, true);
 
 
     auto uniquePtr = Opm::gpuistl::make_gpu_unique_ptr<double>(1.0);
     auto uniqueView = Opm::gpuistl::make_view(uniquePtr);
 
-    double valueFromDeviceUnique = 0;
-    OPM_GPU_SAFE_CALL(cudaMemcpy(&valueFromDeviceUnique, uniqueView.get(), sizeof(double), cudaMemcpyDeviceToHost));
+    const auto valueFromDeviceUnique = Opm::gpuistl::copyFromGPU(uniqueView.get());
     BOOST_CHECK_EQUAL(valueFromDeviceUnique, 1.0);
 }
 
@@ -152,16 +147,10 @@ BOOST_AUTO_TEST_CASE(TestUniquePointerArray)
     auto arrayPtr = Opm::gpuistl::make_gpu_unique_ptr_array<double>(numElements);
 
     const std::array<double, numElements> hostInput {1.5, 2.5, 3.5, 4.5, 5.5};
-    OPM_GPU_SAFE_CALL(cudaMemcpy(arrayPtr.get(),
-                                 hostInput.data(),
-                                 numElements * sizeof(double),
-                                 cudaMemcpyHostToDevice));
+    Opm::gpuistl::detail::gpuMemcpyHostToDevice(arrayPtr.get(), hostInput.data(), numElements);
 
     std::array<double, numElements> hostOutput {};
-    OPM_GPU_SAFE_CALL(cudaMemcpy(hostOutput.data(),
-                                 arrayPtr.get(),
-                                 numElements * sizeof(double),
-                                 cudaMemcpyDeviceToHost));
+    Opm::gpuistl::detail::gpuMemcpyDeviceToHost(hostOutput.data(), arrayPtr.get(), numElements);
 
     for (std::size_t i = 0; i < numElements; ++i) {
         BOOST_CHECK_EQUAL(hostOutput[i], hostInput[i]);

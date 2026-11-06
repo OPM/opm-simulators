@@ -34,6 +34,7 @@
 #include <opm/material/common/UniformXTabulated2DFunctionBuilder.hpp>
 
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
 
@@ -75,26 +76,17 @@ __global__ void gpuEvaluateUniformXTabulated2DFunction(GpuViewXTab gpuTab, doubl
 // Helper function to launch a kernel and retrieve the result on the CPU to reduce code duplication
 template <typename KernelFunc, typename... Args>
 double launchKernelAndRetrieveResult(KernelFunc kernel, Args... args) {
-    double* resultOnGpu;
-    double gpuComputedResultOnCpu;
-
-    // Allocate memory for the result on the GPU
-    OPM_GPU_SAFE_CALL(cudaMalloc(&resultOnGpu, sizeof(double)));
+    auto resultOnGpu = Opm::gpuistl::make_gpu_unique_ptr<double>();
 
     // Launch the kernel
-    kernel<<<1, 1>>>(args..., resultOnGpu);
+    kernel<<<1, 1>>>(args..., resultOnGpu.get());
 
     // Check for any errors in kernel launch
     OPM_GPU_SAFE_CALL(cudaPeekAtLastError());
     OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
 
     // Retrieve the result from the GPU to the CPU
-    OPM_GPU_SAFE_CALL(cudaMemcpy(&gpuComputedResultOnCpu, resultOnGpu, sizeof(double), cudaMemcpyDeviceToHost));
-
-    // Free allocated GPU memory
-    OPM_GPU_SAFE_CALL(cudaFree(resultOnGpu));
-
-    return gpuComputedResultOnCpu;
+    return Opm::gpuistl::copyFromGPU(resultOnGpu);
 }
 
 // Regular grid: same X spacing and the same number/position of Y samples in every
@@ -224,18 +216,10 @@ BOOST_AUTO_TEST_CASE(TestEvaluateUniformTabulated2DFunctionOnGpu) {
     Evaluation b(4.5);
 
     // Allocate GPU memory for the Evaluation inputs
-    Evaluation* gpuA = nullptr;
-    Evaluation* gpuB = nullptr;
-    OPM_GPU_SAFE_CALL(cudaMalloc(&gpuA, sizeof(Evaluation)));
-    OPM_GPU_SAFE_CALL(cudaMemcpy(gpuA, &a, sizeof(Evaluation), cudaMemcpyHostToDevice));
-    OPM_GPU_SAFE_CALL(cudaMalloc(&gpuB, sizeof(Evaluation)));
-    OPM_GPU_SAFE_CALL(cudaMemcpy(gpuB, &b, sizeof(Evaluation), cudaMemcpyHostToDevice));
+    auto gpuA = Opm::gpuistl::make_gpu_unique_ptr(a);
+    auto gpuB = Opm::gpuistl::make_gpu_unique_ptr(b);
 
-    const double gpuComputedResultOnCpu = launchKernelAndRetrieveResult(gpuEvaluateUniformTabulated2DFunction, gpuViewTab, gpuA, gpuB);
-
-    // Free allocated GPU memory
-    OPM_GPU_SAFE_CALL(cudaFree(gpuA));
-    OPM_GPU_SAFE_CALL(cudaFree(gpuB));
+    const double gpuComputedResultOnCpu = launchKernelAndRetrieveResult(gpuEvaluateUniformTabulated2DFunction, gpuViewTab, gpuA.get(), gpuB.get());
 
     // Verify that the CPU and GPU results match within a reasonable tolerance
     const double cpuComputedResult = cpuTab.eval(a, b, true).value();

@@ -23,10 +23,9 @@
 #include <cuda_runtime.h>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 
-BOOST_AUTO_TEST_CASE(TestGpuMalloc)
+BOOST_AUTO_TEST_CASE(TestSuccessfulCall)
 {
-    void* pointer;
-    BOOST_CHECK_NO_THROW(OPM_GPU_SAFE_CALL(cudaMalloc(&pointer, 1)););
+    BOOST_CHECK_NO_THROW(OPM_GPU_SAFE_CALL(cudaSuccess));
 }
 
 
