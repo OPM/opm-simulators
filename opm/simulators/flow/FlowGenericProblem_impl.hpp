@@ -203,6 +203,16 @@ readRockParameters_(const std::vector<Scalar>& cellCenterDepths,
                 throw std::runtime_error(fmtError("Rock water compaction",
                                                   rockCompPoroMultWc_.size()));
             }
+            // ROCK is sized by NTPVT unless ROCKNUM is selected through TABDIMS(13)
+            // and ROCKOPTS(3), so it may hold fewer records than the rock regions.
+            if (!rockParams_.empty() &&
+                fieldPropValue > static_cast<int>(rockParams_.size())) {
+                throw std::runtime_error(fmtError("Rock compressibility (ROCK)",
+                                                  rockParams_.size())
+                    + ". ROCK has one record per ROCKNUM region only if TABDIMS item 13"
+                      " (NTROCC) is set to the number of ROCKNUM regions and ROCKOPTS"
+                      " item 3 is ROCKNUM or defaulted");
+            }
         };
 
         rockTableIdx_ = this->lookUpData_.template assignFieldPropsIntOnLeaf<short unsigned int>(eclState_.fieldProps(),
