@@ -350,6 +350,18 @@ collectSlaveGroupReinjectionRateForGasPhase_(std::size_t group_idx) const
 }
 
 template<typename Scalar, typename IndexTraits>
+Scalar
+RescoupSendSlaveGroupData<Scalar, IndexTraits>::
+collectSlaveGroupGasLiftRate_(std::size_t group_idx, bool network) const
+{
+    auto& rescoup_slave = this->reservoir_coupling_slave_;
+    const auto& group_name = rescoup_slave.slaveGroupIdxToGroupName(group_idx);
+    const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
+    // sumWellGasLiftRates() only sums wells owned by this rank
+    return this->comm().sum(this->groupStateHelper_.sumWellGasLiftRates(group, network));
+}
+
+template<typename Scalar, typename IndexTraits>
 typename RescoupSendSlaveGroupData<Scalar, IndexTraits>::ProductionRates
 RescoupSendSlaveGroupData<Scalar, IndexTraits>::
 collectSlaveGroupSurfaceProductionRates_(std::size_t group_idx) const
@@ -497,6 +509,15 @@ collectSlaveGroupProductionData_(std::size_t group_idx) const
     // stored slave group data on every receive, so it would then also have to keep
     // the summary fields of the last end-of-sync-step message.
     this->collectSlaveGroupSummaryProductionData_(group_idx, production_data);
+    // The master uses this for network nodes with NODEPROP item 4 = YES.
+    production_data.network_gas_lift_rate =
+        this->collectSlaveGroupGasLiftRate_(group_idx, /*network=*/true);
+    {
+        const auto& group_name = this->reservoir_coupling_slave_.slaveGroupIdxToGroupName(group_idx);
+        const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
+        production_data.gas_lift_headroom =
+            this->comm().sum(this->groupStateHelper_.sumWellGasLiftHeadroom(group));
+    }
     return production_data;
 }
 

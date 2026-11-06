@@ -236,16 +236,16 @@ receiveMasterGroupNodePressuresFromMaster(std::size_t num_pressures)
 }
 
 template <class Scalar>
-std::pair<std::size_t, std::size_t>
+std::tuple<std::size_t, std::size_t, std::size_t>
 ReservoirCouplingSlaveReportStep<Scalar>::
 receiveNumGroupConstraintsFromMaster() const {
-    std::vector<std::size_t> num_group_targets(2);
+    std::vector<std::size_t> num_group_targets(3);
     if (this->comm().rank() == 0) {
         auto MPI_SIZE_T_TYPE = Dune::MPITraits<std::size_t>::getType();
         // NOTE: See comment about error handling at the top of this file.
         MPI_Recv(
             num_group_targets.data(),
-            /*count=*/2,
+            /*count=*/3,
             /*datatype=*/MPI_SIZE_T_TYPE,
             /*source_rank=*/0,
             /*tag=*/static_cast<int>(MessageTag::NumSlaveGroupConstraints),
@@ -254,13 +254,14 @@ receiveNumGroupConstraintsFromMaster() const {
         );
         this->logger().debug("Received number of slave group constraints from master process rank 0");
     }
-    this->comm().broadcast(num_group_targets.data(), /*count=*/2, /*emitter_rank=*/0);
+    this->comm().broadcast(num_group_targets.data(), /*count=*/3, /*emitter_rank=*/0);
     auto num_injection_targets = num_group_targets[0];
     auto num_production_constraints = num_group_targets[1];
-    this->logger().debug(fmt::format("Received number of injection targets: {} and "
-                             "production constraints: {} from master process",
-                             num_injection_targets, num_production_constraints));
-    return std::make_pair(num_injection_targets, num_production_constraints);
+    auto num_gas_lift_limits = num_group_targets[2];
+    this->logger().debug(fmt::format("Received number of injection targets: {}, "
+                             "production constraints: {} and gas lift limits: {} from master process",
+                             num_injection_targets, num_production_constraints, num_gas_lift_limits));
+    return {num_injection_targets, num_production_constraints, num_gas_lift_limits};
 }
 
 template <class Scalar>
@@ -298,6 +299,54 @@ receiveNumMasterGroupNodePressuresFromMaster()
         num_pressures, is_final
     ));
     return {num_pressures, is_final};
+}
+
+template <class Scalar>
+void
+ReservoirCouplingSlaveReportStep<Scalar>::
+receiveGasLiftGroupLimitsFromMaster(std::size_t num_limits)
+{
+    using GasLiftGroupLimits = ReservoirCoupling::GasLiftGroupLimits<Scalar>;
+    std::vector<GasLiftGroupLimits> limits(num_limits);
+    // The master sends nothing when it has no records, which then replace the limits
+    // received before: there are none in force.
+    if (num_limits > 0 && this->comm().rank() == 0) {
+        auto MPI_GAS_LIFT_LIMITS_TYPE = Dune::MPITraits<GasLiftGroupLimits>::getType();
+        // NOTE: See comment about error handling at the top of this file.
+        MPI_Recv(
+            limits.data(),
+            /*count=*/num_limits,
+            /*datatype=*/MPI_GAS_LIFT_LIMITS_TYPE,
+            /*source_rank=*/0,
+            /*tag=*/static_cast<int>(MessageTag::GasLiftGroupLimits),
+            this->getSlaveMasterComm(),
+            MPI_STATUS_IGNORE
+        );
+    }
+    if (num_limits > 0) {
+        this->comm().broadcast(limits.data(), num_limits, /*emitter_rank=*/0);
+    }
+    this->master_gas_lift_limits_.clear();
+    for (const auto& limit : limits) {
+        if (limit.max_lift_gas < 0 && limit.max_total_gas < 0) {
+            continue;
+        }
+        const auto& group_name = this->slave_.slaveGroupIdxToGroupName(limit.group_name_idx);
+        this->master_gas_lift_limits_[group_name] = limit;
+        this->logger().debug(fmt::format(
+            "Stored master gas lift limits for group '{}': max_lift_gas={}, max_total_gas={}",
+            group_name, limit.max_lift_gas, limit.max_total_gas
+        ));
+    }
+}
+
+template <class Scalar>
+const ReservoirCoupling::GasLiftGroupLimits<Scalar>*
+ReservoirCouplingSlaveReportStep<Scalar>::
+masterGasLiftLimits(const std::string& gname) const
+{
+    auto it = this->master_gas_lift_limits_.find(gname);
+    return (it == this->master_gas_lift_limits_.end()) ? nullptr : &it->second;
 }
 
 template <class Scalar>

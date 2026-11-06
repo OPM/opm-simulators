@@ -25,7 +25,7 @@ START
 
 WELLDIMS
 -- max wells, max cons/well, max groups, max wells/group
-   1 1 7 4 /
+   1 1 7 6 /
 
 TABDIMS
 /

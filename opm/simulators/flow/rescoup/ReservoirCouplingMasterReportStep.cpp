@@ -104,6 +104,52 @@ getMasterGroupProductionReservoirRate(const std::string &group_name, ReservoirCo
 }
 
 template <class Scalar>
+bool
+ReservoirCouplingMasterReportStep<Scalar>::
+hasSlaveGroupProductionData(const std::string &group_name) const
+{
+    const auto it = this->getMasterGroupToSlaveNameMap().find(group_name);
+    return it != this->getMasterGroupToSlaveNameMap().end()
+        && this->slave_group_production_data_.count(it->second) > 0;
+}
+
+template <class Scalar>
+const ReservoirCoupling::SlaveGroupProductionData<Scalar>*
+ReservoirCouplingMasterReportStep<Scalar>::
+slaveGroupProductionDataOrNull_(const std::string &group_name) const
+{
+    const auto it = this->getMasterGroupToSlaveNameMap().find(group_name);
+    if (it == this->getMasterGroupToSlaveNameMap().end()) {
+        RCOUP_LOG_THROW(
+            std::runtime_error,
+            fmt::format(
+                "Master group name {} not found in master-to-slave-group-name mapping",
+                group_name
+            )
+        );
+    }
+    const auto& slave_name = it->second;
+    const auto data_it = this->slave_group_production_data_.find(slave_name);
+    if (data_it == this->slave_group_production_data_.end()) {
+        // The slave has sent no production data, e.g. it has no slave groups yet
+        return nullptr;
+    }
+    return &data_it->second[this->getMasterGroupCanonicalIdx(slave_name, group_name)];
+}
+
+template <class Scalar>
+Scalar
+ReservoirCouplingMasterReportStep<Scalar>::
+getMasterGroupGasLiftRate(const std::string &group_name, bool network) const
+{
+    const auto* data = this->slaveGroupProductionDataOrNull_(group_name);
+    if (data == nullptr) {
+        return 0.0;
+    }
+    return network ? data->network_gas_lift_rate : data->gas_lift_rate;
+}
+
+template <class Scalar>
 int
 ReservoirCouplingMasterReportStep<Scalar>::
 getSlaveGroupNumGroupControlledProducers(const std::string &master_group_name) const
@@ -148,6 +194,15 @@ getSlaveGroupNumGroupControlledInjectors(const std::string &master_group_name,
             )
         );
     }
+}
+
+template <class Scalar>
+Scalar
+ReservoirCouplingMasterReportStep<Scalar>::
+getMasterGroupGasLiftHeadroom(const std::string &group_name) const
+{
+    const auto* data = this->slaveGroupProductionDataOrNull_(group_name);
+    return (data == nullptr) ? Scalar{0} : data->gas_lift_headroom;
 }
 
 template <class Scalar>
@@ -375,27 +430,30 @@ void
 ReservoirCouplingMasterReportStep<Scalar>::
 sendNumGroupConstraintsToSlave(std::size_t slave_idx,
                            std::size_t num_injection_targets,
-                           std::size_t num_production_constraints) const
+                           std::size_t num_production_constraints,
+                           std::size_t num_gas_lift_limits) const
 {
     // Only rank 0 sends data to slaves. Other ranks in the master's MPI communicator
     // do not participate in master-slave communication (no else branch needed).
     if (this->comm().rank() == 0) {
-        std::vector<std::size_t> num_targets(2);
+        std::vector<std::size_t> num_targets(3);
         num_targets[0] = num_injection_targets;
         num_targets[1] = num_production_constraints;
+        num_targets[2] = num_gas_lift_limits;
         auto MPI_SIZE_T_TYPE = Dune::MPITraits<std::size_t>::getType();
         // NOTE: See comment about error handling at the top of this file.
         MPI_Send(
             num_targets.data(),
-            /*count=*/2,
+            /*count=*/3,
             /*datatype=*/MPI_SIZE_T_TYPE,
             /*dest_rank=*/0,
             /*tag=*/static_cast<int>(MessageTag::NumSlaveGroupConstraints),
             this->getSlaveComm(slave_idx)
         );
         this->logger().debug(fmt::format(
-            "Sent constraint counts (inj={}, prod={}) to {}",
-            num_injection_targets, num_production_constraints, this->slaveName(slave_idx)
+            "Sent constraint counts (inj={}, prod={}, gaslift={}) to {}",
+            num_injection_targets, num_production_constraints, num_gas_lift_limits,
+            this->slaveName(slave_idx)
         ));
     }
 }
@@ -432,6 +490,32 @@ sendNumMasterGroupNodePressuresToSlave(std::size_t slave_idx,
         this->logger().debug(fmt::format(
             "Sent master-group-node-pressure header (count={}, is_final={}) to {}",
             num_pressures, is_final, this->slaveName(slave_idx)
+        ));
+    }
+}
+
+template <class Scalar>
+void
+ReservoirCouplingMasterReportStep<Scalar>::
+sendGasLiftGroupLimitsToSlave(std::size_t slave_idx,
+                              const std::vector<GasLiftGroupLimits>& gas_lift_limits) const
+{
+    // Only rank 0 sends data to slaves. Other ranks in the master's MPI communicator
+    // do not participate in master-slave communication (no else branch needed).
+    if (this->comm().rank() == 0) {
+        auto MPI_GAS_LIFT_LIMITS_TYPE = Dune::MPITraits<GasLiftGroupLimits>::getType();
+        // NOTE: See comment about error handling at the top of this file.
+        MPI_Send(
+            gas_lift_limits.data(),
+            /*count=*/gas_lift_limits.size(),
+            /*datatype=*/MPI_GAS_LIFT_LIMITS_TYPE,
+            /*dest_rank=*/0,
+            /*tag=*/static_cast<int>(MessageTag::GasLiftGroupLimits),
+            this->getSlaveComm(slave_idx)
+        );
+        this->logger().debug(fmt::format(
+            "Sent {} gas lift group limits to {}",
+            gas_lift_limits.size(), this->slaveName(slave_idx)
         ));
     }
 }
