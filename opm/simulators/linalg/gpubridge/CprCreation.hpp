@@ -24,6 +24,7 @@
 #include <dune/istl/paamg/matrixhierarchy.hh>
 #include <dune/istl/umfpack.hh>
 
+#include <opm/simulators/linalg/ISTLDirectSolverHelper.hpp>
 #include <opm/simulators/linalg/gpubridge/Matrix.hpp>
 #include <opm/simulators/linalg/gpubridge/Preconditioner.hpp>
 
@@ -65,7 +66,7 @@ protected:
     std::vector<int> level_sizes;               // size of each level in the AMG hierarchy
     std::vector<std::vector<int> > diagIndices; // index of diagonal value for each level
     std::conditional_t<std::is_same_v<Scalar,double>,
-                       Dune::UMFPack<DuneMat>, int> umfpack; // dune/istl/umfpack object used to solve the coarsest level of AMG
+                       Opm::UMFPack<DuneMat, DuneVec, DuneVec>, int> umfpack; // dune/istl/umfpack object used to solve the coarsest level of AMG
     bool always_recalculate_aggregates = false; // OPM always reuses the aggregates by default
     bool recalculate_aggregates = true;         // only rerecalculate if true
     const int pressure_idx = 1;                 // hardcoded to mimic OPM
