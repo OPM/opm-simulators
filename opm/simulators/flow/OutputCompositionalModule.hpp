@@ -413,6 +413,13 @@ public:
                                                     : Scalar{1});
                   }, this->compC_.vaporFractionAllocated()
             },
+            Entry{[&compC = this->compC_, &problem = this->simulator_.problem()]
+                  (const ExtractContext& ectx)
+                  {
+                      compC.assignLiCorrelationFactor(ectx.globalDofIdx,
+                                                      problem.liCorrelationFactor(ectx.globalDofIdx));
+                  }, this->compC_.liCorrelationFactorAllocated()
+            },
             // The phase densities and viscosities, reported where the phase is present.
             Entry{PhaseEntry{&this->relativePermeability_,
                   [](const unsigned phaseIdx, const ExtractContext& ectx)

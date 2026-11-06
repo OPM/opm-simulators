@@ -58,7 +58,8 @@ public:
     /// Allocate compositional restart fields requested by \p rstKeywords.
     /// PSAT is currently consumed only by restart output. Allocate it only
     /// for passes that will write restart data because filling the buffer
-    /// requires a nonlinear solve for each single-phase cell.
+    /// requires a nonlinear solve for each single-phase cell. LIFACT is part
+    /// of every restart pass.
     void allocate(const unsigned bufferSize,
                   std::map<std::string, int>& rstKeywords,
                   RestartOutput restartOutput);
@@ -99,6 +100,9 @@ public:
     void assignVaporFraction(const unsigned globalDofIdx,
                              const Scalar vmf);
 
+    void assignLiCorrelationFactor(const unsigned globalDofIdx,
+                                   const Scalar factor);
+
     void outputRestart(data::Solution& sol,
                        ScalarBuffer& oil_saturation);
 
@@ -119,6 +123,9 @@ public:
 
     bool saturationPressureAllocated() const
     { return !saturationPressure_.empty(); }
+
+    bool liCorrelationFactorAllocated() const
+    { return !liCorrelationFactor_.empty(); }
 
     /// Whether PSAT was requested in this allocation pass. Unlike the buffer
     /// state above, this remains true on MPI ranks with no local cells.
@@ -142,6 +149,8 @@ private:
     bool saturationPressureRequested_ = false;
     // vapour mole fraction of the total mixture (VMF)
     ScalarBuffer vaporFraction_;
+    // multiplier on the Li critical temperature, FACTLI (LIFACT)
+    ScalarBuffer liCorrelationFactor_;
 };
 
 } // namespace Opm
