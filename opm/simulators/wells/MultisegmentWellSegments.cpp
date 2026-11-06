@@ -536,13 +536,58 @@ pressureDropValve(const int seg,
 }
 
 template<class FluidSystem, class Indices>
+typename MultisegmentWellSegments<FluidSystem,Indices>::Scalar
+MultisegmentWellSegments<FluidSystem,Indices>::
+accelerationCoefficient(const int seg) const
+{
+    // Mass rates are positive towards the toe, so a positive balance leaves through the wall.
+    // The tolerance ignores mass-balance residue from storage or an unconverged iterate.
+    Scalar wall_outflow = mass_rates_[seg].value();
+    for (const int inlet : inlets_[seg]) {
+        wall_outflow -= mass_rates_[inlet].value();
+    }
+    const bool wall_flow = !perforations_[seg].empty()
+        && wall_outflow > 1e-3 * std::abs(mass_rates_[seg].value());
+    const bool divides = wall_flow || !dividingInletWeights(seg).empty();
+    return divides ? 0.5 : 1.0;
+}
+
+template<class FluidSystem, class Indices>
+std::vector<typename MultisegmentWellSegments<FluidSystem,Indices>::Scalar>
+MultisegmentWellSegments<FluidSystem,Indices>::
+dividingInletWeights(const int seg) const
+{
+    std::vector<Scalar> weights;
+    if (inlets_[seg].size() < 2 || mass_rates_[seg].value() <= 0.0) {
+        return weights;
+    }
+    Scalar total = 0.0;
+    int flowing = 0;
+    for (const int inlet : inlets_[seg]) {
+        const Scalar rate = mass_rates_[inlet].value();
+        if (rate < 0.0) {
+            return weights;
+        }
+        flowing += rate > 0.0;
+        total += rate;
+    }
+    if (flowing < 2) {
+        return weights;
+    }
+    for (const int inlet : inlets_[seg]) {
+        weights.push_back(mass_rates_[inlet].value() / total);
+    }
+    return weights;
+}
+
+template<class FluidSystem, class Indices>
 typename MultisegmentWellSegments<FluidSystem,Indices>::EvalWell
 MultisegmentWellSegments<FluidSystem,Indices>::
 accelerationPressureLossContribution(const int seg,
                                      const Scalar area,
                                      const bool extra_reverse_flow_derivatives /*false*/) const
 {
-    // Compute the *signed* velocity head for given segment (sign is positive for flow towards surface, i.e., negative rate)
+    // Compute the velocity head for given segment, which does not depend on flow direction.
     // Optionally return derivatives for reversed flow case
     EvalWell mass_rate = mass_rates_[seg];
     const int seg_upwind = upwinding_segments_[seg];
@@ -565,8 +610,7 @@ accelerationPressureLossContribution(const int seg,
             mass_rate.clearDerivatives();
         }
     }
-    const Scalar sign = mass_rate > 0 ? -1.0 : 1.0;
-    return sign * mswellhelpers::velocityHead(area, mass_rate, density);
+    return mswellhelpers::velocityHead(area, mass_rate, density);
 }
 
 template <class FluidSystem, class Indices>

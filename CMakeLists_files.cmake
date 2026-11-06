@@ -710,6 +710,7 @@ list (APPEND TEST_DATA_FILES
   tests/COMP_EXPLICIT_SOIL_SGAS.DATA
   tests/drsdt_initial_rs.DATA
   tests/equil_base.DATA
+  tests/msw_acceleration.DATA
   tests/numaquifer_equil_immobile.DATA
   tests/numaquifer_equil_mismatch.DATA
   tests/numaquifer_equil_tolerance.DATA
