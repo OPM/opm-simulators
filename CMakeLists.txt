@@ -668,6 +668,22 @@ macro(opm-simulators_tests_hook)
         ${${project}_LABEL}
     )
   endif()
+
+  # A RUNSPEC error must stop flow_comp with a message, not std::terminate().
+  add_test(
+    NAME
+      runSimulator/comp_runspec_parse_error
+    COMMAND
+      $<TARGET_FILE:flow_comp>
+        --output-dir=${PROJECT_BINARY_DIR}/tests/results/flow_comp+comp_runspec_parse_error
+        ${PROJECT_SOURCE_DIR}/tests/COMP_RUNSPEC_PARSE_ERROR.DATA
+  )
+  set_tests_properties(
+    runSimulator/comp_runspec_parse_error
+    PROPERTIES
+      PASS_REGULAR_EXPRESSION "Failed to read the RUNSPEC section"
+      FAIL_REGULAR_EXPRESSION "terminate called"
+  )
 endmacro()
 
 macro(opm-simulators_targets_hook)
