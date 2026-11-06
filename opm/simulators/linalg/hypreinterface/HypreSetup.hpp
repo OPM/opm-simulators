@@ -135,6 +135,9 @@ setSolverParameters(HYPRE_Solver solver, const PropertyTree& prm, bool use_gpu_b
     HYPRE_SAFE_CALL(HYPRE_BoomerAMGSetInterpType(solver, prm.get<int>("interp_type", 6)));
     HYPRE_SAFE_CALL(HYPRE_BoomerAMGSetMaxLevels(solver, prm.get<int>("max_levels", 15)));
     HYPRE_SAFE_CALL(HYPRE_BoomerAMGSetTol(solver, prm.get<double>("tolerance", 0.0)));
+    // HYPRE's 0.9 makes accumulation-dominated pressure rows all-weak (one-level hierarchy)
+    HYPRE_SAFE_CALL(HYPRE_BoomerAMGSetMaxRowSum(solver, prm.get<double>("max_row_sum", 0.9)));
+    HYPRE_SAFE_CALL(HYPRE_BoomerAMGSetPMaxElmts(solver, prm.get<int>("p_max_elmts", 4)));
 
     if (use_gpu_backend) {
         HYPRE_SAFE_CALL(HYPRE_BoomerAMGSetRelaxType(solver, prm.get<int>("relax_type", 16)));
