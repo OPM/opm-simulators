@@ -23,8 +23,6 @@
 #include <config.h>
 #include <opm/simulators/flow/CompositionalContainer.hpp>
 
-#include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
-
 #include <opm/material/constraintsolvers/SaturationPressure.hpp>
 #include <opm/material/fluidsystems/GenericOilGasWaterFluidSystem.hpp>
 
@@ -247,7 +245,7 @@ cellSaturationPressure(const Scalar liquidFraction,
                        const Scalar oilPressure,
                        const std::array<Scalar, numComponents>& moleFractions,
                        const Scalar temperature,
-                       const CompositionalConfig::EOSType eosType) -> std::optional<Scalar>
+                       const unsigned eosRegionIdx) -> std::optional<Scalar>
 {
     // Compare against the flash's exact single-phase labels. Round-off can put
     // a two-phase Rachford-Rice result slightly outside the interval [0, 1].
@@ -264,8 +262,8 @@ cellSaturationPressure(const Scalar liquidFraction,
         typename Solver::CompVec incipient{};
         Scalar psat{};
         const bool found = liquidOnly
-            ? Solver::bubblePressure(moleFractions, temperature, eosType, psat, incipient)
-            : Solver::dewPressure(moleFractions, temperature, eosType, psat, incipient);
+            ? Solver::bubblePressure(moleFractions, temperature, eosRegionIdx, psat, incipient)
+            : Solver::dewPressure(moleFractions, temperature, eosRegionIdx, psat, incipient);
         if (found) {
             return psat;
         }

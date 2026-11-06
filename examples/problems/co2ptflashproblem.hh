@@ -30,8 +30,6 @@
 
 #include <opm/common/Exceptions.hpp>
 
-#include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
-
 #include <opm/material/components/SimpleCO2.hpp>
 #include <opm/material/components/C10.hpp>
 #include <opm/material/components/C1.hpp>
@@ -280,13 +278,13 @@ public:
         return gravity_;
     }
 
-    Opm::CompositionalConfig::EOSType getEosType() const
-    {
-        return Opm::CompositionalConfig::EOSType::PR;
-    }
-
     template <class Context>
     unsigned pvtRegionIndex(const Context&, unsigned, unsigned) const
+    {
+        return 0;
+    }
+
+    unsigned eosRegionIndex(unsigned /*globalDofIdx*/) const
     {
         return 0;
     }
@@ -540,7 +538,7 @@ private:
 
         // Set initial K and L
         for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-            const Evaluation Ktmp = fs.wilsonK_(compIdx);
+            const Evaluation Ktmp = fs.wilsonK_(compIdx, /*eosRegionIdx=*/0);
             fs.setKvalue(compIdx, Ktmp);
         }
 

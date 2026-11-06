@@ -26,8 +26,6 @@
 #ifndef OPM_COMPOSITIONAL_CONTAINER_HPP
 #define OPM_COMPOSITIONAL_CONTAINER_HPP
 
-#include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
-
 #include <array>
 #include <functional>
 #include <map>
@@ -94,7 +92,7 @@ public:
                            const Scalar oilPressure,
                            const std::array<Scalar, numComponents>& moleFractions,
                            const Scalar temperature,
-                           const CompositionalConfig::EOSType eosType);
+                           const unsigned eosRegionIdx);
 
     void assignVaporFraction(const unsigned globalDofIdx,
                              const Scalar vmf);
