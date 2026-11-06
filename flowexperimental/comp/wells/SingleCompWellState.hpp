@@ -93,6 +93,10 @@ public:
     std::vector<std::vector<Scalar> > phase_molar_fractions;
 
     CompConnectionData<Scalar> connection_data;
+    // density of the wellbore fluid between each connection and the one above
+    // it in the last time step; empty until the well is solved with its
+    // current connections
+    std::vector<Scalar> connection_densities;
 
     WellInjectorCMode injection_cmode{WellInjectorCMode::CMODE_UNDEFINED};
     WellProducerCMode production_cmode{WellProducerCMode::CMODE_UNDEFINED};
