@@ -212,9 +212,9 @@ function(add_test_compareSeparateECLFiles)
                         SIMULATOR ${PARAM_SIMULATOR}
                         TESTNAME ${PARAM_CASENAME}
                         PROCESSORS ${MPI_PROCS})
-  if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)
+  if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.22 AND opm-common_PYTHON_COMMON_DIR)
     set_tests_properties(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_CASENAME} PROPERTIES
-                         ENVIRONMENT_MODIFICATION PYTHONPATH=path_list_append:${opm-common_DIR}/python)
+                         ENVIRONMENT_MODIFICATION PYTHONPATH=path_list_append:${opm-common_PYTHON_COMMON_DIR})
   endif()
 endfunction()
 
