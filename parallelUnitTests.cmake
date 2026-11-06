@@ -24,6 +24,15 @@ opm_add_test(test_compequil_invalid_eqlnum_np2
     2
 )
 
+opm_add_test(test_compequil_solvd_np2
+  EXE_TARGET
+    test_compequil_solvd
+  DRIVER_ARGS
+    -n 2
+  PROCESSORS
+    2
+)
+
 opm_add_test(test_gatherconvergencereport
   DEPENDS
     opmsimulators
