@@ -909,6 +909,35 @@ add_test_compare_parallel_simulation(
     --relaxed-max-pv-fraction=0.0
 )
 
+# The first aquifer cell is on rank 0 and the other two on rank 1.
+add_test_compare_parallel_simulation(
+  CASENAME
+    numerical_aquifer_3d_1aqu_split
+  FILENAME
+    3D_1AQU_3CELLS
+  POSTFIX
+    split
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol_parallel}
+  REL_TOL
+    0.05
+  DIR
+    aquifer-num
+  MPI_PROCS
+    2
+  TEST_ARGS
+    --enable-tuning=true
+    --tolerance-cnv=0.00003
+    --time-step-control=pid
+    --linear-solver=cpr_trueimpes
+    --relaxed-max-pv-fraction=0.0
+    --external-partition=${OPM_TESTS_ROOT}/aquifer-num/3D_1AQU_3CELLS_SPLIT.partition
+)
+
 add_test_compare_parallel_simulation(
   CASENAME
     6_uda_model5_stdw
