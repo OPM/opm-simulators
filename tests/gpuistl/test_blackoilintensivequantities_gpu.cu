@@ -660,15 +660,24 @@ struct TemporaryFile {
     TemporaryFile& operator=(const TemporaryFile&) = delete;
 };
 
-static void runProductionDispatcherTest(const std::string& deckPath)
-{
-    using ProductionTypeTag = Opm::Properties::TTag::FlowGasWaterEnergyProblem;
-    using Simulator = Opm::GetPropType<ProductionTypeTag, Opm::Properties::Simulator>;
-    using PrimaryVariables =
-        Opm::GetPropType<ProductionTypeTag, Opm::Properties::PrimaryVariables>;
-    using IntensiveQuantities =
-        Opm::GetPropType<ProductionTypeTag, Opm::Properties::IntensiveQuantities>;
+using ProductionTypeTag = Opm::Properties::TTag::FlowGasWaterEnergyProblem;
+using ProductionSimulator = Opm::GetPropType<ProductionTypeTag, Opm::Properties::Simulator>;
+using ProductionPrimaryVariables =
+    Opm::GetPropType<ProductionTypeTag, Opm::Properties::PrimaryVariables>;
+using ProductionIntensiveQuantities =
+    Opm::GetPropType<ProductionTypeTag, Opm::Properties::IntensiveQuantities>;
 
+/// Per-cell pointers passed to the production dispatcher.
+struct ProductionDispatcherInputs
+{
+    std::vector<const ProductionPrimaryVariables*> primaryVariables;
+    std::vector<ProductionIntensiveQuantities*> intensiveQuantities;
+};
+
+/// Read \p deckPath and set up a simulator for the production TypeTag, with
+/// its initial solution and CPU intensive quantities.
+static std::unique_ptr<ProductionSimulator> makeProductionSimulator(const std::string& deckPath)
+{
     Opm::resetLocale();
     initSimulatorOnce();
 
@@ -685,27 +694,45 @@ static void runProductionDispatcherTest(const std::string& deckPath)
                                               /*myRank=*/0);
 
     Opm::FlowGenericVanguard::readDeck(deckPath, /*ignoredKeywords=*/"");
-    auto sim = std::make_unique<Simulator>();
+    auto sim = std::make_unique<ProductionSimulator>();
     sim->model().applyInitialSolution();
     sim->model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
+    return sim;
+}
 
-    const auto& problem = sim->problem();
-    const auto& solution = problem.model().solution(/*timeIdx=*/0);
-    const std::size_t numCells = problem.model().numGridDof();
+/// Collect pointers to the initial solution and the cached CPU intensive
+/// quantities of every cell of \p sim.
+static ProductionDispatcherInputs makeProductionDispatcherInputs(ProductionSimulator& sim)
+{
+    const auto& solution = sim.problem().model().solution(/*timeIdx=*/0);
+    const std::size_t numCells = sim.model().numGridDof();
     BOOST_REQUIRE_EQUAL(solution.size(), numCells);
 
-    std::vector<const PrimaryVariables*> primaryVariables(numCells);
-    std::vector<IntensiveQuantities*> intensiveQuantities(numCells);
+    ProductionDispatcherInputs inputs;
+    inputs.primaryVariables.resize(numCells);
+    inputs.intensiveQuantities.resize(numCells);
+    for (std::size_t i = 0; i < numCells; ++i) {
+        inputs.primaryVariables[i] = &solution[i];
+        inputs.intensiveQuantities[i]
+            = const_cast<ProductionIntensiveQuantities*>(
+                sim.model().cachedIntensiveQuantities(static_cast<unsigned>(i), 0));
+        BOOST_REQUIRE(inputs.intensiveQuantities[i] != nullptr);
+    }
+    return inputs;
+}
+
+static void runProductionDispatcherTest(const std::string& deckPath)
+{
+    const auto sim = makeProductionSimulator(deckPath);
+    const auto& problem = sim->problem();
+    const auto [primaryVariables, intensiveQuantities] = makeProductionDispatcherInputs(*sim);
+    const std::size_t numCells = intensiveQuantities.size();
+
     std::vector<double> mobilityBefore(numCells * 2u);
     std::vector<double> waterDensityBefore(numCells);
     constexpr unsigned activePhases[] = {FluidSystem::waterPhaseIdx,
                                          FluidSystem::gasPhaseIdx};
     for (std::size_t i = 0; i < numCells; ++i) {
-        primaryVariables[i] = &solution[i];
-        intensiveQuantities[i]
-            = const_cast<IntensiveQuantities*>(
-                sim->model().cachedIntensiveQuantities(static_cast<unsigned>(i), 0));
-        BOOST_REQUIRE(intensiveQuantities[i] != nullptr);
         for (unsigned phaseOffset = 0; phaseOffset < 2u; ++phaseOffset) {
             mobilityBefore[2u * i + phaseOffset]
                 = asDouble(intensiveQuantities[i]->mobility(activePhases[phaseOffset]));
@@ -736,6 +763,26 @@ static void runProductionDispatcherTest(const std::string& deckPath)
                               FluidSystem::waterPhaseIdx)),
                           1e-6);
     }
+}
+
+/// Check that the production dispatcher refuses \p deckPath before it does
+/// any work on the GPU.
+static void runProductionDispatcherRejectionTest(const std::string& deckPath,
+                                                 std::string_view expectedMessage)
+{
+    const auto sim = makeProductionSimulator(deckPath);
+    const auto [primaryVariables, intensiveQuantities] = makeProductionDispatcherInputs(*sim);
+
+    Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcher<ProductionTypeTag> dispatcher;
+    BOOST_CHECK_EXCEPTION(dispatcher.update(sim->problem(),
+                                            primaryVariables.data(),
+                                            intensiveQuantities.data(),
+                                            intensiveQuantities.size()),
+                          std::logic_error,
+                          [expectedMessage](const std::logic_error& e) {
+                              return std::string_view{e.what()}.find(expectedMessage)
+                                  != std::string_view::npos;
+                          });
 }
 
 /// Variant of \c runIntensiveQuantitiesTestForDeck that takes the per-cell
@@ -1049,6 +1096,26 @@ BOOST_AUTO_TEST_CASE(TestProductionGpuDispatcherContract)
         f << deckString1;
     }
     runProductionDispatcherTest(tempFile.path.string());
+}
+
+BOOST_AUTO_TEST_CASE(TestProductionGpuDispatcherRejectsEndscale)
+{
+    // The GPU material-law manager does not implement endpoint scaling, so a
+    // deck with ENDSCALE must be refused. ENDSCALE alone is enough: it is not
+    // reported by Manager::enableEndPointScaling(), which only covers ENKRVD.
+    std::string deck{deckString1};
+    const std::string metric = "METRIC\n";
+    const auto pos = deck.find(metric);
+    BOOST_REQUIRE(pos != std::string::npos);
+    deck.insert(pos + metric.size(), "ENDSCALE\n/\n");
+
+    const TemporaryFile tempFile("test_blackoil_dispatcher_endscale.DATA");
+    {
+        std::ofstream f(tempFile.path);
+        f << deck;
+    }
+    runProductionDispatcherRejectionTest(tempFile.path.string(),
+                                         "does not support endpoint scaling");
 }
 
 BOOST_AUTO_TEST_CASE(TestInstantiateGpuFlowProblem)

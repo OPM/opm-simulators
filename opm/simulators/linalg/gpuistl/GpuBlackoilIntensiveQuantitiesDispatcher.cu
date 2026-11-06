@@ -187,12 +187,22 @@ void validateGpuPropertyInputs(const ProblemT& problem)
         OPM_THROW(std::logic_error,
                   "GPU property evaluation requires piecewise-linear saturation tables");
     }
+    // enableEndPointScaling() only reports ENKRVD tables. Regular endpoint
+    // scaling (ENDSCALE, endpoint arrays such as SWL/SGCR/KRW, or SWATINIT)
+    // is recorded in the endpoint-scaling configuration of each two-phase
+    // system. All of them are set from the same deck setting, and only the
+    // gas-water system is in use here (checked above).
+    if (materialLawManager.enableEndPointScaling()
+        || materialLawManager.gasWaterConfig().enableSatScaling()) {
+        OPM_THROW(std::logic_error,
+                  "GPU property evaluation does not support endpoint scaling "
+                  "(ENDSCALE, endpoint arrays or SWATINIT)");
+    }
     if (materialLawManager.enableHysteresis()
-        || materialLawManager.enableEndPointScaling()
         || materialLawManager.hasDirectionalRelperms()
         || materialLawManager.hasDirectionalImbnum()) {
         OPM_THROW(std::logic_error,
-                  "GPU property evaluation does not support hysteresis, endpoint scaling, "
+                  "GPU property evaluation does not support hysteresis "
                   "or directional saturation functions");
     }
 
