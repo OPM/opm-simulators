@@ -81,9 +81,7 @@ public:
     using Equations = MultisegmentWellEquations<Scalar,IndexTraits, numWellEq, Indices::numEq>;
     using BVectorWell = typename Equations::BVectorWell;
 
-    explicit MultisegmentWellPrimaryVariables(const WellInterfaceIndices<FluidSystem,Indices>& well)
-        : well_(well)
-    {}
+    explicit MultisegmentWellPrimaryVariables(const WellInterfaceIndices<FluidSystem,Indices>& well);
 
     //! \brief Resize values and evaluations.
     void resize(const int numSegments);
@@ -160,6 +158,17 @@ public:
                              DeferredLogger& deferred_logger) const;
 
 private:
+    //! \brief Scaling of well primary variable \p eqIdx, 1.0 unless configured.
+    Scalar varScale(const int eqIdx) const;
+
+    //! \brief The physical increment for \p eqIdx in \p seg from a solver-space update.
+    //! \details The only place solver-space quantities enter this class, see the
+    //!          note on value_ below.
+    Scalar physicalIncrement(const BVectorWell& dwells,
+                             const int seg,
+                             const int eqIdx) const
+    { return varScale(eqIdx) * dwells[seg][eqIdx]; }
+
     //! \brief Initialize evaluations from values.
     void setEvaluationsFromValues();
 
@@ -172,6 +181,18 @@ private:
 
     //! \brief The values for the primary variables
     //! \details Based on different solution strategies, the wells can have different primary variables
+    //!
+    //! Units contract when scaling is enabled (varScale() != 1):
+    //!  - value_ is PHYSICAL, and so is everything exchanged with WellState and
+    //!    every segment pressure or rate handed to a PVT lookup.
+    //!  - The linear system's unknown is X = x/varScale, so dwells arrives in
+    //!    X-space; physicalIncrement() is the only conversion, and the absolute
+    //!    limits in updateNewton() are therefore compared in physical units.
+    //!  - eval(seg)[i] has a physical value and derivative varScale(i), so any
+    //!    Jacobian entry must come from a derivative rather than a literal.
+    //! An alternative is to store X here and multiply out in the accessors; that
+    //! keeps value_ and the solution in one space but moves the conversion to
+    //! every WellState exchange and every getter.
     std::vector<std::array<Scalar, numWellEq>> value_;
 
     //! \brief The Evaluation for the well primary variables.
@@ -179,6 +200,9 @@ private:
     std::vector<std::array<EvalWell, numWellEq>> evaluation_;
 
     const WellInterfaceIndices<FluidSystem,Indices>& well_; //!< Reference to well interface
+
+    Scalar rate_scale_; //!< Read per well so Parameters::reset() takes effect
+    Scalar pressure_scale_;
 
     static constexpr double bhp_lower_limit = 1. * unit::barsa - 1. * unit::Pascal;
     static constexpr double seg_pres_lower_limit = 0.;
