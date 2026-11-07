@@ -256,9 +256,8 @@ doInit(bool rst, std::size_t numGridDof,
         freeTracerConcentration_[tracerIdx].resize(numGridDof);
         solTracerConcentration_[tracerIdx].resize(numGridDof);
 
-        if (rst)
-            continue;
-
+        // In a restarted run, the restart file replaces these values for the
+        // tracers it holds.  Tracers appended to TRACER keep them.
 
         // TBLKF keyword
         if (tracer.free_concentration.has_value()){
@@ -286,8 +285,10 @@ doInit(bool rst, std::size_t numGridDof,
             }
         }
         else {
-            OpmLog::warning(fmt::format("No TBLKF or TVDPF given for free tracer {}. "
-                                        "Initial values set to zero. ", tracer.name));
+            if (!rst) {
+                OpmLog::warning(fmt::format("No TBLKF or TVDPF given for free tracer {}. "
+                                            "Initial values set to zero. ", tracer.name));
+            }
             for (std::size_t globalDofIdx = 0; globalDofIdx < numGridDof; ++globalDofIdx) {
                 tracerConcentration_[tracerIdx][globalDofIdx][0] = 0.0;
                 freeTracerConcentration_[tracerIdx][globalDofIdx] = 0.0;
@@ -328,8 +329,10 @@ doInit(bool rst, std::size_t numGridDof,
             else {
                 // No solution tracers, default to zero
                 enableSolTracers_[tracerIdx] = false;
-                OpmLog::warning(fmt::format("No TBLKS or TVDPS given for solution tracer {}. "
-                                            "Initial values set to zero. ", tracer.name));
+                if (!rst) {
+                    OpmLog::warning(fmt::format("No TBLKS or TVDPS given for solution tracer {}. "
+                                                "Initial values set to zero. ", tracer.name));
+                }
                 for (std::size_t globalDofIdx = 0; globalDofIdx < numGridDof; ++globalDofIdx) {
                         tracerConcentration_[tracerIdx][globalDofIdx][1] = 0.0;
                         solTracerConcentration_[tracerIdx][globalDofIdx] = 0.0;

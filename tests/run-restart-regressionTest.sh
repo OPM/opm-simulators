@@ -3,6 +3,8 @@
 # This runs a simulator from start to end, then a restarted
 # run of the simulator, before comparing the output from the two runs.
 # This is meant to track regressions in the restart support.
+# The restarted run may start from the restart file of another deck,
+# for instance one which lacks a tracer that the restarted run appends.
 
 if test $# -eq 0
 then
@@ -17,11 +19,14 @@ then
   echo -e "\t\t -d <path>     Path to restart deck tool"
   echo -e "\t\t -e <filename> Simulator binary to use"
   echo -e "\t\t -s <step>     Step to do restart testing from"
+  echo -e "\tOptional options:"
+  echo -e "\t\t -b <filename> Deck file name of the run to restart from"
   exit 1
 fi
 
+RESTART_FROM=
 OPTIND=1
-while getopts "i:r:f:a:t:c:e:d:s:" OPT
+while getopts "i:r:f:a:t:c:e:d:s:b:" OPT
 do
   case "${OPT}" in
     i) INPUT_DATA_PATH=${OPTARG} ;;
@@ -33,6 +38,7 @@ do
     d) RST_DECK_COMMAND=${OPTARG} ;;
     s) RESTART_STEP=${OPTARG} ;;
     e) EXE_NAME=${OPTARG} ;;
+    b) RESTART_FROM=${OPTARG} ;;
   esac
 done
 shift $(($OPTIND-1))
@@ -47,7 +53,15 @@ cd ${RESULT_PATH}
 
 test $? -eq 0 || exit 1
 
-${RST_DECK_COMMAND} -m inline -s ${INPUT_DATA_PATH}/${FILENAME}.DATA ${FILENAME}.UNRST:${RESTART_STEP} ${BASE_NAME}.DATA
+if [ -n "${RESTART_FROM}" ]
+then
+  "${EXE_NAME}" ${INPUT_DATA_PATH}/${RESTART_FROM} --output-dir=${RESULT_PATH} ${TEST_ARGS}
+  test $? -eq 0 || exit 1
+else
+  RESTART_FROM=${FILENAME}
+fi
+
+${RST_DECK_COMMAND} -m inline -s ${INPUT_DATA_PATH}/${FILENAME}.DATA ${RESTART_FROM}.UNRST:${RESTART_STEP} ${BASE_NAME}.DATA
 
 "${EXE_NAME}" ${BASE_NAME} --output-dir=${RESULT_PATH} ${TEST_ARGS}
 test $? -eq 0 || exit 1
