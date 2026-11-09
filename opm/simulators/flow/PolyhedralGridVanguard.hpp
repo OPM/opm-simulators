@@ -628,12 +628,23 @@ protected:
             cellsOnProcess.insert(globalCell ? globalCell[cell] : cell);
         }
 
+        // The connections that ACTIONX may add later are only known on the root process. A process that has
+        // only such a connection has to take part in the well, or the connection would be lost for the well
+        // when it is added.
+        auto possibleFuture = this->schedule().getPossibleFutureConnections();
+        Parallel::MpiSerializer ser(this->grid_->comm());
+        ser.broadcast(Parallel::RootRank{0}, possibleFuture);
+
         this->parallelWells_.clear();
         for (const auto& well : this->schedule().getWellsatEnd()) {
             const auto& connections = well.getConnections();
-            const bool local = std::any_of(connections.begin(), connections.end(),
-                                           [&](const auto& connection)
-                                           { return cellsOnProcess.count(connection.global_index()) > 0; });
+            bool local = std::any_of(connections.begin(), connections.end(),
+                                     [&](const auto& connection)
+                                     { return cellsOnProcess.count(connection.global_index()) > 0; });
+            if (const auto it = possibleFuture.find(well.name()); !local && it != possibleFuture.end()) {
+                local = std::any_of(it->second.begin(), it->second.end(),
+                                    [&](const int index) { return cellsOnProcess.count(index) > 0; });
+            }
             this->parallelWells_.emplace_back(well.name(), local);
         }
         std::ranges::sort(this->parallelWells_);
