@@ -256,7 +256,7 @@ void
 NonlinearSystemCompositional<TypeTag>::
 updateTUNING(const Tuning& /*tuning*/)
 {
-    OpmLog::warning("TUNING convergence records 2 and 3 are ignored compositional simulations!");
+    OpmLog::warning("TUNING convergence records 2 and 3 are ignored in compositional simulations!");
 }
 
 template <class TypeTag>
@@ -354,23 +354,19 @@ void
 NonlinearSystemCompositional<TypeTag>::
 storeSolutionUpdate(const GlobalEqVector& dx)
 {
+    // Store dP and calculate dSeff from (raw) solution step
     const auto& elemMapper = this->simulator_.model().elementMapper();
     const auto& gridView = this->simulator_.gridView();
     for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
          unsigned globalElemIdx = elemMapper.index(elem);
 
-        // Store pressure update
-        const auto& dP = dx[globalElemIdx][Indices::pressure0Idx];
-        dP_[globalElemIdx] = dP;
+        const auto& dxCell = dx[globalElemIdx];
 
-        // Calculate effective saturation after Newton iteration to use in diff.
-        // TODO: use element context?
-        const auto* intQuants =
-            this->simulator_.model().cachedIntensiveQuantities(globalElemIdx, /*timeIdx=*/0);
-        assert(intQuants);
-        const auto& fs = intQuants->fluidState();
-        dSeff_[globalElemIdx] = effectiveSaturationChange_(effSatData_[globalElemIdx],
-                                                           computeEffectiveSaturationData_(fs));
+        // Store pressure update
+        dP_[globalElemIdx] = dxCell[Indices::pressure0Idx];
+
+        // Effective saturation change linearized around the state before the update
+        dSeff_[globalElemIdx] = effectiveSaturationChange_(effSatData_[globalElemIdx], dxCell);
     }
 }
 
@@ -420,11 +416,10 @@ getCompositionalConvergence(double reportTime,
     Scalar dSmax = 0.0;
     std::vector<Scalar> residualMaxNorm;
     std::vector<Scalar> residualSum;
-    std::vector<Scalar> specificVolumeAvg;
     const Scalar poreVolumeSumLocal = localCompositionalConvergenceData(
-        dPmax, dSmax, residualMaxNorm, residualSum, specificVolumeAvg);
+        dPmax, dSmax, residualMaxNorm, residualSum);
     const Scalar poreVolumeSum = compositionalConvergenceReduction(
-        poreVolumeSumLocal, dPmax, dSmax, residualMaxNorm, residualSum, specificVolumeAvg);
+        poreVolumeSumLocal, dPmax, dSmax, residualMaxNorm, residualSum);
 
     // Converged if the solution change criteria are met, or, regardless of them, if the residual
     // max-norm or sum is below its tolerance
@@ -432,16 +427,15 @@ getCompositionalConvergence(double reportTime,
     const Scalar tolDs = this->param_.tolerance_max_ds_;
     const bool solutionChangeConverged = hasSolutionUpdate && dPmax <= tolDp && dSmax <= tolDs;
 
-    // CNV and MB residual metrics: max. pore-volume normalized residual and residual sum
+    // CNV and MB residual metrics: max. and summed volume imbalance per pore volume
     const Scalar dt = this->simulator_.timeStepSize();
     std::vector<Scalar> cnv(numEq);
     std::vector<Scalar> mb(numEq);
     Scalar resMax = 0.0;
     Scalar resSum = 0.0;
     for (int eqIdx = 0; eqIdx < numEq; ++eqIdx) {
-        const Scalar specVol = specificVolumeAvg[eqIdx] > 0.0 ? specificVolumeAvg[eqIdx] : 1.0;
-        cnv[eqIdx] = specVol * dt * residualMaxNorm[eqIdx];
-        mb[eqIdx] = specVol * dt * std::abs(residualSum[eqIdx]) / poreVolumeSum;
+        cnv[eqIdx] = dt * residualMaxNorm[eqIdx];
+        mb[eqIdx] = dt * std::abs(residualSum[eqIdx]) / poreVolumeSum;
         resMax = std::max(resMax, cnv[eqIdx]);
         resSum = std::max(resSum, mb[eqIdx]);
     }
@@ -546,8 +540,7 @@ NonlinearSystemCompositional<TypeTag>::
 localCompositionalConvergenceData(Scalar& dPmax,
                                   Scalar& dSmax,
                                   std::vector<Scalar>& residualMaxNorm,
-                                  std::vector<Scalar>& residualSum,
-                                  std::vector<Scalar>& specificVolumeAvg) const
+                                  std::vector<Scalar>& residualSum) const
 {
     // Max. absolute pressure and effective saturation change over (local) cells
     dPmax = dP_.infinity_norm();
@@ -562,7 +555,6 @@ localCompositionalConvergenceData(Scalar& dPmax,
 
     residualMaxNorm.assign(numEq, 0.0);
     residualSum.assign(numEq, 0.0);
-    specificVolumeAvg.assign(numEq, 0.0);
     Scalar poreVolumeSumLocal = 0.0;
 
     const auto& elemMapper = model.elementMapper();
@@ -583,37 +575,30 @@ localCompositionalConvergenceData(Scalar& dPmax,
         }
         poreVolumeSumLocal += pvValue;
 
-        // Specific volume sums (i.e., sum over the inverse of component densities)
+        // Volume per residual unit: partial molar volume over molar mass, and 1/rho_w for water
         const auto* intQuants = model.cachedIntensiveQuantities(dofIdx, /*timeIdx=*/0);
         assert(intQuants);
         const auto& fs = intQuants->fluidState();
-        const Scalar L = decay<Scalar>(fs.L());
-        const Scalar massPerMole = L * decay<Scalar>(fs.averageMolarMass(FluidSystem::oilPhaseIdx))
-            + (1.0 - L) * decay<Scalar>(fs.averageMolarMass(FluidSystem::gasPhaseIdx));
-        const Scalar volumePerMole = L / decay<Scalar>(fs.molarDensity(FluidSystem::oilPhaseIdx))
-            + (1.0 - L) / decay<Scalar>(fs.molarDensity(FluidSystem::gasPhaseIdx));
-        const Scalar hcSpecificVolume = volumePerMole / massPerMole;
+        const auto partialMolarVolumes = partialMolarVolumes_(computeEffectiveSaturationData_(fs));
+        std::array<Scalar, numEq> volumePerResidual;
+        volumePerResidual.fill(1.0);
         for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
-            specificVolumeAvg[Indices::conti0EqIdx + compIdx] += hcSpecificVolume;
+            volumePerResidual[Indices::conti0EqIdx + compIdx]
+                = partialMolarVolumes[compIdx] / FluidSystem::molarMass(compIdx);
         }
         if constexpr (waterEnabled) {
-            specificVolumeAvg[Indices::conti0EqIdx + numComponents]
-                += 1.0 / decay<Scalar>(fs.density(FluidSystem::waterPhaseIdx));
+            volumePerResidual[Indices::conti0EqIdx + numComponents]
+                = 1.0 / decay<Scalar>(fs.density(FluidSystem::waterPhaseIdx));
         }
 
         // Max. and sum residuals, accounting for use of volumetric residuals
         const Scalar residualScale = useVolumetricResidual ? model.dofTotalVolume(dofIdx) : 1.0;
         const auto& localResidual = residual[dofIdx];
         for (int eqIdx = 0; eqIdx < numEq; ++eqIdx) {
-            const Scalar r = localResidual[eqIdx] * residualScale;
+            const Scalar r = localResidual[eqIdx] * residualScale * volumePerResidual[eqIdx];
             residualMaxNorm[eqIdx] = std::max(residualMaxNorm[eqIdx], std::abs(r) / pvValue);
             residualSum[eqIdx] += r;
         }
-    }
-
-    // Local share of the average over all cells of the global grid
-    for (auto& value : specificVolumeAvg) {
-        value /= Scalar(this->global_nc_);
     }
 
     return poreVolumeSumLocal;
@@ -626,8 +611,7 @@ compositionalConvergenceReduction(const Scalar poreVolumeSumLocal,
                                   Scalar& dPmax,
                                   Scalar& dSmax,
                                   std::vector<Scalar>& residualMaxNorm,
-                                  std::vector<Scalar>& residualSum,
-                                  std::vector<Scalar>& specificVolumeAvg)
+                                  std::vector<Scalar>& residualSum)
 {
     // Max. pressure and effective saturation change
     const auto& comm = this->grid_.comm();
@@ -638,13 +622,14 @@ compositionalConvergenceReduction(const Scalar poreVolumeSumLocal,
         dSmax = maxBuffer[1];
     }
 
-    // Residual metrics and pore volume. The second volume of the reduction is not used.
+    // Residual metrics and pore volume. The second volume and the averages are not used.
+    std::vector<Scalar> unusedAverages(numEq, 0.0);
     const auto [poreVolumeSum, unused] = this->convergenceReduction(comm,
                                                                     poreVolumeSumLocal,
                                                                     Scalar{0.0},
                                                                     residualSum,
                                                                     residualMaxNorm,
-                                                                    specificVolumeAvg);
+                                                                    unusedAverages);
     return poreVolumeSum;
 }
 
@@ -702,14 +687,6 @@ computeEffectiveSaturationData_(const FluidState& fs) const
 {
     EffectiveSaturationData data;
 
-    // Component moles per pore volume
-    for (const int phaseIdx : {FluidSystem::oilPhaseIdx, FluidSystem::gasPhaseIdx}) {
-        const Scalar Sb = decay<Scalar>(fs.saturation(phaseIdx) * fs.molarDensity(phaseIdx));
-        for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
-            data.molarDens[compIdx] += Sb * decay<Scalar>(fs.moleFraction(phaseIdx, compIdx));
-        }
-    }
-
     // Mixture molar volume and its derivatives w.r.t. z at fixed pressure
     const auto& L = fs.L();
     const auto v = L / fs.molarDensity(FluidSystem::oilPhaseIdx)
@@ -720,44 +697,72 @@ computeEffectiveSaturationData_(const FluidState& fs) const
         data.dMolarVolumeDz[compIdx] = v.derivative(Indices::z0Idx + compIdx);
     }
 
-    // Water volume per pore volume is m_w / rho_w
+    // Hydrocarbon fraction of the pore volume
     if constexpr (waterEnabled) {
-        data.waterDensity = decay<Scalar>(fs.density(FluidSystem::waterPhaseIdx));
-        data.waterMassDens =
-            decay<Scalar>(fs.saturation(FluidSystem::waterPhaseIdx)) * data.waterDensity;
+        data.hydrocarbonSaturation = 1.0 - decay<Scalar>(fs.saturation(FluidSystem::waterPhaseIdx));
     }
 
     return data;
 }
 
 template <class TypeTag>
-typename NonlinearSystemCompositional<TypeTag>::Scalar
+std::array<typename NonlinearSystemCompositional<TypeTag>::Scalar,
+           NonlinearSystemCompositional<TypeTag>::numComponents>
 NonlinearSystemCompositional<TypeTag>::
-effectiveSaturationChange_(const EffectiveSaturationData& oldData,
-                           const EffectiveSaturationData& newData)
+partialMolarVolumes_(const EffectiveSaturationData& data)
 {
-    // Linearized fluid volume change per pore volume of each component at fixed pressure,
-    // dS'_c = vbar_c * dm_c, with partial molar volume vbar_c = v + dv/dz_c - sum_j z_j * dv/dz_j
+    // vbar_c = v + dv/dz_c - sum_j z_j * dv/dz_j, with dv/dz = 0 for the dependent component
     Scalar zdvdz = 0.0;
     for (int compIdx = 0; compIdx < numComponents - 1; ++compIdx) {
-        zdvdz += oldData.z[compIdx] * oldData.dMolarVolumeDz[compIdx];
+        zdvdz += data.z[compIdx] * data.dMolarVolumeDz[compIdx];
     }
+
+    std::array<Scalar, numComponents> vbar{};
+    for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
+        const Scalar dvdz = compIdx < numComponents - 1 ? data.dMolarVolumeDz[compIdx] : 0.0;
+        vbar[compIdx] = data.molarVolume + dvdz - zdvdz;
+    }
+    return vbar;
+}
+
+template <class TypeTag>
+typename NonlinearSystemCompositional<TypeTag>::Scalar
+NonlinearSystemCompositional<TypeTag>::
+effectiveSaturationChange_(const EffectiveSaturationData& data,
+                           const EqVector& dxCell)
+{
+    // Newton step in z and Sw
+    std::array<Scalar, numComponents> z{};
+    std::array<Scalar, numComponents> dz{};
+    z.back() = 1.0;
+    Scalar dv = 0.0; // Linearized change of the mixture molar volume at fixed pressure
+    for (int compIdx = 0; compIdx < numComponents - 1; ++compIdx) {
+        z[compIdx] = data.z[compIdx];
+        dz[compIdx] = -dxCell[Indices::z0Idx + compIdx];
+        z.back() -= z[compIdx];
+        dz.back() -= dz[compIdx];
+        dv += data.dMolarVolumeDz[compIdx] * dz[compIdx];
+    }
+
+    Scalar dSw = 0.0;
+    if constexpr (waterEnabled) {
+        dSw = -dxCell[Indices::water0Idx];
+    }
+
+    // Moles per pore volume m_c = (1 - Sw) * z_c / v, and dS'_c = vbar_c * dm_c
+    const Scalar v = data.molarVolume;
+    const Scalar h = data.hydrocarbonSaturation;
+    const auto vbar = partialMolarVolumes_(data);
 
     Scalar dSeffMax = 0.0;
     for (int compIdx = 0; compIdx < numComponents; ++compIdx) {
-        const Scalar dvdz = compIdx < numComponents - 1 ? oldData.dMolarVolumeDz[compIdx] : 0.0;
-        const Scalar partialMolarVolume = oldData.molarVolume + dvdz - zdvdz;
-        const Scalar dSeffComp
-            = partialMolarVolume * (newData.molarDens[compIdx] - oldData.molarDens[compIdx]);
-        dSeffMax = std::max(dSeffMax, std::abs(dSeffComp));
+        const Scalar dm = (-dSw * z[compIdx] + h * dz[compIdx] - h * z[compIdx] * dv / v) / v;
+        dSeffMax = std::max(dSeffMax, std::abs(vbar[compIdx] * dm));
     }
 
+    // Water volume per pore volume is Sw itself
     if constexpr (waterEnabled) {
-        if (oldData.waterDensity > 0.0) {
-            const Scalar dSeffWater
-                = (newData.waterMassDens - oldData.waterMassDens) / oldData.waterDensity;
-            dSeffMax = std::max(dSeffMax, std::abs(dSeffWater));
-        }
+        dSeffMax = std::max(dSeffMax, std::abs(dSw));
     }
 
     return dSeffMax;

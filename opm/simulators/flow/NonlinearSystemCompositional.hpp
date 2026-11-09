@@ -52,6 +52,7 @@ public:
     using Scalar = typename ParentType::Scalar;
     using ComponentName = typename ParentType::ComponentName;
     using GlobalEqVector = typename ParentType::GlobalEqVector;
+    using EqVector = GetPropType<TypeTag, Properties::EqVector>;
     using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
     using ModelParameters = CompositionalModelParameters<Scalar>;
 
@@ -131,15 +132,13 @@ public:
     Scalar localCompositionalConvergenceData(Scalar& dPmax,
                                              Scalar& dSmax,
                                              std::vector<Scalar>& residualMaxNorm,
-                                             std::vector<Scalar>& residualSum,
-                                             std::vector<Scalar>& specificVolumeAvg) const;
+                                             std::vector<Scalar>& residualSum) const;
 
     Scalar compositionalConvergenceReduction(const Scalar poreVolumeSumLocal,
                                              Scalar& dPmax,
                                              Scalar& dSmax,
                                              std::vector<Scalar>& residualMaxNorm,
-                                             std::vector<Scalar>& residualSum,
-                                             std::vector<Scalar>& specificVolumeAvg);
+                                             std::vector<Scalar>& residualSum);
 
     template <class LogFailure>
     void addCompositionalConvergenceMetrics(
@@ -159,12 +158,10 @@ protected:
 private:
     struct EffectiveSaturationData
     {
-        std::array<Scalar, numComponents> molarDens{};
         std::array<Scalar, numComponents - 1> z{};
         std::array<Scalar, numComponents - 1> dMolarVolumeDz{};
         Scalar molarVolume = 0.0;
-        Scalar waterMassDens = 0.0;
-        Scalar waterDensity = 0.0;
+        Scalar hydrocarbonSaturation = 1.0;
     };
 
     DSolVector dP_;
@@ -174,8 +171,11 @@ private:
     template <class FluidState>
     EffectiveSaturationData computeEffectiveSaturationData_(const FluidState& fs) const;
 
-    static Scalar effectiveSaturationChange_(const EffectiveSaturationData& oldData,
-                                             const EffectiveSaturationData& newData);
+    static std::array<Scalar, numComponents>
+    partialMolarVolumes_(const EffectiveSaturationData& data);
+
+    static Scalar effectiveSaturationChange_(const EffectiveSaturationData& data,
+                                             const EqVector& dxCell);
 
     double linear_solve_setup_time_ = 0.0;
 };
