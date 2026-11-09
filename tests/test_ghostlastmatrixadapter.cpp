@@ -24,6 +24,7 @@
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/BCRSMatrix.hpp>
+#include <opm/simulators/linalg/BlockVector.hpp>
 #include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 #include <opm/simulators/linalg/WellOperators.hpp>
 
@@ -267,7 +268,7 @@ int main(int argc, char** argv)
     using MatrixBlock = Dune::FieldMatrix<double,BS,BS>;
     using BCRSMat = Opm::BCRSMatrix<MatrixBlock>;
     using VectorBlock = Dune::FieldVector<double,BS>;
-    using Vector = Dune::BlockVector<VectorBlock>;
+    using Vector = Opm::BlockVector<VectorBlock>;
     using Communication = Dune::OwnerOverlapCopyCommunication<int>;
     using Operator = Dune::OverlappingSchwarzOperator<BCRSMat,Vector,Vector,Communication>;
 

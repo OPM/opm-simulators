@@ -35,6 +35,7 @@
 #include <opm/models/blackoil/blackoilmodel.hh>
 
 #include <opm/simulators/linalg/BCRSMatrix.hpp>
+#include <opm/simulators/linalg/BlockVector.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/wells/WellTracerRate.hpp>
 
@@ -54,9 +55,9 @@ class Well;
 template<class Grid, class GridView, class DofMapper, class Stencil, class FluidSystem, class Scalar>
 class GenericTracerModel {
 public:
-    using TracerVectorSingle = Dune::BlockVector<Dune::FieldVector<Scalar, 1>>;
+    using TracerVectorSingle = Opm::BlockVector<Dune::FieldVector<Scalar, 1>>;
     using TracerMatrix = Opm::BCRSMatrix<Opm::MatrixBlock<Scalar, 2, 2>>;
-    using TracerVector = Dune::BlockVector<Dune::FieldVector<Scalar, 2>>;
+    using TracerVector = Opm::BlockVector<Dune::FieldVector<Scalar, 2>>;
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
     static constexpr int dimWorld = Grid::dimensionworld;
     /*!
