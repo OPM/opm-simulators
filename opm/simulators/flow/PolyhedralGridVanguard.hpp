@@ -51,6 +51,7 @@
 #endif
 
 #include <algorithm>
+#include <exception>
 #include <array>
 #include <functional>
 #include <memory>
@@ -396,14 +397,29 @@ protected:
             }
         }
 
-        // The transmissibilities of the whole grid, which the output needs, are computed before it is distributed.
-        if (isRoot && this->enableEclOutput()) {
-            this->allocTrans_();
-        }
-
+        // Only the root process computes the transmissibilities of the whole grid, which the output needs
+        // before the grid is distributed, and the partition. If that fails the other processes must be told,
+        // since they wait for the root in the collective operations that follow.
         std::vector<int> parts;
+        std::exception_ptr rootFailure;
         if (isRoot) {
-            parts = this->computePartition_();
+            try {
+                if (this->enableEclOutput()) {
+                    this->allocTrans_();
+                }
+                parts = this->computePartition_();
+            }
+            catch (...) {
+                rootFailure = std::current_exception();
+            }
+        }
+        int failed = rootFailure ? 1 : 0;
+        comm.broadcast(&failed, 1, 0);
+        if (failed) {
+            if (rootFailure) {
+                std::rethrow_exception(rootFailure);
+            }
+            throw std::runtime_error { "The setup of the parallel grid failed on the root process." };
         }
 
         PropsDataHandle<Grid> handle { *this->grid_, *eclState };
