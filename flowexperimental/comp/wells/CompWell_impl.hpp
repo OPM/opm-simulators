@@ -131,8 +131,9 @@ updateConnectionPressureDiffs_(const Simulator& simulator,
 {
     // The connections are ordered from the top of the well. The wellbore between
     // a connection and the one above it carries the flow of that connection and
-    // all below it. Those flows are taken at the start of the time step, with
-    // offsets from the density of the single wellbore node.
+    // all below it. Those flows, and the pressures they are flashed at, are taken
+    // at the start of the time step, with offsets from the density of the single
+    // wellbore node.
     const Scalar gravity = simulator.problem().gravity()[2];
     const int num_conn = this->number_of_connection_;
     for (int con_idx = 0; con_idx < num_conn; ++con_idx) {
@@ -193,7 +194,9 @@ streamDensity_(const std::array<Scalar, PrimaryVariables::numWellConservationEq>
                const Scalar pressure,
                const Scalar temperature)
 {
-    // Flows of both signs add up, as they all pass through the wellbore.
+    // The rates are the net flow of each component past the connection, negative
+    // up the wellbore. A component fills the wellbore whichever way it flows, so
+    // its magnitude counts.
     Scalar hydrocarbon_mass = 0.;
     Scalar molar_rate = 0.;
     std::array<Scalar, num_comp> molar_rates{};
