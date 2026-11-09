@@ -61,6 +61,20 @@ opm_add_test(test_gatherdeferredlogger
     4
 )
 
+opm_add_test(test_wellsolverecovery
+  DEPENDS
+    opmsimulators
+  LIBRARIES
+    opmsimulators
+    Boost::unit_test_framework
+  SOURCES
+    tests/test_wellsolverecovery.cpp
+  DRIVER_ARGS
+    -n 2
+  PROCESSORS
+    2
+)
+
 opm_add_test(test_parallelwellinfo_mpi
   EXE_TARGET
     test_parallelwellinfo
