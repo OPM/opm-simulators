@@ -21,6 +21,7 @@
 #include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/BCRSMatrix.hpp>
+#include <opm/simulators/linalg/BlockVector.hpp>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
@@ -360,9 +361,9 @@ initWellContributions([[maybe_unused]] WellContributions<Scalar>& wellContribs,
 // the tests use Dune::FieldMatrix, Flow uses Opm::MatrixBlock
 #define INSTANTIATE_GPU_FUNCTIONS(T,n)                                     \
     template class GpuBridge<Opm::BCRSMatrix<MatrixBlock<T,n,n>>,   \
-                   Dune::BlockVector<Dune::FieldVector<T,n>>,n>;           \
+                   Opm::BlockVector<Dune::FieldVector<T,n>>,n>;           \
     template class GpuBridge<Opm::BCRSMatrix<Dune::FieldMatrix<T,n,n>>, \
-                             Dune::BlockVector<Dune::FieldVector<T,n>>,n>;
+                             Opm::BlockVector<Dune::FieldVector<T,n>>,n>;
 
 #define INSTANTIATE_TYPE(T)        \
     INSTANTIATE_GPU_FUNCTIONS(T,1) \

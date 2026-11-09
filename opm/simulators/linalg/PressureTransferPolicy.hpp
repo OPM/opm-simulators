@@ -25,6 +25,7 @@
 #include <opm/simulators/linalg/twolevelmethodcpr.hh>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/BCRSMatrix.hpp>
+#include <opm/simulators/linalg/BlockVector.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/WellOperators.hpp>
 
@@ -32,7 +33,7 @@
 
 namespace Opm { namespace Details {
     template<class Scalar> using PressureMatrixType = Opm::BCRSMatrix<MatrixBlock<Scalar, 1, 1>>;
-    template<class Scalar> using PressureVectorType = Dune::BlockVector<Dune::FieldVector<Scalar, 1>>;
+    template<class Scalar> using PressureVectorType = Opm::BlockVector<Dune::FieldVector<Scalar, 1>>;
     template<class Scalar> using SeqCoarseOperatorType = Dune::MatrixAdapter<PressureMatrixType<Scalar>,
                                                                              PressureVectorType<Scalar>,
                                                                              PressureVectorType<Scalar>>;
