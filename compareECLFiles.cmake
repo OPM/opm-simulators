@@ -364,6 +364,66 @@ function(add_test_compare_parallel_simulation)
 endfunction()
 
 ###########################################################################
+# TEST: add_test_compare_gpu_properties_simulation
+###########################################################################
+
+# Input:
+#   - casename: basename (no extension)
+#
+# Details:
+#   - This test class runs a deck twice with the same simulator, with the
+#     intensive quantities computed on the CPU and on the GPU
+#     (--experimental-compute-properties-on-gpu), and compares the summary
+#     and restart files of the two runs. No reference files are needed.
+function(add_test_compare_gpu_properties_simulation)
+  set(oneValueArgs
+    CASENAME
+    FILENAME
+    DEV_SIMULATOR
+    SIMULATOR
+    ABS_TOL
+    REL_TOL
+    DIR
+  )
+  set(multiValueArgs TEST_ARGS)
+  cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
+  if(NOT PARAM_DIR)
+    set(PARAM_DIR ${PARAM_CASENAME})
+  endif()
+  if(USE_DEV_SIMULATOR_IN_TESTS AND PARAM_DEV_SIMULATOR)
+    set(PARAM_SIMULATOR ${PARAM_DEV_SIMULATOR})
+  endif()
+  # The name contains "gpu", so that "ctest -R gpu" runs it together with
+  # the gpuistl unit tests.
+  set(TEST_NAME compare_gpu_properties_${PARAM_SIMULATOR}+${PARAM_FILENAME})
+  set(RESULT_PATH ${BASE_RESULT_PATH}/gpu_properties/${PARAM_SIMULATOR}+${PARAM_CASENAME})
+  set(DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
+                  -r ${RESULT_PATH}
+                  -f ${PARAM_FILENAME}
+                  -a ${PARAM_ABS_TOL}
+                  -t ${PARAM_REL_TOL}
+                  -c $<TARGET_FILE:compareECL>)
+  opm_add_test(${TEST_NAME}
+    EXE_TARGET
+      ${PARAM_SIMULATOR}
+    DRIVER_ARGS
+      ${DRIVER_ARGS}
+    TEST_ARGS
+      ${PARAM_TEST_ARGS}
+  )
+  set(gpu_label "gpu_cuda")
+  if(CONVERT_CUDA_TO_HIP)
+    set(gpu_label "gpu_hip")
+  endif()
+  set_tests_properties(${TEST_NAME} PROPERTIES
+                       LABELS ${gpu_label}
+                       DIRNAME ${PARAM_DIR}
+                       FILENAME ${PARAM_FILENAME}
+                       SIMULATOR ${PARAM_SIMULATOR}
+                       TESTNAME ${PARAM_CASENAME})
+endfunction()
+
+###########################################################################
 # TEST: add_test_compare_rescoup_simulation
 ###########################################################################
 
@@ -1125,6 +1185,30 @@ if(MPI_FOUND)
     endif()
 
   include (${CMAKE_CURRENT_SOURCE_DIR}/parallelTests.cmake)
+endif()
+
+# Intensive quantities on the GPU against the CPU, with two runs of the
+# current build. Jenkins does not run GPU tests; this is the test that GPU
+# developers run locally before submitting changes to the GPU path.
+if(CUDA_FOUND OR hip_FOUND)
+  opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-gpu-properties-regressionTest.sh "")
+  add_test_compare_gpu_properties_simulation(
+    CASENAME
+      spe1
+    FILENAME
+      SPE1CASE1
+    SIMULATOR
+      flow
+    DEV_SIMULATOR
+      flow_blackoil_nohyst
+    # The two runs differ by round-off in the intensive quantities, which can
+    # change the Newton iteration count (SPE1CASE1: 305 vs 309), as in the
+    # serial-vs-parallel comparisons. Same tolerances as parallelTests.cmake.
+    ABS_TOL
+      0.02
+    REL_TOL
+      8e-5
+  )
 endif()
 
 
