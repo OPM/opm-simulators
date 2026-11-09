@@ -24,6 +24,7 @@
 #define OPM_STANDARDWELL_EQUATIONS_HEADER_INCLUDED
 
 #include <opm/simulators/linalg/BCRSMatrix.hpp>
+#include <opm/simulators/linalg/BlockVector.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/simulators/wells/WellHelpers.hpp>
 #include <opm/common/TimingMacros.hpp>
@@ -64,7 +65,7 @@ public:
     using OffDiagMatWell = Opm::BCRSMatrix<OffDiagMatrixBlockWellType>;
 
     // block vector type
-    using BVector = Dune::BlockVector<Dune::FieldVector<Scalar,numEq>>;
+    using BVector = Opm::BlockVector<Dune::FieldVector<Scalar,numEq>>;
 
     explicit StandardWellEquations(const ParallelWellInfo<Scalar>& parallel_well_info);
 

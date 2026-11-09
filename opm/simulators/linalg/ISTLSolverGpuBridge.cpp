@@ -30,6 +30,7 @@
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/ParallelIstlInformation.hpp>
 #include <opm/simulators/linalg/BCRSMatrix.hpp>
+#include <opm/simulators/linalg/BlockVector.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <fmt/format.h>
@@ -240,7 +241,7 @@ copyMatToBlockJac(const Matrix& mat, Matrix& blockJac)
 template<class Scalar, int Dim>
 using BM = Opm::BCRSMatrix<MatrixBlock<Scalar,Dim,Dim>>;
 template<class Scalar, int Dim>
-using BV = Dune::BlockVector<Dune::FieldVector<Scalar,Dim>>;
+using BV = Opm::BlockVector<Dune::FieldVector<Scalar,Dim>>;
 
 #define INSTANTIATE_GRID(T, Dim, Grid)                             \
     template void GpuSolverInfo<BM<T,Dim>,BV<T,Dim>>::             \

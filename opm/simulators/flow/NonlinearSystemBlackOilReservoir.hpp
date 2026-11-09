@@ -35,6 +35,7 @@
 #include <opm/simulators/flow/RSTConv.hpp>
 
 #include <opm/simulators/linalg/ISTLSolver.hpp>
+#include <opm/simulators/linalg/BlockVector.hpp>
 
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
@@ -110,7 +111,7 @@ public:
     using VectorBlockType = Dune::FieldVector<Scalar, numEq>;
     using MatrixBlockType = typename SparseMatrixAdapter::MatrixBlock;
     using Mat = typename SparseMatrixAdapter::IstlMatrix;
-    using BVector = Dune::BlockVector<VectorBlockType>;
+    using BVector = Opm::BlockVector<VectorBlockType>;
 
     using ComponentName = ::Opm::ComponentName<FluidSystem,Indices>;
 

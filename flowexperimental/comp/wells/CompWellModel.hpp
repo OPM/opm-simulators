@@ -39,6 +39,8 @@
 
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 
+#include <opm/simulators/linalg/BlockVector.hpp>
+
 #include <cstddef>
 #include <map>
 #include <stdexcept>
@@ -73,7 +75,7 @@ public:
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     static const int numEq = Indices::numEq;
     using VectorBlockType = Dune::FieldVector<Scalar, numEq>;
-    typedef Dune::BlockVector<VectorBlockType> BVector;
+    typedef Opm::BlockVector<VectorBlockType> BVector;
 
 
     // TODO: Scalar will probably to be TypeTag later

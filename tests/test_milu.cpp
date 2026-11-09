@@ -11,6 +11,7 @@
 #include<dune/common/fvector.hh>
 
 #include<opm/simulators/linalg/BCRSMatrix.hpp>
+#include <opm/simulators/linalg/BlockVector.hpp>
 #include<opm/simulators/linalg/ParallelOverlappingILU0.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
@@ -43,7 +44,7 @@ void test_milu0(M& A)
         std::cout<<std::endl;
     }
 #endif
-    Dune::BlockVector<Dune::FieldVector<typename M::field_type, M::block_type::rows>> e(A.N()), x1(A.N()), x2(A.N()), t(A.N());
+    Opm::BlockVector<Dune::FieldVector<typename M::field_type, M::block_type::rows>> e(A.N()), x1(A.N()), x2(A.N()), t(A.N());
     e = 1;
     A.mv(e, x1);
     // Compute L*U*e;

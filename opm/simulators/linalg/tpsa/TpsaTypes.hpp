@@ -23,6 +23,7 @@
 
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/BCRSMatrix.hpp>
+#include <opm/simulators/linalg/BlockVector.hpp>
 
 #include <dune/common/fvector.hh>
 #include <dune/common/indices.hh>
@@ -97,15 +98,15 @@ using SPresRotMatrixT = Opm::BCRSMatrix<MatrixBlock<Scalar, numSolidPresDofs, nu
 // Sub-vector types
 //
 template <typename Scalar>
-using DispVector0T = Dune::BlockVector<Dune::FieldVector<Scalar, numDispDofs>>;
+using DispVector0T = Opm::BlockVector<Dune::FieldVector<Scalar, numDispDofs>>;
 template <typename Scalar>
 using DispVector1T = DispVector0T<Scalar>;
 template <typename Scalar>
 using DispVector2T = DispVector0T<Scalar>;
 template <typename Scalar>
-using RotVectorT = Dune::BlockVector<Dune::FieldVector<Scalar, numRotDofs>>;
+using RotVectorT = Opm::BlockVector<Dune::FieldVector<Scalar, numRotDofs>>;
 template <typename Scalar>
-using SPresVectorT = Dune::BlockVector<Dune::FieldVector<Scalar, numSolidPresDofs>>;
+using SPresVectorT = Opm::BlockVector<Dune::FieldVector<Scalar, numSolidPresDofs>>;
 
 //! \brief The vector the Krylov solver and the preconditioner operate on.
 template <typename Scalar>

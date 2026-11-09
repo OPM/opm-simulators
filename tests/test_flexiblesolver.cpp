@@ -25,6 +25,7 @@
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 #include <opm/simulators/linalg/BCRSMatrix.hpp>
+#include <opm/simulators/linalg/BlockVector.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 
@@ -36,11 +37,11 @@
 
 
 template <int bz>
-Dune::BlockVector<Dune::FieldVector<double, bz>>
+Opm::BlockVector<Dune::FieldVector<double, bz>>
 testSolver(const Opm::PropertyTree& prm, const std::string& matrix_filename, const std::string& rhs_filename)
 {
     using Matrix = Opm::BCRSMatrix<Opm::MatrixBlock<double, bz, bz>>;
-    using Vector = Dune::BlockVector<Dune::FieldVector<double, bz>>;
+    using Vector = Opm::BlockVector<Dune::FieldVector<double, bz>>;
     Matrix matrix;
     {
         std::ifstream mfile(matrix_filename);
@@ -89,7 +90,7 @@ BOOST_AUTO_TEST_CASE(TestFlexibleSolver)
 
         const int bz = 1;
         auto sol = testSolver<bz>(prm, "matr33.txt", "rhs3.txt");
-        Dune::BlockVector<Dune::FieldVector<double, bz>> expected {-1.62493,
+        Opm::BlockVector<Dune::FieldVector<double, bz>> expected {-1.62493,
                                                                    -1.76435e-06,
                                                                    1.86991e-10,
                                                                    -458.542,
@@ -113,7 +114,7 @@ BOOST_AUTO_TEST_CASE(TestFlexibleSolver)
 
         const int bz = 3;
         auto sol = testSolver<bz>(prm, "matr33.txt", "rhs3.txt");
-        Dune::BlockVector<Dune::FieldVector<double, bz>> expected {{-1.62493, -1.76435e-06, 1.86991e-10},
+        Opm::BlockVector<Dune::FieldVector<double, bz>> expected {{-1.62493, -1.76435e-06, 1.86991e-10},
                                                                    {-458.542, 2.28308e-06, -2.45341e-07},
                                                                    {-1.48005, -5.02264e-07, -1.049e-05}};
         BOOST_REQUIRE_EQUAL(sol.size(), expected.size());

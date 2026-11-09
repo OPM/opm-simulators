@@ -21,6 +21,7 @@
 
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/BCRSMatrix.hpp>
+#include <opm/simulators/linalg/BlockVector.hpp>
 
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/bvector.hh>
@@ -59,9 +60,9 @@ template<typename Scalar>
 using WWMatrix = Opm::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numWellDofs>>;
 
 template<typename Scalar>
-using ResVector = Dune::BlockVector<Dune::FieldVector<Scalar, numResDofs>>;
+using ResVector = Opm::BlockVector<Dune::FieldVector<Scalar, numResDofs>>;
 template<typename Scalar>
-using WellVector = Dune::BlockVector<Dune::FieldVector<Scalar, numWellDofs>>;
+using WellVector = Opm::BlockVector<Dune::FieldVector<Scalar, numWellDofs>>;
 template<typename Scalar>
 using SystemVector = Dune::MultiTypeBlockVector<ResVector<Scalar>, WellVector<Scalar>>;
 

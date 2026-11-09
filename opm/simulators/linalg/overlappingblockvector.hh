@@ -28,6 +28,7 @@
 #define EWOMS_OVERLAPPING_BLOCK_VECTOR_HH
 
 #include "overlaptypes.hh"
+#include "BlockVector.hpp"
 
 #include <opm/models/parallel/mpibuffer.hh>
 #include <opm/material/common/Valgrind.hpp>
@@ -45,11 +46,11 @@ namespace Linear {
 /*!
  * \brief An overlap aware block vector.
  */
-template <class FieldVector, class Overlap>
-class OverlappingBlockVector : public Dune::BlockVector<FieldVector>
+template <class FieldVector, class Overlap, class Allocator = std::allocator<FieldVector>>
+class OverlappingBlockVector : public Opm::BlockVector<FieldVector, Allocator>
 {
-    using ParentType = Dune::BlockVector<FieldVector>;
-    using BlockVector = Dune::BlockVector<FieldVector>;
+    using ParentType = Opm::BlockVector<FieldVector, Allocator>;
+    using BlockVector = Opm::BlockVector<FieldVector, Allocator>;
 
 public:
     /*!

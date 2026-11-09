@@ -30,6 +30,7 @@
 #include <opm/input/eclipse/Schedule/Well/WellEnums.hpp>
 
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
+#include <opm/simulators/linalg/BlockVector.hpp>
 
 #include <dune/istl/bvector.hh>
 
@@ -218,9 +219,9 @@ bool rateControlWithZeroInjTarget(const WellInjectionControls& controls,
 }
 
 template<class Scalar, int Dim>
-using Vec = Dune::BlockVector<Dune::FieldVector<Scalar,Dim>>;
+using Vec = Opm::BlockVector<Dune::FieldVector<Scalar,Dim>>;
 template<class Scalar>
-using DynVec = Dune::BlockVector<Dune::DynamicVector<Scalar>>;
+using DynVec = Opm::BlockVector<Dune::DynamicVector<Scalar>>;
 template<class Scalar>
 using DMatrix = Dune::DynamicMatrix<Scalar>;
 using Comm = Parallel::Communication;

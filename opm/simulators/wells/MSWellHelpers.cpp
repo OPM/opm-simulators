@@ -34,6 +34,7 @@
 #include <opm/material/densead/Math.hpp>
 
 #include <opm/simulators/linalg/BCRSMatrix.hpp>
+#include <opm/simulators/linalg/BlockVector.hpp>
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
@@ -360,12 +361,12 @@ ValueType emulsionViscosity(const ValueType& water_fraction,
 }
 
 template<class Scalar, int Dim>
-using OffDiagVec = Dune::BlockVector<Dune::FieldVector<Scalar,Dim>>;
+using OffDiagVec = Opm::BlockVector<Dune::FieldVector<Scalar,Dim>>;
 template<class Scalar, int M, int N = M>
 using OffDiagMat = Opm::BCRSMatrix<Dune::FieldMatrix<Scalar,M,N>>;
 
 template<class Scalar, int Dim>
-using DiagVec = Dune::BlockVector<Dune::FieldVector<Scalar,Dim>>;
+using DiagVec = Opm::BlockVector<Dune::FieldVector<Scalar,Dim>>;
 template<class Scalar, int M, int N = M>
 using DiagMat = Opm::BCRSMatrix<Dune::FieldMatrix<Scalar,M,N>>;
 

@@ -42,6 +42,7 @@ namespace Opm {
 #include <opm/models/blackoil/blackoilproperties.hh>
 
 #include <opm/simulators/linalg/BCRSMatrix.hpp>
+#include <opm/simulators/linalg/BlockVector.hpp>
 #include <opm/simulators/linalg/linalgproperties.hh>
 
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
@@ -96,7 +97,7 @@ public:
     using VectorBlockType = Dune::FieldVector<Scalar, Indices::numEq>;
     using MatrixBlockType = Dune::FieldMatrix<Scalar, Indices::numEq, Indices::numEq>;
     using Eval = typename Base::Eval;
-    using BVector = Dune::BlockVector<VectorBlockType>;
+    using BVector = Opm::BlockVector<VectorBlockType>;
     using PressureMatrix = Opm::BCRSMatrix<Opm::MatrixBlock<Scalar, 1, 1>>;
 
     using WellStateType = WellState<Scalar, IndexTraits>;

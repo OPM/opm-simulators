@@ -43,6 +43,7 @@
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/system/SystemTypes.hpp>
 #include <opm/simulators/linalg/BCRSMatrix.hpp>
+#include <opm/simulators/linalg/BlockVector.hpp>
 
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/gatherConvergenceReport.hpp>
@@ -131,7 +132,7 @@ template<class Scalar> class WellContributions;
             // TODO: where we should put these types, WellInterface or Well Model?
             // or there is some other strategy, like TypeTag
             using VectorBlockType = Dune::FieldVector<Scalar, numEq>;
-            using BVector = Dune::BlockVector<VectorBlockType>;
+            using BVector = Opm::BlockVector<VectorBlockType>;
 
             using PolymerModule = BlackOilPolymerModule<TypeTag, has_polymer_>;
             using BioeffectsModule = BlackOilBioeffectsModule<TypeTag, has_bioeffects_>;

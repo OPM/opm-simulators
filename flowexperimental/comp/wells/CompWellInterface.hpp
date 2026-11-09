@@ -22,6 +22,7 @@
 
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/simulators/wells/PerforationData.hpp>
+#include <opm/simulators/linalg/BlockVector.hpp>
 
 #include <flowexperimental/comp/wells/SingleCompWellState.hpp>
 
@@ -41,7 +42,7 @@ public:
     using RateVector = GetPropType<TypeTag, Properties::RateVector>; // FlashRateVector at the moment
 
     using VectorBlockType = Dune::FieldVector<Scalar, Indices::numEq>;
-    using BVector = Dune::BlockVector<VectorBlockType>;
+    using BVector = Opm::BlockVector<VectorBlockType>;
     using CompConnectionData = PerforationData<Scalar>;
     using SingleWellState = SingleCompWellState<FluidSystem>;
 

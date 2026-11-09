@@ -1205,6 +1205,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/BCRSMatrix.hpp
   opm/simulators/linalg/bicgstabsolver.hh
   opm/simulators/linalg/blacklist.hh
+  opm/simulators/linalg/BlockVector.hpp
   opm/simulators/linalg/combinedcriterion.hh
   opm/simulators/linalg/convergencecriterion.hh
   opm/simulators/linalg/DILU.hpp
