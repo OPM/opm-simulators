@@ -1403,21 +1403,49 @@ namespace Opm
                                  WellStateType& well_state)
     {
         this->stopWell();
+        // keep the state to be able to restore it if the solve with zero rate fails badly
+        const auto ws_before_zero_rate_solve = well_state.well(this->indexOfWell());
+        bool solve_threw = false;
         try {
             this->solveWellWithZeroRate(
                 simulator, dt, groupStateHelper, well_state
             );
         } catch (const std::exception& e) {
+            solve_threw = true;
             const std::string msg = fmt::format("well {}: solveWellWithZeroRate() failed "
                                                 "during attempt to solve with zero rate for well: {}",
                                                 this->name(), e.what());
             groupStateHelper.deferredLogger().info(msg);
-            // we set the rate to zero to make sure the well dont contribute to the group rate
-            auto& ws = well_state.well(this->indexOfWell());
-            const int np = well_state.numPhases();
-            for (int p = 0; p < np; ++p) {
-                ws.surface_rates[p] = Scalar{0.0};
-            }
+        }
+        // A solve with zero rate that threw, or left a state that is not finite, can leave the well in a
+        // diverged state. As the well is stopped it is still part of the reservoir equations and of the
+        // convergence checks, so restore the state and make the well consistent with zero rates.
+        if (well_state.well(this->indexOfWell()).restoreIfDiverged(ws_before_zero_rate_solve, solve_threw)) {
+            this->resetStoppedWell(simulator, dt, groupStateHelper, well_state);
+        }
+    }
+
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    resetStoppedWell(const Simulator& simulator,
+                     const double dt,
+                     const GroupStateHelperType& groupStateHelper,
+                     WellStateType& well_state)
+    {
+        // no flow in the well, so that the well does not contribute to the group rates
+        auto& ws = well_state.well(this->indexOfWell());
+        std::ranges::fill(ws.surface_rates, Scalar{0.0});
+        std::ranges::fill(ws.segments.rates, Scalar{0.0});
+        // the primary variables, and thereby the assembly, should not come from the failed solve
+        try {
+            this->updatePrimaryVariables(groupStateHelper);
+            this->assembleWellEqWithoutIteration(simulator, groupStateHelper, dt,
+                                                 Well::InjectionControls(0), Well::ProductionControls(0),
+                                                 well_state, /*solving_with_zero_rate=*/true);
+        } catch (const NumericalProblem&) {
+            // The restored state can itself hold non-finite values, e.g. the BHP. The rates are
+            // already zero, so keep the cached equations and leave it to the next solve of the well.
         }
     }
 
