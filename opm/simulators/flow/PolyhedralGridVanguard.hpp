@@ -324,7 +324,7 @@ protected:
         else {
             typename Grid::UnstructuredGridPtr empty(allocate_grid(3, 0, 0, 0, 0, 0));
             std::copy(cartDims.begin(), cartDims.end(), empty->cartdims);
-            this->grid_ = std::make_unique<Grid>(std::move(empty));
+            this->grid_ = std::make_unique<Grid>(std::move(empty), comm);
         }
 
         this->cartesianIndexMapper_ =
@@ -345,7 +345,8 @@ protected:
         return std::make_unique<Grid>(this->eclState().getInputGrid(),
                                       this->eclState().fieldProps().porv(true),
                                       this->edgeConformal(),
-                                      this->minpvMergeCells());
+                                      this->minpvMergeCells(),
+                                      FlowGenericVanguard::comm());
     }
 
 
