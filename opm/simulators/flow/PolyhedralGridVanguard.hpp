@@ -48,12 +48,17 @@
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
 #include <opm/simulators/utils/PropsDataHandle.hpp>
+
+#include <fmt/format.h>
 #endif
 
 #include <algorithm>
-#include <exception>
 #include <array>
+#include <exception>
+#include <filesystem>
+#include <fstream>
 #include <functional>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -501,7 +506,7 @@ protected:
 
         std::vector<int> parts;
         if (const auto& file = this->externalPartitionFile(); !file.empty() && file != "none") {
-            parts = partitionCellsFromFile(file, numCells).first;
+            parts = this->partitionFromFile_(file);
             if (*std::max_element(parts.begin(), parts.end()) >= numParts) {
                 throw std::invalid_argument { "The partition file has more parts than there are processes." };
             }
@@ -530,6 +535,43 @@ protected:
         if (std::ranges::any_of(size, [](const int n) { return n == 0; })) {
             throw std::runtime_error { "At least one process has no cells. Use fewer processes, or "
                                        "a different partition method." };
+        }
+        return parts;
+    }
+
+    // The partition from a file that has either the process of each active cell, or a row
+    //
+    //   Process_ID   Cartesian_Idx   NLDD_Domain
+    //
+    // for each active cell, as the CpGrid reads it.
+    std::vector<int> partitionFromFile_(const std::string& fileName) const
+    {
+        if (!std::filesystem::exists(fileName)) {
+            throw std::runtime_error { fmt::format("External partition file '{}' does not exist.", fileName) };
+        }
+        std::ifstream file { fileName };
+        const std::vector<int> values { std::istream_iterator<int> { file }, std::istream_iterator<int> {} };
+
+        const auto numCells = static_cast<std::size_t>(this->grid_->size(0));
+        if (values.size() == numCells) {
+            return values;
+        }
+        if (values.size() != 3 * numCells) {
+            throw std::invalid_argument {
+                fmt::format("Partition file '{}' with {} values does not match the grid with {} cells",
+                            fileName, values.size(), numCells) };
+        }
+
+        const int* globalCell = this->grid_->globalCellPtr();
+        std::unordered_map<int, int> cartesianToCompressed;
+        for (std::size_t cell = 0; cell < numCells; ++cell) {
+            cartesianToCompressed.emplace(globalCell ? globalCell[cell] : static_cast<int>(cell), cell);
+        }
+        std::vector<int> parts(numCells, 0);
+        for (std::size_t row = 0; row < numCells; ++row) {
+            if (const auto it = cartesianToCompressed.find(values[3 * row + 1]); it != cartesianToCompressed.end()) {
+                parts[it->second] = values[3 * row];
+            }
         }
         return parts;
     }
