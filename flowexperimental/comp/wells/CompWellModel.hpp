@@ -222,6 +222,9 @@ private:
      // limits of a Newton update of the wells, as for the black-oil wells
      Scalar dwell_fraction_max_;
      Scalar dbhp_max_rel_;
+     // damp the density of each wellbore section rather than the hydrostatic
+     // offset of each connection
+     bool damp_section_densities_;
 
      // this is needed for parallel running, not all the wells will be in the same process
      std::vector<Well> wells_ecl_;

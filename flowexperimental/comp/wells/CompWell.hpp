@@ -108,7 +108,8 @@ public:
              const std::vector<CompConnectionData>& well_connection_data,
              Scalar dwell_fraction_max,
              Scalar dbhp_max_rel,
-             unsigned pvt_region_idx);
+             unsigned pvt_region_idx,
+             bool damp_section_densities);
 
     void init() override;
 
@@ -162,6 +163,9 @@ private:
     const Scalar dbhp_max_rel_;
     // PVT region of the connection cell, which gives the water properties
     const unsigned pvt_region_idx_;
+    // damp the density of each wellbore section rather than the hydrostatic
+    // offset of each connection
+    const bool damp_section_densities_;
 
     // primary variables
     PrimaryVariables primary_variables_;
@@ -181,9 +185,10 @@ private:
     // density of the wellbore fluid between each connection and the one above
     // it that gives these offsets
     std::vector<Scalar> connection_densities_;
-    // Weight of the new density of each wellbore section between two connections
-    // against the one of the last time step. The densities are explicit, and
-    // the damping keeps them from swinging with the flow they lead to.
+    // Weight of the new density of each wellbore section between two connections,
+    // or of the new offset of each connection, against the one of the last time
+    // step. The densities are explicit, and the damping keeps them from swinging
+    // with the flow they lead to.
     static constexpr Scalar connection_density_weight_ {1. / 3.};
 
     std::array<EvalWell, num_comp> mass_fractions_{0.};
@@ -268,7 +273,7 @@ private:
 
     // hydrostatic pressure offset of each connection from the reference depth,
     // from the density of the fluid flowing past it in the wellbore, damped
-    // by the densities in the well state when they are for the same
+    // by the densities or offsets in the well state when they are for the same
     // connections
     void updateConnectionPressureDiffs_(const Simulator& simulator,
                                         const Scalar wellbore_density,

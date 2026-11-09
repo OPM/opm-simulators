@@ -94,11 +94,14 @@ public:
 
     CompConnectionData<Scalar> connection_data;
     // density of the wellbore fluid between each connection and the one above
-    // it in the last time step the well was solved, and the cells and depths
-    // of those connections; all empty before that
+    // it and hydrostatic offset of each connection in the last time step the
+    // well was solved, and the cells and depths of those connections and the
+    // reference depth of the offsets; all empty before that
     std::vector<Scalar> connection_densities;
+    std::vector<Scalar> connection_pressure_diffs;
     std::vector<std::size_t> connection_density_cells;
     std::vector<Scalar> connection_density_depths;
+    Scalar connection_reference_depth{0};
 
     WellInjectorCMode injection_cmode{WellInjectorCMode::CMODE_UNDEFINED};
     WellProducerCMode production_cmode{WellProducerCMode::CMODE_UNDEFINED};

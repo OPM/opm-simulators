@@ -29,6 +29,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <initializer_list>
 #include <iterator>
 #include <string>
 #include <vector>
@@ -147,6 +148,15 @@ TSTEP
 END
 )";
 
+// The producer at 70 bar.
+const std::string bhp_fixed = R"(WCONPROD
+PROD OPEN BHP 5* 70 /
+/
+TSTEP
+4*0.1 /
+END
+)";
+
 // The BHP drops from 70 to 60 bar after three time steps.
 const std::string bhp_drop = R"(WCONPROD
 PROD OPEN BHP 5* 70 /
@@ -206,6 +216,13 @@ float columnDensity(const float upper, const float lower)
     return (lower - upper) * 1.0e5f / (gravity * layer_thickness);
 }
 
+// the parameter that damps the density of each wellbore section instead of the
+// offset of each connection
+std::string dampSections(const bool sections)
+{
+    return std::string("--comp-well-damp-section-densities=") + (sections ? "true" : "false");
+}
+
 // The deck has no water phase.
 using TypeTag = Opm::Properties::TTag::FlowCompProblem<3, false>;
 
@@ -240,14 +257,42 @@ BOOST_AUTO_TEST_CASE(WellboreColumnHoldsTheFluidFlowingPastIt)
     }
 }
 
-// The density of each column is explicit and damped: in each time step it
-// moves a third of the way from its last value to the one of the flow past
-// it. After the BHP drops, the gas below the oil gets lighter, and each change
+// By default, the offset of each connection is damped: in each time step it
+// moves a third of the way from its last value to the new offset of the
+// connection above it plus the weight of the column between them. While the
+// gas below the oil keeps its density, the offset of the bottom connection
+// lags behind the falling offset of the middle one.
+BOOST_AUTO_TEST_CASE(OffsetApproachesTheOneAboveGradually)
+{
+    const Opm::TemporaryDirectory dir("compwell_connection_pressure_offset_damping");
+    const auto smry = Opm::runDeck<TypeTag>(dir.path(), "OFFSETDAMPING", deck + bhp_fixed);
+
+    const auto& top = smry.get("CPR:PROD:1,1,1");
+    const auto& middle = smry.get("CPR:PROD:1,1,2");
+    const auto& bottom = smry.get("CPR:PROD:1,1,3");
+    BOOST_REQUIRE_EQUAL(top.size(), 4u);
+    // the first time step is not damped, so it gives the weight of the gas column
+    const float gas_column = bottom[0] - middle[0];
+    for (std::size_t step = 1; step < top.size(); ++step) {
+        BOOST_TEST_CONTEXT("time step " << step) {
+            const float middle_offset = middle[step] - top[step];
+            const float last_offset = bottom[step - 1] - top[step - 1];
+            const float target = middle_offset + gas_column;
+            BOOST_CHECK_CLOSE(bottom[step] - top[step],
+                              2.0f / 3.0f * last_offset + 1.0f / 3.0f * target, 0.1f);
+        }
+    }
+}
+
+// With the section densities damped, the density of each column moves a third
+// of the way from its last value to the one of the flow past it in each time
+// step. After the BHP drops, the gas below the oil gets lighter, and each change
 // of its column density is two thirds of the one before.
 BOOST_AUTO_TEST_CASE(ColumnDensityApproachesItsNewValueGradually)
 {
     const Opm::TemporaryDirectory dir("compwell_connection_pressure_damping");
-    const auto smry = Opm::runDeck<TypeTag>(dir.path(), "DAMPING", deck + bhp_drop);
+    const auto smry = Opm::runDeck<TypeTag>(dir.path(), "DAMPING", deck + bhp_drop,
+                                            {dampSections(true)});
 
     const auto& middle = smry.get("CPR:PROD:1,1,2");
     const auto& bottom = smry.get("CPR:PROD:1,1,3");
@@ -268,59 +313,73 @@ BOOST_AUTO_TEST_CASE(ColumnDensityApproachesItsNewValueGradually)
     }
 }
 
-// The damping keeps the densities of the wellbore, not offsets from the old
-// reference depth, so the connection at the new one is at the BHP from the
-// first time step on.
+// The damped densities of the wellbore do not depend on the reference depth,
+// and damped offsets from the old one count no more, so either way the
+// connection at the new reference depth is at the BHP from the first time step
+// on.
 BOOST_AUTO_TEST_CASE(OffsetsFollowNewReferenceDepth)
 {
     const Opm::TemporaryDirectory dir("compwell_connection_pressure_ref_depth");
-    const auto smry = Opm::runDeck<TypeTag>(dir.path(), "REFDEPTH", deck + ref_depth_change);
+    for (const bool sections : {false, true}) {
+        BOOST_TEST_CONTEXT("section densities damped: " << sections) {
+            const auto smry = Opm::runDeck<TypeTag>(dir.path(), "REFDEPTH",
+                                                    deck + ref_depth_change,
+                                                    {dampSections(sections)});
 
-    const auto& time = smry.get("TIME");
-    const auto& bhp = smry.get("WBHP:PROD");
-    const auto& top = smry.get("CPR:PROD:1,1,1");
-    std::size_t moved = 0;
-    for (std::size_t step = 0; step < time.size(); ++step) {
-        BOOST_TEST_CONTEXT("producer at day " << time[step]) {
-            if (time[step] < 0.35f) {
-                // 5 m of wellbore fluid above the top connection
-                BOOST_CHECK_GT(top[step] - bhp[step], 0.01f);
-            } else {
-                BOOST_CHECK_SMALL(top[step] - bhp[step], 1.0e-4f);
-                ++moved;
+            const auto& time = smry.get("TIME");
+            const auto& bhp = smry.get("WBHP:PROD");
+            const auto& top = smry.get("CPR:PROD:1,1,1");
+            std::size_t moved = 0;
+            for (std::size_t step = 0; step < time.size(); ++step) {
+                BOOST_TEST_CONTEXT("producer at day " << time[step]) {
+                    if (time[step] < 0.35f) {
+                        // 5 m of wellbore fluid above the top connection
+                        BOOST_CHECK_GT(top[step] - bhp[step], 0.01f);
+                    } else {
+                        BOOST_CHECK_SMALL(top[step] - bhp[step], 1.0e-4f);
+                        ++moved;
+                    }
+                }
             }
+            BOOST_CHECK_EQUAL(moved, 3u);
         }
     }
-    BOOST_CHECK_EQUAL(moved, 3u);
 }
 
-// The densities of the last time step count only for the connections they were
-// taken at. After the lower connection moves from the oil layer to the gas
-// layer below it, the well has as many connections as before, but the column
-// above that connection holds the gas from the first time step on, not a blend
-// with the oil of the old section.
+// The densities and offsets of the last time step count only for the
+// connections they were taken at. After the lower connection moves from the oil
+// layer to the gas layer below it, the well has as many connections as before,
+// but the column above that connection holds the gas from the first time step
+// on, not a blend with the oil of the old section.
 BOOST_AUTO_TEST_CASE(DensitiesRestartWhenConnectionsMove)
 {
     const Opm::TemporaryDirectory dir("compwell_connection_pressure_connection_move");
-    const auto smry = Opm::runDeck<TypeTag>(dir.path(), "CONNECTIONMOVE", deck + connection_move);
+    for (const bool sections : {false, true}) {
+        BOOST_TEST_CONTEXT("section densities damped: " << sections) {
+            const auto smry = Opm::runDeck<TypeTag>(dir.path(), "CONNECTIONMOVE",
+                                                    deck + connection_move,
+                                                    {dampSections(sections)});
 
-    const auto& time = smry.get("TIME");
-    const auto& top = smry.get("CPR:PROD:1,1,1");
-    const auto& middle = smry.get("CPR:PROD:1,1,2");
-    const auto& bottom = smry.get("CPR:PROD:1,1,3");
-    std::size_t moved = 0;
-    for (std::size_t step = 0; step < time.size(); ++step) {
-        BOOST_TEST_CONTEXT("producer at day " << time[step]) {
-            if (time[step] < 0.35f) {
-                BOOST_CHECK_GT(columnDensity(top[step], middle[step]), 200.0f);
-            } else {
-                // the connections are two layers apart
-                const float gas_column = columnDensity(top[step], bottom[step]) / 2.0f;
-                BOOST_CHECK_GT(gas_column, 50.0f);
-                BOOST_CHECK_LT(gas_column, 100.0f);
-                ++moved;
+            const auto& time = smry.get("TIME");
+            const auto& top = smry.get("CPR:PROD:1,1,1");
+            const auto& middle = smry.get("CPR:PROD:1,1,2");
+            const auto& bottom = smry.get("CPR:PROD:1,1,3");
+            std::size_t moved = 0;
+            for (std::size_t step = 0; step < time.size(); ++step) {
+                BOOST_TEST_CONTEXT("producer at day " << time[step]) {
+                    if (time[step] < 0.35f) {
+                        BOOST_CHECK_GT(columnDensity(top[step], middle[step]), 200.0f);
+                    } else {
+                        // the connections are two layers apart
+                        const float gas_column
+                            = columnDensity(top[step], bottom[step]) / 2.0f;
+                        BOOST_CHECK_GT(gas_column, 50.0f);
+                        BOOST_CHECK_LT(gas_column, 100.0f);
+                        ++moved;
+                    }
+                }
             }
+            BOOST_CHECK_EQUAL(moved, 3u);
         }
     }
-    BOOST_CHECK_EQUAL(moved, 3u);
 }

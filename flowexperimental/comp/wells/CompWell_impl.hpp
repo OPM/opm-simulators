@@ -47,11 +47,13 @@ CompWell(const Well& well,
          const std::vector<CompConnectionData>& well_connection_data,
          const Scalar dwell_fraction_max,
          const Scalar dbhp_max_rel,
-         const unsigned pvt_region_idx)
+         const unsigned pvt_region_idx,
+         const bool damp_section_densities)
   : CompWellInterface<TypeTag>(well, index_of_well, well_connection_data)
   , dwell_fraction_max_(dwell_fraction_max)
   , dbhp_max_rel_(dbhp_max_rel)
   , pvt_region_idx_(pvt_region_idx)
+  , damp_section_densities_(damp_section_densities)
 {
 }
 
@@ -158,15 +160,23 @@ updateConnectionPressureDiffs_(const Simulator& simulator,
     }
 
     // Without flow, the wellbore holds the fluid above it, and at the top that
-    // of the wellbore node. The density of each section between two connections
-    // is damped on its own, so that a deep connection does not lag behind the
-    // ones above it, and the offsets follow a change of the reference depth at
-    // once. The last densities count only while the well has the connections
-    // they were taken at, in the same cells and at the same depths.
+    // of the wellbore node. Either the density of each section between two
+    // connections is damped on its own, so that a deep connection does not lag
+    // behind the ones above it, or the offset of each connection is damped
+    // towards the new offset of the one above it plus the new density of the
+    // section between them. The last densities and offsets count only while the
+    // well has the connections they were taken at, in the same cells and at the
+    // same depths, and the offsets only for the same reference depth.
     const auto& last_densities = well_state.connection_densities;
-    const bool damped = well_state.connection_density_cells == this->well_cells_
+    const auto& last_diffs = well_state.connection_pressure_diffs;
+    const bool same_connections = well_state.connection_density_cells == this->well_cells_
         && well_state.connection_density_depths == this->connection_depths_;
-    assert(!damped || std::ssize(last_densities) == num_conn);
+    assert(!same_connections || (std::ssize(last_densities) == num_conn
+                                 && std::ssize(last_diffs) == num_conn));
+    const bool damp_sections = same_connections && this->damp_section_densities_;
+    const bool damp_offsets = same_connections && !this->damp_section_densities_
+        && well_state.connection_reference_depth == this->reference_depth_;
+    constexpr Scalar weight = connection_density_weight_;
     this->connection_densities_.resize(num_conn);
     const Scalar bhp = getValue(this->primary_variables_.getBhp());
     Scalar density = wellbore_density;
@@ -175,12 +185,14 @@ updateConnectionPressureDiffs_(const Simulator& simulator,
     for (int con_idx = 0; con_idx < num_conn; ++con_idx) {
         const Scalar pressure = bhp + this->connection_pressure_diffs_[con_idx];
         density = streamDensity_(flow_up[con_idx], pressure, temperature).value_or(density);
-        const Scalar section_density = damped
-            ? connection_density_weight_ * density
-                + (1. - connection_density_weight_) * last_densities[con_idx]
+        const Scalar section_density = damp_sections
+            ? weight * density + (1. - weight) * last_densities[con_idx]
             : density;
         const Scalar depth = this->connection_depths_[con_idx];
         diff_above += section_density * gravity * (depth - depth_above);
+        if (damp_offsets) {
+            diff_above = weight * diff_above + (1. - weight) * last_diffs[con_idx];
+        }
         depth_above = depth;
         this->connection_densities_[con_idx] = section_density;
         this->connection_pressure_diffs_[con_idx] = diff_above;
@@ -910,8 +922,10 @@ updateConnectionQuantities(const Simulator& simulator,
         conn_data.pressure[con] = well_state.bhp + this->connection_pressure_diffs_[con];
     }
     well_state.connection_densities = this->connection_densities_;
+    well_state.connection_pressure_diffs = this->connection_pressure_diffs_;
     well_state.connection_density_cells = this->well_cells_;
     well_state.connection_density_depths = this->connection_depths_;
+    well_state.connection_reference_depth = this->reference_depth_;
 }
 
 template <typename TypeTag>

@@ -36,6 +36,7 @@
 #include <opm/models/utils/parametersystem.hpp>
 
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
+#include <opm/simulators/flow/FlowProblemComp.hpp>
 
 namespace Opm {
 
@@ -54,6 +55,7 @@ CompWellModel<TypeTag>::CompWellModel(Simulator& simulator, const NewtonIteratio
     , last_valid_comp_well_states_(comp_config_)
     , dwell_fraction_max_(wellNewtonLimit_<Parameters::DwellFractionMax<Scalar>>())
     , dbhp_max_rel_(wellNewtonLimit_<Parameters::DbhpMaxRel<Scalar>>())
+    , damp_section_densities_(Parameters::Get<Parameters::CompWellDampSectionDensities>())
 {
     local_num_cells_ = simulator.gridView().size(0);
 }
@@ -165,7 +167,8 @@ createWellContainer()
             = simulator_.problem().pvtRegionIndex(well_connection_data_[w].front().cell_index);
         well_container_.emplace_back(std::make_shared<CompWell<TypeTag>>(wells_ecl_[w], w, well_connection_data_[w],
                                                                           dwell_fraction_max_, dbhp_max_rel_,
-                                                                          pvt_region_idx));
+                                                                          pvt_region_idx,
+                                                                          damp_section_densities_));
     }
 }
 
