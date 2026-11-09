@@ -34,6 +34,8 @@
 
 #include <opm/common/Exceptions.hpp>
 
+#include <opm/simulators/linalg/BCRSMatrix.hpp>
+
 #include <limits>
 
 namespace Opm {
@@ -303,14 +305,14 @@ struct MatrixDimension<Opm::MatrixBlock<Scalar, n, m> >
 ///
 /// Without this the empty default implementation would be used.
 template <typename T, typename A, int n, int m>
-class UMFPack<BCRSMatrix<Opm::MatrixBlock<T, n, m>, A> >
-    : public UMFPack<BCRSMatrix<FieldMatrix<T, n, m>, A> >
+class UMFPack<Opm::BCRSMatrix<Opm::MatrixBlock<T, n, m>, A>>
+    : public UMFPack<Opm::BCRSMatrix<FieldMatrix<T, n, m>, A>>
 {
-    using Base = UMFPack<BCRSMatrix<FieldMatrix<T, n, m>, A> >;
-    using Matrix = BCRSMatrix<FieldMatrix<T, n, m>, A>;
+    using Base = UMFPack<Opm::BCRSMatrix<FieldMatrix<T, n, m>, A>>;
+    using Matrix = Opm::BCRSMatrix<FieldMatrix<T, n, m>, A>;
 
 public:
-    using RealMatrix = BCRSMatrix<Opm::MatrixBlock<T, n, m>, A>;
+    using RealMatrix = Opm::BCRSMatrix<Opm::MatrixBlock<T, n, m>, A>;
 
     UMFPack(const RealMatrix& matrix, int verbose, bool)
         : Base(reinterpret_cast<const Matrix&>(matrix), verbose)
@@ -323,14 +325,14 @@ public:
 ///
 /// Without this the empty default implementation would be used.
 template <typename T, typename A, int n, int m>
-class SuperLU<BCRSMatrix<Opm::MatrixBlock<T, n, m>, A> >
-    : public SuperLU<BCRSMatrix<FieldMatrix<T, n, m>, A> >
+class SuperLU<Opm::BCRSMatrix<Opm::MatrixBlock<T, n, m>, A> >
+    : public SuperLU<Opm::BCRSMatrix<FieldMatrix<T, n, m>, A> >
 {
-    using Base = SuperLU<BCRSMatrix<FieldMatrix<T, n, m>, A> >;
-    using Matrix = BCRSMatrix<FieldMatrix<T, n, m>, A>;
+    using Base = SuperLU<Opm::BCRSMatrix<FieldMatrix<T, n, m>, A> >;
+    using Matrix = Opm::BCRSMatrix<FieldMatrix<T, n, m>, A>;
 
 public:
-    using RealMatrix = BCRSMatrix<Opm::MatrixBlock<T, n, m>, A>;
+    using RealMatrix = Opm::BCRSMatrix<Opm::MatrixBlock<T, n, m>, A>;
 
     SuperLU(const RealMatrix& matrix, int verb, bool reuse=true)
         : Base(reinterpret_cast<const Matrix&>(matrix), verb, reuse)

@@ -23,8 +23,6 @@
 #include <opm/simulators/linalg/gpuistl/detail/gpu_preconditioner_utils.hpp>
 #endif
 
-#include <dune/istl/bcrsmatrix.hh>
-
 #include <type_traits>
 
 

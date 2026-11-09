@@ -5,11 +5,12 @@
 #include<vector>
 #include<memory>
 
-#include<dune/istl/bcrsmatrix.hh>
 #include<dune/istl/bvector.hh>
 #include<dune/common/version.hh>
 #include<dune/common/fmatrix.hh>
 #include<dune/common/fvector.hh>
+
+#include<opm/simulators/linalg/BCRSMatrix.hpp>
 #include<opm/simulators/linalg/ParallelOverlappingILU0.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
@@ -104,13 +105,13 @@ void test_milu0(M& A)
 }
 
 template<class B, class Alloc>
-void setupSparsityPattern(Dune::BCRSMatrix<B,Alloc>& A, int N)
+void setupSparsityPattern(Opm::BCRSMatrix<B,Alloc>& A, int N)
 {
-  typedef typename Dune::BCRSMatrix<B,Alloc> Matrix;
-  A.setSize(N*N, N*N, N*N*5);
+    typedef typename Opm::BCRSMatrix<B,Alloc> Matrix;
   A.setBuildMode(Matrix::row_wise);
+  A.setSize(N*N, N*N, N*N*5);
 
-  for (typename Dune::BCRSMatrix<B,Alloc>::CreateIterator i = A.createbegin(); i != A.createend(); ++i) {
+    for (typename Opm::BCRSMatrix<B,Alloc>::CreateIterator i = A.createbegin(); i != A.createend(); ++i) {
     int x = i.index()%N; // x coordinate in the 2d field
     int y = i.index()/N;  // y coordinate in the 2d field
 
@@ -135,9 +136,9 @@ void setupSparsityPattern(Dune::BCRSMatrix<B,Alloc>& A, int N)
 
 
 template<class B, class Alloc>
-void setupLaplacian(Dune::BCRSMatrix<B,Alloc>& A, int N)
+void setupLaplacian(Opm::BCRSMatrix<B,Alloc>& A, int N)
 {
-  typedef typename Dune::BCRSMatrix<B,Alloc>::field_type FieldType;
+    typedef typename Opm::BCRSMatrix<B,Alloc>::field_type FieldType;
 
   setupSparsityPattern(A,N);
 
@@ -150,7 +151,7 @@ void setupLaplacian(Dune::BCRSMatrix<B,Alloc>& A, int N)
     b->operator[](b.index())=-1.0;
 
 
-  for (typename Dune::BCRSMatrix<B,Alloc>::RowIterator i = A.begin(); i != A.end(); ++i) {
+    for (typename Opm::BCRSMatrix<B,Alloc>::RowIterator i = A.begin(); i != A.end(); ++i) {
     int x = i.index()%N; // x coordinate in the 2d field
     int y = i.index()/N;  // y coordinate in the 2d field
 
@@ -174,7 +175,7 @@ template<int bsize>
 void test()
 {
     std::size_t N = 32;
-    Dune::BCRSMatrix<Dune::FieldMatrix<double, bsize, bsize> > A;
+    Opm::BCRSMatrix<Dune::FieldMatrix<double, bsize, bsize>> A;
     setupLaplacian(A, N);
     test_milu0(A);
 #ifdef DEBUG

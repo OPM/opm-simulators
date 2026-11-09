@@ -33,7 +33,6 @@
 #include <opm/models/parallel/mpibuffer.hh>
 
 #include <dune/grid/common/datahandleif.hh>
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/scalarproducts.hh>
 #include <dune/istl/operators.hh>
 

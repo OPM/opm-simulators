@@ -35,7 +35,7 @@ namespace MatrixMarketImpl
 {
 
     template <typename T, int i, int j, typename A>
-    struct mm_header_printer<BCRSMatrix<Opm::MatrixBlock<T,i,j>, A>>
+    struct mm_header_printer<Opm::BCRSMatrix<Opm::MatrixBlock<T,i,j>, A>>
     {
         static void print(std::ostream& os)
         {
@@ -45,9 +45,9 @@ namespace MatrixMarketImpl
     };
 
     template <typename T, int i, int j, typename A>
-    struct mm_block_structure_header<BCRSMatrix<Opm::MatrixBlock<T,i,j>, A>>
+    struct mm_block_structure_header<Opm::BCRSMatrix<Opm::MatrixBlock<T,i,j>, A>>
     {
-        using M = BCRSMatrix<Opm::MatrixBlock<T,i,j>, A>;
+        using M = Opm::BCRSMatrix<Opm::MatrixBlock<T,i,j>, A>;
         static void print(std::ostream& os, const M&)
         {
             os << "% ISTL_STRUCT blocked ";
@@ -59,7 +59,7 @@ namespace MatrixMarketImpl
 namespace MatrixMarketImpl
 {
     template <typename T, int i, int j, typename A>
-    struct mm_multipliers<BCRSMatrix<Opm::MatrixBlock<T,i,j>, A>>
+    struct mm_multipliers<Opm::BCRSMatrix<Opm::MatrixBlock<T,i,j>, A>>
     {
         enum {
             rows = i,

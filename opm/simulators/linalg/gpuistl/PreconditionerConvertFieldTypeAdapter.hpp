@@ -19,9 +19,9 @@
 #ifndef OPM_PRECONDITIONERCONVERTOFLOATADAPTER_HPP
 #define OPM_PRECONDITIONERCONVERTOFLOATADAPTER_HPP
 #include <cusparse.h>
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/preconditioner.hh>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
+#include <opm/simulators/linalg/BCRSMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/CuMatrixDescription.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/CuSparseHandle.hpp>
@@ -107,8 +107,7 @@ public:
 
     using XTo = Dune::BlockVector<Dune::FieldVector<field_type_to, block_type::dimension>>;
     using YTo = Dune::BlockVector<Dune::FieldVector<field_type_to, block_type::dimension>>;
-    using matrix_type_to =
-        typename Dune::BCRSMatrix<Dune::FieldMatrix<field_type_to, block_type::dimension, block_type::dimension>>;
+    using matrix_type_to = Opm::BCRSMatrix<Dune::FieldMatrix<field_type_to, block_type::dimension, block_type::dimension>>;
 
     //! \brief Constructor.
     //!

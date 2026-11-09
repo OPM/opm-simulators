@@ -25,9 +25,9 @@
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/MSWellHelpers.hpp>
+#include <opm/simulators/linalg/BCRSMatrix.hpp>
 #include <dune/common/fmatrix.hh>
 #include <dune/common/fvector.hh>
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/bvector.hh>
 
 #include <memory>
@@ -65,11 +65,11 @@ public:
 
     // the matrix type for the diagonal matrix D
     using DiagMatrixBlockWellType = Dune::FieldMatrix<Scalar,numWellEq,numWellEq>;
-    using DiagMatWell = Dune::BCRSMatrix<DiagMatrixBlockWellType>;
+    using DiagMatWell = Opm::BCRSMatrix<DiagMatrixBlockWellType>;
 
     // the matrix type for the non-diagonal matrix B and C^T
     using OffDiagMatrixBlockWellType = Dune::FieldMatrix<Scalar,numWellEq,numEq>;
-    using OffDiagMatWell = Dune::BCRSMatrix<OffDiagMatrixBlockWellType>;
+    using OffDiagMatWell = Opm::BCRSMatrix<OffDiagMatrixBlockWellType>;
 
     MultisegmentWellEquations(const MultisegmentWellGeneric<Scalar, IndexTraits>& well, const ParallelWellInfo<Scalar>& parallel_well_info);
 

@@ -1202,6 +1202,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/aquifers/SupportsFaceTag.hpp
   opm/simulators/linalg/AbstractISTLSolver.hpp
   opm/simulators/linalg/amgcpr.hh
+  opm/simulators/linalg/BCRSMatrix.hpp
   opm/simulators/linalg/bicgstabsolver.hh
   opm/simulators/linalg/blacklist.hh
   opm/simulators/linalg/combinedcriterion.hh
