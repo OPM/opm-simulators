@@ -618,9 +618,13 @@ protected:
     // Which wells have connections on this process.
     void setParallelWells_()
     {
+        // Only the cells that the process owns count, as the well model only has the perforations of those.
+        // A process with overlap cells of a well but no owned perforation must not take part in the well.
         std::unordered_set<int> cellsOnProcess;
         const auto* globalCell = this->grid_->globalCellPtr();
-        for (int cell = 0; cell < this->grid_->size(0); ++cell) {
+        const auto& gridView = this->grid_->leafGridView();
+        for (const auto& element : elements(gridView, Dune::Partitions::interior)) {
+            const int cell = gridView.indexSet().index(element);
             cellsOnProcess.insert(globalCell ? globalCell[cell] : cell);
         }
 
