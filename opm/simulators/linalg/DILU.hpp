@@ -24,7 +24,6 @@
 #include <dune/common/fmatrix.hh>
 #include <dune/common/unused.hh>
 #include <dune/common/version.hh>
-#include <dune/istl/bcrsmatrix.hh>
 
 #include <opm/simulators/linalg/GraphColoring.hpp>
 
