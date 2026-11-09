@@ -398,6 +398,17 @@ public:
                                       const GroupStateHelperType& groupStateHelper,
                                       WellStateType& well_state);
 
+    //! \brief Make a stopped well consistent after the solve with zero rate failed.
+    //!
+    //! Sets the rates of the well to zero, updates the primary variables from the well
+    //! state and assembles the well equations of the stopped well. The residuals,
+    //! connection rates and linearization that are used in the convergence check and
+    //! in the reservoir equations are then consistent with the well state.
+    void resetStoppedWell(const Simulator& simulator,
+                          const double dt,
+                          const GroupStateHelperType& groupStateHelper,
+                          WellStateType& well_state);
+
     void solveWellEquation(const Simulator& simulator,
                            const GroupStateHelperType& groupStateHelper,
                            WellStateType& well_state);
