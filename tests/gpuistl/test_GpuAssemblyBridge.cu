@@ -203,7 +203,7 @@ struct Fixture {
             "--linear-solver-reduction=1e-10", "--threads-per-process=2",
             "--enable-tuning=false", "--check-satfunc-consistency=false"};
         Opm::setupParameters_<TypeTag>(sizeof(args) / sizeof(args[0]), args, false, true, false, 0);
-        Opm::FlowGenericVanguard::readDeck(filename.string());
+        Opm::FlowGenericVanguard::readDeck(filename.string(), /*ignoredKeywords=*/"");
         simulator = std::make_unique<Simulator>();
         simulator->model().applyInitialSolution();
         simulator->setEpisodeIndex(0);
