@@ -131,6 +131,25 @@ BOOST_AUTO_TEST_CASE(Simple2)
 }
 
 
+BOOST_AUTO_TEST_CASE(CellGroupsStayTogether)
+{
+    // Wells with the cells {0, 2} and {1, 2}, where the cells 0 and 1 are on different processes.
+    // Moving the cells of a well to the partition of its first cell would move cell 2 back and forth for ever.
+    std::vector<int> parts{1, 0, 2, 3};
+    Opm::keepCellGroupsTogether(parts, std::vector<std::vector<int>>{{0, 2}, {1, 2}});
+    BOOST_CHECK((parts == std::vector<int>{0, 0, 0, 3}));
+
+    // The order of the groups does not matter, and groups that are not connected are left alone.
+    parts = {1, 0, 2, 3, 3, 2};
+    Opm::keepCellGroupsTogether(parts, std::vector<std::vector<int>>{{1, 2}, {0, 2}, {3, 4}, {5}, {}});
+    BOOST_CHECK((parts == std::vector<int>{0, 0, 0, 3, 3, 2}));
+
+    // A chain of groups joins them all.
+    parts = {3, 2, 1, 0};
+    Opm::keepCellGroupsTogether(parts, std::vector<std::vector<int>>{{0, 1}, {2, 3}, {1, 2}});
+    BOOST_CHECK(parts == std::vector<int>(4, 0));
+}
+
 BOOST_AUTO_TEST_CASE(PartitionCellsTest)
 {
     auto grid = createTestGrid({3, 4, 1}, {3.0, 4.0, 1.0});

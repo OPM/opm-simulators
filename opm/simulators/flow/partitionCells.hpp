@@ -110,6 +110,16 @@ std::pair<std::vector<int>, int> partitionCellsFromFile(const std::string& filen
 /// \return pair containing a partition vector (partition number for each cell), and the number of partitions.
 std::pair<std::vector<int>, int> partitionCellsSimple(const int num_cells, const int num_domains);
 
+/// Move the cells of each group to the same partition, for instance the cells that a well is connected to.
+///
+/// Groups can share cells, which joins them. The cells of a group get the smallest partition that any of
+/// them has, so the partition of a cell only decreases, and the result does not depend on the order of the
+/// groups.
+///
+/// \param parts   For each cell its partition, changed in place.
+/// \param groups  The cells of each group.
+void keepCellGroupsTogether(std::vector<int>& parts, const std::vector<std::vector<int>>& groups);
+
 } // namespace Opm
 
 #endif // OPM_ASPINPARTITION_HEADER_INCLUDED

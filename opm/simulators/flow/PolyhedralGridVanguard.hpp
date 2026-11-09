@@ -612,19 +612,7 @@ protected:
             }
         }
 
-        // Wells may share cells, so repeat until nothing moves.
-        for (bool changed = true; changed;) {
-            changed = false;
-            for (const auto& cells : wellCells) {
-                const int target = parts[cells.front()];
-                for (const int cell : cells) {
-                    if (parts[cell] != target) {
-                        parts[cell] = target;
-                        changed = true;
-                    }
-                }
-            }
-        }
+        keepCellGroupsTogether(parts, wellCells);
     }
 
     // Which wells have connections on this process.
