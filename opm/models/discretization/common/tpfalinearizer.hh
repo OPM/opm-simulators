@@ -56,7 +56,7 @@
 
 #include <cassert>
 #include <cstddef>
-#include <exception>   // current_exception, rethrow_exception
+#include <exception>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -95,6 +95,8 @@
 #endif
 
 namespace Opm::Parameters {
+
+struct EnableGpuAssemblySolverBridge { static constexpr bool value = true; };
 
 struct SeparateSparseSourceTerms { static constexpr bool value = false; };
 
@@ -191,6 +193,8 @@ public:
      */
     static void registerParameters()
     {
+        Parameters::Register<Parameters::EnableGpuAssemblySolverBridge>
+            ("Pass source-only serial GPU assembly directly to gpuISTL.");
         Parameters::Register<Parameters::SeparateSparseSourceTerms>
             ("Treat well source terms all in one go, instead of on a cell by cell basis.");
     }
@@ -219,6 +223,10 @@ public:
      */
     void eraseMatrix()
     {
+#if HAVE_CUDA
+        gpuParams_.reset();
+#endif
+        gpuSystemActive_ = false;
         jacobian_.reset();
     }
 
@@ -311,6 +319,30 @@ public:
     void finalize()
     { jacobian_->finalize(); }
 
+#if HAVE_CUDA
+    bool gpuSystemActive() const { return gpuSystemActive_; }
+
+#if OPM_IS_COMPILING_WITH_GPU_COMPILER
+    // Kernel-dependent operations are instantiated by GPU translation units.
+    // The owner below has the same layout in host and GPU translation units.
+    //! GPU matrix and residual from the most recent GPU linearization.
+    auto& gpuJacobian()
+    {
+        return gpuParams_->gpuJacobian();
+    }
+
+    auto& gpuResidual()
+    {
+        return gpuParams_->residualBuffer();
+    }
+
+    auto& flattenedGpuResidual()
+    {
+        return gpuParams_->flattenedResidual();
+    }
+#endif
+#endif
+
     /*!
      * \brief Linearize the part of the non-linear system of equations that is associated
      *        with the spatial domain.
@@ -377,6 +409,11 @@ public:
         fmt::print(fmt::runtime("index = {:d}\n"), exportIndex_);
         fmt::print(fmt::runtime("count = {:d}\n"), exportCount_);
 
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+        if (gpuSystemActive_) {
+            gpuParams_->copyJacobianToHost(*jacobian_, *gpuJacobian_);
+        }
+#endif
         Opm::exportSystem(jacobian_->istlMatrix(), residual_, export_sparsity, tag.c_str(), path);
     }
 
@@ -868,6 +905,23 @@ private:
     void linearize_(const SubDomainType& domain)
     {
         constexpr bool run_assembly_on_gpu = getPropValue<TypeTag, Properties::RunAssemblyOnGpu>();
+        const bool useAssemblyLinearsolveBridge = [&] {
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+            // Only use assembly->linsolve bridge if assembly is on GPU, as well as following criteria
+            if constexpr (run_assembly_on_gpu) {
+                // 1. Assembly->linsolv bridge is enabled
+                // 2. We only have 1 rank (because gpuISTL makeOverlapRowsInvalid expects host/cpu matrix)
+                // 3. There are no wells
+                // 4. We use gpuISTL as the linear solver
+                return Parameters::Get<Parameters::EnableGpuAssemblySolverBridge>()
+                    && simulator_().gridView().comm().size() == 1
+                    && problem_().wellModel().numLocalWellsEnd() == 0
+                    && simulator_().model().newtonMethod().linearSolver().hasGpuSolver();
+            }
+#endif
+            return false;
+        }();
+        gpuSystemActive_ = useAssemblyLinearsolveBridge;
 
         // This check should be removed once this is addressed by
         // for example storing the previous timesteps' values for
@@ -912,47 +966,60 @@ private:
                 int constexpr blockSize = 256; // Experimentally this is a good value for multiple
                                                // GPUs. Autotune this later.
 
-                GpuParams gpuParams(domain,
-                                    neighborInfo_,
-                                    *gpuJacobian_,
-                                    *gpuBufferDiagMatAddress_,
-                                    jacobian_->istlMatrix(),
-                                    residual_,
-                                    boundaryInfo_,
-                                    model_(),
-                                    problem_(),
-                                    numCells);
+                if (!gpuParams_) {
+                    auto params = std::make_unique<GpuParams>(domain,
+                                                        neighborInfo_,
+                                                        *gpuJacobian_,
+                                                        *gpuBufferDiagMatAddress_,
+                                                        jacobian_->istlMatrix(),
+                                                        residual_,
+                                                        boundaryInfo_,
+                                                        model_(),
+                                                        problem_(),
+                                                        numCells);
+                    gpuParams_ = GpuParamsOwner(params.release(), [](GpuParams* ptr) {
+                        std::default_delete<GpuParams>{}(ptr);
+                    });
+                } else {
+                    gpuParams_->refreshForLinearization(model_(), boundaryInfo_, numCells);
+                }
 
                 linearize_parallelization_wrapper<run_assembly_on_gpu,
                                                   typename GpuParams::LocalResidualGPU>(
                     numCells,
-                    gpuParams.domainView(),
-                    gpuParams.neighborInfoView(),
-                    gpuParams.diagMatAddressView(),
-                    gpuParams.residualView(),
-                    gpuParams.modelView(),
+                    gpuParams_->domainView(),
+                    gpuParams_->neighborInfoView(),
+                    gpuParams_->diagMatAddressView(),
+                    gpuParams_->residualView(),
+                    gpuParams_->modelView(),
                     dt,
                     dispersionActive,
-                    gpuParams.flowProblemView());
+                    gpuParams_->flowProblemView());
 
-                if (gpuParams.boundaryInfoSize() > 0) {
-                    auto boundaryInfoView = gpuParams.boundaryInfoView();
+                if (gpuParams_->boundaryInfoSize() > 0) {
+                    auto boundaryInfoView = gpuParams_->boundaryInfoView();
                     linearize_bc_threadsafe<TpfaLinearizer<TypeTag>,
                                             typename GpuParams::GPUBOIQ,
-                                            decltype(gpuParams.modelView()),
+                                            decltype(gpuParams_->modelView()),
                                             typename GpuParams::LocalResidualGPU>
-                        <<<((gpuParams.boundaryInfoSize() + blockSize - 1) / blockSize),
-                           blockSize>>>(gpuParams.diagMatAddressView(),
-                                        gpuParams.residualView(),
+                        <<<((gpuParams_->boundaryInfoSize() + blockSize - 1) / blockSize),
+                           blockSize>>>(gpuParams_->diagMatAddressView(),
+                                        gpuParams_->residualView(),
                                         boundaryInfoView,
-                                        gpuParams.modelView(),
-                                        gpuParams.flowProblemView());
+                                        gpuParams_->modelView(),
+                                        gpuParams_->flowProblemView());
                 }
 
-                // The memory copies here are synchronous and in the default stream,
-                // guaranteeing that the GPU kernels have completed.
-                gpuParams.copyResidualToHost(residual_, numCells);
-                gpuParams.copyJacobianToHost(*jacobian_, *gpuJacobian_);
+                if (useAssemblyLinearsolveBridge) {
+                    linearize_source_terms_gpu(numCells, domain);
+
+                    // The convergence report consumes the residual on the host,
+                    // but the numerical Jacobian remains device authoritative.
+                    gpuParams_->copyResidualToHost(residual_, numCells);
+                } else {
+                    gpuParams_->copyResidualToHost(residual_, numCells);
+                    gpuParams_->copyJacobianToHost(*jacobian_, *gpuJacobian_);
+                }
             } else {
                 OPM_THROW(std::logic_error, "Only FullDomain is supported on GPU");
             }
@@ -962,9 +1029,12 @@ private:
 #endif
         }
 
-        // Handle source terms separately as we want the functionality for CPU and GPU cases
-        // but for now we cannot handle this inside gpu kernels due to the use of problem_()
-        linearize_source_terms(numCells, domain);
+        // Source evaluation remains CPU-side because it uses problem_().  The
+        // source-only GPU/gpuISTL path uploads just the resulting block deltas.
+        if (!useAssemblyLinearsolveBridge) {
+            linearize_source_terms(numCells, domain);
+        }
+
     }
 
     template <bool useGPU,
@@ -1026,6 +1096,53 @@ private:
                                                      problem);
             }
         }
+    }
+
+    template <class SubDomainType>
+    void linearize_source_terms_gpu(unsigned int numCells, const SubDomainType& domain)
+    {
+        // Evaluate the same CPU source calculation as the host path, uploading
+        // only nonzero residual and diagonal-block contributions to gpuParams_
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+        std::vector<unsigned> indices;
+        std::vector<VectorBlockCPU> residualContributions;
+        std::vector<MatrixBlockCPU> jacobianContributions;
+        // Small initial capacity; larger source sets grow normally.
+        constexpr std::size_t reservedSize = 20;
+        indices.reserve(reservedSize);
+        residualContributions.reserve(reservedSize);
+        jacobianContributions.reserve(reservedSize);
+        for (unsigned ii = 0; ii < numCells; ++ii) {
+            const unsigned cell = domain.cells[ii];
+            ADVectorBlockCPU source(0.0);
+            const auto& intQuantsIn = model_().intensiveQuantities(cell, 0);
+            const double volume = model_().dofTotalVolume(cell);
+            if (separateSparseSourceTerms_) {
+                LocalResidual::computeSourceDense(source, problem_(), intQuantsIn, cell, 0);
+            } else {
+                LocalResidual::computeSource(source, problem_(), intQuantsIn, cell, 0);
+            }
+            source *= -volume;
+            VectorBlockCPU residualContribution(0.0);
+            MatrixBlockCPU jacobianContribution(0.0);
+            setResAndJacobi(residualContribution, jacobianContribution, source);
+            bool nonzero = false;
+            for (unsigned eq = 0; eq < numEq; ++eq) {
+                nonzero = nonzero || residualContribution[eq] != 0.0;
+                for (unsigned pv = 0; pv < numEq; ++pv) {
+                    nonzero = nonzero || jacobianContribution[eq][pv] != 0.0;
+                }
+            }
+            if (nonzero) {
+                indices.push_back(cell);
+                residualContributions.push_back(residualContribution);
+                jacobianContributions.push_back(jacobianContribution);
+            }
+        }
+        gpuParams_->applySourceContributions(indices, residualContributions, jacobianContributions);
+#else
+        OPM_THROW(std::logic_error, "GPU source-term path requires GPU support");
+#endif
     }
 
     template <class SubDomainType>
@@ -1209,6 +1326,8 @@ public:
     }
 
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+    // Thread-safe on the GPU, but floating-point atomic additions make the numerical
+    // result depend on the order in which boundary faces are calculated.
     template <class LocalIntensiveQuantities,
               class LocalResidualT,
               class ModelT,
@@ -1231,10 +1350,10 @@ public:
             const unsigned globI = boundaryInfoElement.cell;
             const LocalIntensiveQuantities& insideIntQuants
                 = model.intensiveQuantities(globI, /*timeIdx*/ 0);
-            if constexpr (!std::is_empty_v<GetPropType<TypeTag, Properties::FluidSystem>>) {
-                LocalResidualT::computeBoundaryFlux(
-                    adres, problem, boundaryInfoElement.bcdata, insideIntQuants, globI);
-            }
+            // LocalResidualT carries the device fluid system. The linearizer's
+            // TypeTag still names the host fluid system, so it cannot gate this call.
+            LocalResidualT::computeBoundaryFlux(
+                adres, problem, boundaryInfoElement.bcdata, insideIntQuants, globI);
             adres *= boundaryInfoElement.bcdata.faceArea;
             TpfaLinearizer<TypeTag>::setResAndJacobi(res, bMat, adres);
             auto* residualPtr = &(residual.data()[globI]);
@@ -1313,6 +1432,11 @@ private:
 #if HAVE_CUDA
     std::unique_ptr<gpuistl::GpuSparseMatrixWrapper<Scalar>> gpuJacobian_;
     std::unique_ptr<gpuistl::GpuBuffer<MatrixBlockGPU*>> gpuBufferDiagMatAddress_;
+    // Type-erased destruction keeps this owner usable with an incomplete state
+    // in ordinary C++ translation units. Only GPU code constructs that state.
+    using GpuParams = TpfaLinearizerGpuParams<TypeTag>;
+    using GpuParamsOwner = std::unique_ptr<GpuParams, void (*)(GpuParams*)>;
+    GpuParamsOwner gpuParams_{nullptr, nullptr};
 #endif
 
     // the right-hand side
@@ -1351,6 +1475,7 @@ private:
     std::vector<BoundaryInfoCPU> boundaryInfo_;
 
     bool separateSparseSourceTerms_ = false;
+    bool gpuSystemActive_ = false;
 
     FullDomain<> fullDomain_;
 

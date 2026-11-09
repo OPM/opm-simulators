@@ -31,6 +31,25 @@ namespace Opm::gpuistl::detail
 {
 
 /**
+ * @brief Clear byteCount bytes of device memory to zero on the default stream.
+ * @param dstDevice raw pointer to GPU memory
+ * @param byteCount number of bytes to clear (not an element count)
+ *
+ * @note This clears the object representation; it does not construct objects.
+ * @note A zero byte count is a no-op, including for a null pointer.
+ * @note In debug builds, checks that @p dstDevice is a GPU pointer.
+ */
+inline void
+gpuMemsetZero(void* dstDevice, std::size_t byteCount)
+{
+    if (byteCount == 0) {
+        return;
+    }
+    OPM_GPUISTL_DETAIL_ASSERT_DEVICE_POINTER(dstDevice);
+    OPM_GPU_SAFE_CALL(cudaMemset(dstDevice, 0, byteCount));
+}
+
+/**
  * @brief gpuMemcpyHostToDevice copies count elements of type T from host to device.
  * @param dstDevice raw pointer to GPU memory (destination)
  * @param srcHost raw pointer to CPU memory (source)

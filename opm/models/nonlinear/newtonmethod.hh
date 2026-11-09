@@ -280,7 +280,18 @@ public:
                 solveTimer_.start();
                 auto& residual = linearizer.residual();
                 const auto& jacobian = linearizer.jacobian();
-                linearSolver_.prepare(jacobian, residual);
+                bool preparedOnGpu = false;
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+                if constexpr (getPropValue<TypeTag, Properties::RunAssemblyOnGpu>()) {
+                    if (linearizer.gpuSystemActive()) {
+                        preparedOnGpu = linearSolver_.prepareGpu(
+                            linearizer.gpuJacobian(), linearizer.flattenedGpuResidual());
+                    }
+                }
+#endif
+                if (!preparedOnGpu) {
+                    linearSolver_.prepare(jacobian, residual);
+                }
                 linearSolver_.setResidual(residual);
                 linearSolver_.getResidual(residual);
                 solveTimer_.stop();
