@@ -107,6 +107,9 @@ public:
 
     void beginEpisode() { beginReportStep(simulator_.episodeIndex()); }
     void beginReportStep(unsigned report_step);
+    bool wellStructureChanged() const { return false; }
+    void markWellStructureChanged() {}
+    void continueReportStep() {}
     void beginTimeStep();
     void beginIteration();
     void restoreLastValidState();
