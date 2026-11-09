@@ -73,16 +73,19 @@ struct GpuBlackoilIntensiveQuantitiesDispatcherSupport<
 /// Runs the supported BlackOil intensive-quantities update on the GPU for all
 /// grid degrees of freedom. Each dispatcher instance owns its GPU-side state
 /// and lazily constructs the \c GpuFlowProblem from the supplied CPU problem
-/// on the first call.
+/// on the first call. The deck is validated against the configuration once,
+/// on that first call.
 ///
 /// On every call, primary variables for the requested DoFs are uploaded to
 /// the device, the per-cell update kernel is launched (one thread per DoF),
 /// and the resulting intensive quantities are read back to host memory.
-/// The supported gas-water thermal configuration computes the complete
-/// intensive-quantity state needed by this dispatcher, including mobility.
+/// The supported configurations compute the complete intensive-quantity
+/// state needed by this dispatcher, including mobility.
 ///
-/// The class is a template on the CPU \c TypeTag and is explicitly
-/// instantiated in the \c .cu translation unit.
+/// The class is a template on the CPU \c TypeTag. The implementation is in
+/// \c GpuBlackoilIntensiveQuantitiesDispatcher_impl.hpp, and each
+/// configuration is explicitly instantiated in its own \c .cu translation
+/// unit together with its \c GpuDispatcherTraits specialization.
 template <class CpuTypeTag>
 class GpuBlackoilIntensiveQuantitiesDispatcher
 {
