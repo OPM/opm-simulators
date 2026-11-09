@@ -65,6 +65,7 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <ctime>
 #include <functional>
@@ -1334,6 +1335,38 @@ BOOST_AUTO_TEST_CASE(SingleWellStateRestoreIfDiverged)
     check_restored([](auto& ws, const double v) { ws.segments.rates.back() = v; });
     check_restored([](auto& ws, const double v) { ws.segments.pressure.back() = v; });
     check_restored([](auto& ws, const double v) { ws.primaryvar.back() = v; });
+}
+
+// ---------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE(SingleWellStateRestoreIfDivergedNonFiniteSnapshot)
+{
+    // If the snapshot from before the solve is itself not finite, the rollback restores that state
+    // and reports a restore. The restored state is then still not finite, so anything that follows
+    // the rollback (e.g. updating the primary variables from the BHP, which throws NumericalProblem
+    // for a non-finite BHP) has to cope with it. WellInterface::iterateWellEquations guards for this.
+    const Setup setup{ "msw.data" };
+    std::vector<Opm::ParallelWellInfo<double>> pinfo;
+    auto wstate = buildWellState(setup, 0, pinfo);
+    auto snapshot = wstate.well("PROD01");
+    snapshot.primaryvar.assign(4 * snapshot.segments.size(), 1.0);
+    snapshot.bhp = std::numeric_limits<double>::quiet_NaN();
+
+    // a solve that threw
+    {
+        auto ws = wstate.well("PROD01");
+        ws.primaryvar.assign(4 * ws.segments.size(), 1.0);
+        BOOST_CHECK(ws.restoreIfDiverged(snapshot, /*solve_threw=*/true));
+        BOOST_CHECK(std::isnan(ws.bhp));
+    }
+
+    // a non-finite state after a solve that did not throw
+    {
+        auto ws = snapshot;
+        ws.bhp = std::numeric_limits<double>::infinity();
+        BOOST_CHECK(ws.restoreIfDiverged(snapshot, /*solve_threw=*/false));
+        BOOST_CHECK(std::isnan(ws.bhp));
+    }
 }
 
 // ---------------------------------------------------------------------
