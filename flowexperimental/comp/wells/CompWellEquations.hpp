@@ -20,6 +20,8 @@
 #ifndef OPM_COMP_WELL_EQUATIONS_HPP
 #define OPM_COMP_WELL_EQUATIONS_HPP
 
+#include <opm/simulators/linalg/BCRSMatrix.hpp>
+
 #include <dune/common/fmatrix.hh>
 #include <dune/common/fvector.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -48,11 +50,11 @@ public:
 
     // the matrix type for the diagonal matrix D
     using DiagMatrixBlockWellType = Dune::FieldMatrix<Scalar, numWellEq>;
-    using DiagMatWell = Dune::BCRSMatrix<DiagMatrixBlockWellType>;
+    using DiagMatWell = Opm::BCRSMatrix<DiagMatrixBlockWellType>;
 
     // the matrix type for the non-diagonal matrix B and C^T
     using OffDiagMatrixBlockWellType = Dune::FieldMatrix<Scalar, numWellEq, numEq>;
-    using OffDiagMatWell = Dune::BCRSMatrix<OffDiagMatrixBlockWellType>;
+    using OffDiagMatWell = Opm::BCRSMatrix<OffDiagMatrixBlockWellType>;
 
     void init(const int num_conn, const std::vector<std::size_t>& cells);
 
