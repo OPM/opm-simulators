@@ -23,7 +23,7 @@
  *
  * \brief GPU parameter setup class for TpfaLinearizer.
  *
- * \note This file is designed to be included from tpfalinearizer.hh inside a
+ * \note This file is designed to be included from tpfalinearizergpu.hh inside a
  *       \c #if HAVE_CUDA block.  It is self-contained: all required GPU headers,
  *       model headers, and forward declarations are included below.
  */
@@ -47,19 +47,7 @@ template <class TypeTag> class TpfaLinearizerGpuParams;
 
 #include <opm/common/utility/gpuistl_if_available.hpp>
 
-#if USE_HIP
-#include <opm/simulators/linalg/gpuistl_hip/GpuSparseMatrixWrapper.hpp>
-#include <opm/simulators/linalg/gpuistl_hip/MiniMatrix.hpp>
-#include <opm/simulators/linalg/gpuistl_hip/MiniVector.hpp>
-#include <opm/simulators/linalg/gpuistl_hip/detail/gpu_memcpy.hpp>
-#include <opm/simulators/linalg/gpuistl_hip/detail/cuda_check_last_error.hpp>
-#else
-#include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
-#include <opm/simulators/linalg/gpuistl/MiniMatrix.hpp>
-#include <opm/simulators/linalg/gpuistl/MiniVector.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/gpu_memcpy.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/cuda_check_last_error.hpp>
-#endif
+#include <opm/simulators/linalg/gpuistl_assembly_if_available.hpp>
 
 #include <opm/common/utility/SparseTable.hpp>
 #include <opm/models/blackoil/blackoilintensivequantities.hh>
