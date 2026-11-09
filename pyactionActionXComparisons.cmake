@@ -475,7 +475,7 @@ add_test_compareSeparateECLFiles(
   DIR2
     actionx
   FILENAME2
-    ACTIONX_UDQ_INSERT_KW
+    ACTIONX_UDQ
   SIMULATOR
     flow
   DEV_SIMULATOR
@@ -988,7 +988,7 @@ if(MPI_FOUND)
     DIR2
       actionx
     FILENAME2
-      ACTIONX_UDQ_INSERT_KW
+      ACTIONX_UDQ
     SIMULATOR
       flow
     DEV_SIMULATOR
