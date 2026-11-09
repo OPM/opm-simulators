@@ -388,6 +388,16 @@ public:
                                      WellStateType& well_state,
                                      DeferredLogger& deferred_logger) const;
 
+    //! \brief Stop the well and solve it with zero rate.
+    //!
+    //! Used for wells that can not be solved. If the solve with zero rate also fails, the
+    //! surface rates of the well are set to zero, so that the well does not contribute to
+    //! the reservoir or to the group rates.
+    void stopWellAndSolveWithZeroRate(const Simulator& simulator,
+                                      const double dt,
+                                      const GroupStateHelperType& groupStateHelper,
+                                      WellStateType& well_state);
+
     void solveWellEquation(const Simulator& simulator,
                            const GroupStateHelperType& groupStateHelper,
                            WellStateType& well_state);

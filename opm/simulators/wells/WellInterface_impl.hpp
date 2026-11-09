@@ -1378,23 +1378,7 @@ namespace Opm
 
         const bool well_operable = this->operability_status_.isOperableAndSolvable();
         if (!well_operable) {
-            this->stopWell();
-            try {
-                this->solveWellWithZeroRate(
-                    simulator, dt, groupStateHelper, well_state
-                );
-            } catch (const std::exception& e) {
-                const std::string msg = fmt::format("well {}: solveWellWithZeroRate() failed "
-                                                    "during attempt to solve with zero rate for well: ",
-                                                    this->name(), e.what());
-                deferred_logger.info(msg);
-                // we set the rate to zero to make sure the well dont contribute to the group rate
-                auto& ws = well_state.well(this->indexOfWell());
-                const int np = well_state.numPhases();
-                for (int p = 0; p < np; ++p) {
-                    ws.surface_rates[p] = Scalar{0.0};
-                }
-            }
+            this->stopWellAndSolveWithZeroRate(simulator, dt, groupStateHelper, well_state);
             if (old_well_operable) {
                 const std::string ctx = iterCtx.inLocalSolve() ? " (NLDD domain solve)" : "";
                 deferred_logger.debug(" well " + this->name() + " gets STOPPED during iteration" + ctx);
@@ -1406,6 +1390,33 @@ namespace Opm
                 const std::string ctx = iterCtx.inLocalSolve() ? " (NLDD domain solve)" : "";
                 deferred_logger.debug(" well " + this->name() + " gets REVIVED during iteration" + ctx);
                 this->changed_to_open_this_step_ = true;
+            }
+        }
+    }
+
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    stopWellAndSolveWithZeroRate(const Simulator& simulator,
+                                 const double dt,
+                                 const GroupStateHelperType& groupStateHelper,
+                                 WellStateType& well_state)
+    {
+        this->stopWell();
+        try {
+            this->solveWellWithZeroRate(
+                simulator, dt, groupStateHelper, well_state
+            );
+        } catch (const std::exception& e) {
+            const std::string msg = fmt::format("well {}: solveWellWithZeroRate() failed "
+                                                "during attempt to solve with zero rate for well: {}",
+                                                this->name(), e.what());
+            groupStateHelper.deferredLogger().info(msg);
+            // we set the rate to zero to make sure the well dont contribute to the group rate
+            auto& ws = well_state.well(this->indexOfWell());
+            const int np = well_state.numPhases();
+            for (int p = 0; p < np; ++p) {
+                ws.surface_rates[p] = Scalar{0.0};
             }
         }
     }
