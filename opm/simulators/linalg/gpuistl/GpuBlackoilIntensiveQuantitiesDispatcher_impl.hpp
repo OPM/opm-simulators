@@ -333,6 +333,12 @@ void GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::update(
             "[GpuBlackoilIntensiveQuantitiesDispatcher] initialized for {} cells ({})",
             cpuProblem.model().numGridDof(), Traits::name));
     }
+    else {
+        // The mixing limits (DRSDT, DRVDT, VAPPARS) change between calls:
+        // at the start of a time step, on a chopped time step and on restart.
+        // Re-reading them on every call cannot miss any of these.
+        impl_->problemBuf->refreshMixingLimits(cpuProblem, 0u);
+    }
 
     // -------------------------------------------------------------------
     // 1. Convert CPU primary variables to the dispatcher's GPU primary
