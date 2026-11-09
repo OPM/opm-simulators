@@ -31,8 +31,9 @@
 namespace Opm::Parameters {
 
 // Experimental: route the per-element BlackOilIntensiveQuantities update through the
-// GPU dispatcher instead of computing it on the CPU. This currently supports
-// only the gas-water energy configuration.
+// GPU dispatcher instead of computing it on the CPU. Supported are the CO2STORE
+// gas-water energy configuration and three-phase black-oil with live oil and dry
+// gas; the deck is validated against the configuration at initialization.
 struct ExperimentalComputePropertiesOnGpu { static constexpr bool value = false; };
 
 } // namespace Opm::Parameters
@@ -40,15 +41,16 @@ struct ExperimentalComputePropertiesOnGpu { static constexpr bool value = false;
 namespace Opm::Properties::TTag {
     struct FlowGasWaterEnergyProblem;
     struct FlowGasWaterEnergyProblemGPU;
+    struct FlowProblemNohyst;
 }
 
 namespace Opm::gpuistl {
 
-/// Compile-time predicate: does this CPU \c TypeTag describe the specific
-/// CO2STORE configuration (FlowGasWaterEnergyProblem) that the GPU
-/// intensive-quantities dispatcher currently supports? Restricted to a
-/// single TypeTag so that explicit instantiations of the dispatcher
-/// remain manageable for the experimental prototype.
+/// Compile-time predicate: is the GPU intensive-quantities dispatcher
+/// explicitly instantiated for this CPU \c TypeTag? Each supported TypeTag
+/// has a \c GpuDispatcherTraits specialization and an explicit instantiation
+/// in its own \c .cu file. Whether a given deck is supported is checked at
+/// run time, when the dispatcher is initialized.
 template <class CpuTypeTag>
 struct GpuBlackoilIntensiveQuantitiesDispatcherSupport {
     static constexpr bool value = false;
@@ -67,6 +69,15 @@ struct GpuBlackoilIntensiveQuantitiesDispatcherSupport<
 template <>
 struct GpuBlackoilIntensiveQuantitiesDispatcherSupport<
     Opm::Properties::TTag::FlowGasWaterEnergyProblemGPU> {
+    static constexpr bool value = true;
+};
+
+/// Enable the dispatcher for the TypeTag that \c flow uses for black-oil decks
+/// without hysteresis. Only three-phase decks with live oil (PVTO), dry gas
+/// (PVDG) and PVTW water are accepted at run time.
+template <>
+struct GpuBlackoilIntensiveQuantitiesDispatcherSupport<
+    Opm::Properties::TTag::FlowProblemNohyst> {
     static constexpr bool value = true;
 };
 
@@ -108,10 +119,13 @@ public:
     /// The GPU-owned BlackOil intensive-quantity fields are written onto
     /// \p outIQ[i] field-by-field via
     /// \c BlackOilIntensiveQuantities::overlayBlackOilFieldsFrom.
+    /// Only \p timeIdx 0 is supported: the GPU problem holds the mixing limits
+    /// of the current time level only.
     void update(const Problem& cpuProblem,
                 const PrimaryVariables* const* cpuPriVars,
                 IntensiveQuantities* const* outIQ,
-                std::size_t numDof);
+                std::size_t numDof,
+                unsigned timeIdx);
 
 private:
     struct Impl;

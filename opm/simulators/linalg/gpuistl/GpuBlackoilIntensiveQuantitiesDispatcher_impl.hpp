@@ -194,8 +194,14 @@ template <class ProblemT, class PrimaryVariablesT, class IntensiveQuantitiesT>
 void validateDispatcherInputs(const ProblemT& problem,
                               const PrimaryVariablesT* const* primaryVariables,
                               IntensiveQuantitiesT* const* intensiveQuantities,
-                              std::size_t numDof)
+                              std::size_t numDof,
+                              unsigned timeIdx)
 {
+    if (timeIdx != 0) {
+        OPM_THROW(std::invalid_argument,
+                  "GPU intensive-quantities dispatcher supports only timeIdx 0");
+    }
+
     if (primaryVariables == nullptr || intensiveQuantities == nullptr) {
         OPM_THROW(std::invalid_argument,
                   "GPU intensive-quantities dispatcher received a null pointer array");
@@ -285,7 +291,8 @@ void GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::update(
     const Problem& cpuProblem,
     const PrimaryVariables* const* cpuPriVars,
     IntensiveQuantities* const* outIQ,
-    std::size_t numDof)
+    std::size_t numDof,
+    unsigned timeIdx)
 {
     using ImplT = Impl;
     // The kernel's template arguments are named through the public traits:
@@ -298,7 +305,7 @@ void GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::update(
         return;
     }
 
-    dispatcher_detail::validateDispatcherInputs(cpuProblem, cpuPriVars, outIQ, numDof);
+    dispatcher_detail::validateDispatcherInputs(cpuProblem, cpuPriVars, outIQ, numDof, timeIdx);
 
     if (!impl_->initialized) {
         // The first call comes from the initial solution, so an unsupported
@@ -337,7 +344,7 @@ void GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::update(
         // The mixing limits (DRSDT, DRVDT, VAPPARS) change between calls:
         // at the start of a time step, on a chopped time step and on restart.
         // Re-reading them on every call cannot miss any of these.
-        impl_->problemBuf->refreshMixingLimits(cpuProblem, 0u);
+        impl_->problemBuf->refreshMixingLimits(cpuProblem, timeIdx);
     }
 
     // -------------------------------------------------------------------

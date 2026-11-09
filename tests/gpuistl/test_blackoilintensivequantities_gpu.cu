@@ -692,7 +692,8 @@ static void runProductionDispatcherTest(const std::string& deckPath)
     dispatcher.update(problem,
                       primaryVariables.data(),
                       intensiveQuantities.data(),
-                      numCells);
+                      numCells,
+                      /*timeIdx=*/0u);
 
     for (std::size_t i = 0; i < numCells; ++i) {
         for (unsigned phaseOffset = 0; phaseOffset < 2u; ++phaseOffset) {

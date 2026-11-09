@@ -43,8 +43,10 @@
 #include <opm/material/fluidmatrixinteractions/EclMultiplexerMaterialParams.hpp>
 
 #if HAVE_CUDA
+#include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBlackoilIntensiveQuantitiesDispatcher.hpp>
 #include <memory>
+#include <string>
 #include <variant>
 #include <vector>
 #endif
@@ -89,9 +91,24 @@ public:
                           ThreadManager::maxThreads())
     {
 #if HAVE_CUDA
+        const bool computePropertiesOnGpu =
+            Parameters::Get<Parameters::ExperimentalComputePropertiesOnGpu>(
+                /*errorIfNotRegistered=*/false);
         if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
-            useGpuIntensiveQuantitiesDispatcher_ =
-                Parameters::Get<Parameters::ExperimentalComputePropertiesOnGpu>();
+            useGpuIntensiveQuantitiesDispatcher_ = computePropertiesOnGpu;
+            // NLDD updates the intensive quantities per domain on the CPU,
+            // which would mix CPU and GPU results within one run.
+            if (useGpuIntensiveQuantitiesDispatcher_
+                && Parameters::Get<Parameters::NonlinearSolver>() == std::string("nldd")) {
+                OPM_THROW(std::invalid_argument,
+                          "--experimental-compute-properties-on-gpu=true is not supported "
+                          "with --nonlinear-solver=nldd");
+            }
+        }
+        else if (computePropertiesOnGpu) {
+            OPM_THROW(std::invalid_argument,
+                      "--experimental-compute-properties-on-gpu=true is not supported "
+                      "by the model this deck selects");
         }
 #endif
 
@@ -109,11 +126,14 @@ public:
     {
         ParentType::registerParameters();
 #if HAVE_CUDA
-        if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
-            Parameters::Register<Parameters::ExperimentalComputePropertiesOnGpu>
-                ("Experimental: compute BlackOilIntensiveQuantities on the GPU "
-                 "via the GpuBlackoilIntensiveQuantitiesDispatcher.");
-        }
+        // Registered for every TypeTag: flow parses the command line with a
+        // placeholder TypeTag before it selects the model, and aborts on
+        // parameters that TypeTag does not know.
+        Parameters::Register<Parameters::ExperimentalComputePropertiesOnGpu>
+            ("Experimental: compute the intensive quantities on the GPU. Supported "
+             "for CO2STORE (gas-water with energy) and for three-phase black-oil "
+             "with live oil (PVTO), dry gas (PVDG) and PVTW water on one MPI "
+             "process; other decks are rejected at initialization.");
 #endif
     }
 
@@ -124,14 +144,13 @@ public:
         }
         this->invalidateIntensiveQuantitiesCache(timeIdx);
         if constexpr (gridIsUnchanging) {
-            if constexpr (avoidElementContext) {
-                updateCachedIntQuants(timeIdx);
-                return;
-            }
 #if HAVE_CUDA
+            // Before the avoidElementContext branch, which returns. The GPU
+            // problem only holds the current time level, so timeIdx != 0
+            // (restart load) stays on the CPU.
             if constexpr (Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value)
             {
-                if (useGpuIntensiveQuantitiesDispatcher_) {
+                if (useGpuIntensiveQuantitiesDispatcher_ && timeIdx == 0) {
                     if constexpr (getPropValue<TypeTag, Properties::EnableDiffusion>()
                         || getPropValue<TypeTag, Properties::EnableDispersion>()) {
                         OPM_THROW(std::logic_error,
@@ -146,6 +165,10 @@ public:
                 }
             }
 #endif
+            if constexpr (avoidElementContext) {
+                updateCachedIntQuants(timeIdx);
+                return;
+            }
             OPM_BEGIN_PARALLEL_TRY_CATCH();
 #ifdef _OPENMP
 #pragma omp parallel for
@@ -381,7 +404,8 @@ protected:
                 this->simulator_.problem(),
                 priVarsPtrs.data(),
                 outIqPtrs.data(),
-                numCells);
+                numCells,
+                timeIdx);
         }
     }
 #endif
