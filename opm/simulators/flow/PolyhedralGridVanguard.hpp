@@ -507,8 +507,10 @@ protected:
         std::vector<int> parts;
         if (const auto& file = this->externalPartitionFile(); !file.empty() && file != "none") {
             parts = this->partitionFromFile_(file);
-            if (*std::max_element(parts.begin(), parts.end()) >= numParts) {
-                throw std::invalid_argument { "The partition file has more parts than there are processes." };
+            // Checked here, before the wells are kept together and the cells are counted, which index by process.
+            if (std::ranges::any_of(parts, [numParts](const int part) { return part < 0 || part >= numParts; })) {
+                throw std::invalid_argument { "The partition file has processes that do not exist: "
+                                              "the numbers must be from 0 to the number of processes minus one." };
             }
         }
         else if (this->partitionMethod() == Dune::PartitionMethod::simple || !Dune::unstructured::metisAvailable()) {
