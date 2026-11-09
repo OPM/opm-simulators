@@ -257,6 +257,12 @@ struct TemperatureDependentFluidSystem : FluidSystem
         {
             return 0.001 * temperature;
         }
+
+        double inverseFormationVolumeFactor(unsigned region, double temperature,
+                                             double pressure, double rs) const
+        {
+            return FluidSystem::oilPvt().inverseFormationVolumeFactor(region, temperature, pressure, rs);
+        }
     };
 
     double reservoirTemperature(unsigned = 0) const { return 350.0; }
@@ -287,6 +293,20 @@ BOOST_AUTO_TEST_CASE(AdaptPrimaryVariablesUsesExplicitFluidSystemTemperature)
     BOOST_REQUIRE(disappearing.adaptPrimaryVariables(problem, supplied, 0, 1.0, 1.0, 0.0));
     BOOST_CHECK(disappearing.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs);
     BOOST_CHECK_CLOSE(disappearing[Indices::compositionSwitchIdx], 0.35, 1.e-12);
+
+    // The component-based reinitialisation at small oil saturation must also
+    // use the supplied instance's PVT, including its saturation limit.
+    FluidSystem::setGasPvt(makeWetGasPvt(0.0));
+    const double sw = 0.99;
+    const double sg = -1.e-6;
+    const double so = 1.0 - sw - sg;
+    auto smallOil = makePrimaryVariables(
+        PrimaryVariables::GasMeaning::Sg, sw, sg,
+        PrimaryVariables::WaterMeaning::Sw, PrimaryVariables::PressureMeaning::Po, 1.e5);
+    BOOST_REQUIRE(smallOil.adaptPrimaryVariables(problem, supplied, 0, 1.0, 1.0));
+    BOOST_CHECK(smallOil.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs);
+    const double expectedRs = (0.35 * so / typicalBo + sg / typicalBg) / (so / typicalBo);
+    BOOST_CHECK_CLOSE(smallOil[Indices::compositionSwitchIdx], expectedRs, 1.e-10);
 
     // The legacy overload continues to use the static system's PVT.
     BOOST_REQUIRE(legacy.adaptPrimaryVariables(problem, 0, 1.0, 1.0));
