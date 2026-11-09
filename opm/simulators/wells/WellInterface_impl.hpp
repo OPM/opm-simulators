@@ -705,12 +705,14 @@ namespace Opm
             converged = false;
             // The primary variables used by the assembly, and the cached well equations whose residuals
             // are checked at the start of the next solve, are still from the failed iterate.
-            this->updatePrimaryVariables(groupStateHelper);
+            // Both steps are guarded: if the snapshot itself holds non-finite values (e.g. BHP), the
+            // primary variable update can throw as well, and that must not escape this function.
             try {
+                this->updatePrimaryVariables(groupStateHelper);
                 this->assembleWellEqWithoutIteration(simulator, groupStateHelper, dt, inj_controls, prod_controls,
                                                      well_state, /*solving_with_zero_rate=*/false);
             } catch (const NumericalProblem&) {
-                // keep the cached equations, the next solve of the well handles non-finite residuals
+                // keep the cached equations, the next solve of the well handles non-finite values
             }
         }
         if (converged) {
