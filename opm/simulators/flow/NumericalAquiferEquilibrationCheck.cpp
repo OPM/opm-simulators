@@ -28,6 +28,8 @@
 #include <opm/input/eclipse/EclipseState/Aquifer/NumericalAquifer/NumericalAquiferRegionSplit.hpp>
 #include <opm/input/eclipse/EclipseState/Aquifer/NumericalAquifer/NumericalAquifers.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/Aqudims.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
 #include <algorithm>
@@ -135,7 +137,7 @@ checkNumericalAquiferEquilibration(const std::vector<NumericalAquiferEquilibrati
             eclState.aquifer().numericalAquifers(), ids,
             eclState.getInputGrid(), eclState.globalFieldProps(), eclState.getLgrs()
         };
-        message += split.deckChanges(units);
+        message += split.deckChanges(units, eclState.getTableManager().getAqudims());
 
         message += fmt::format(
             "\nTo run the case unchanged, accepting the initial transient, use "
