@@ -23,6 +23,8 @@
 #include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <opm/models/blackoil/blackoildiffusionmodule.hh>
+#include <opm/models/blackoil/blackoildispersionmodule.hh>
 
 #include <opm/models/discretization/common/tpfalinearizer.hh>
 
@@ -47,7 +49,11 @@ struct LocalResidual<TypeTag, TTag::FlowWaterOnlyProblem>
 
 template<class TypeTag>
 struct EnableDiffusion<TypeTag, TTag::FlowWaterOnlyProblem>
-{ static constexpr bool value = false; };
+{ static constexpr bool value = true; };
+
+template<class TypeTag>
+struct EnableDispersion<TypeTag, TTag::FlowWaterOnlyProblem>
+{ static constexpr bool value = true; };
 
 //! The indices required by the model
 template<class TypeTag>
