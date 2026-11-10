@@ -487,6 +487,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_blackoil_amg.cpp
   tests/test_blackoilprimaryvariables.cpp
   tests/test_compequil.cpp
+  tests/test_compequil_solvd.cpp
   tests/test_compositional_cpr_weights.cpp
   tests/test_compositionalcontainer.cpp
   tests/test_compwell_bhp_limit.cpp
@@ -1181,6 +1182,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/Transmissibility_impl.hpp
   opm/simulators/flow/ValidationFunctions.hpp
   opm/simulators/flow/VtkTracerModule.hpp
+  opm/simulators/flow/equil/EquilCompReport.hpp
   opm/simulators/flow/equil/EquilibrationHelpers.hpp
   opm/simulators/flow/equil/EquilibrationHelpers_impl.hpp
   opm/simulators/flow/equil/InitStateEquil.hpp

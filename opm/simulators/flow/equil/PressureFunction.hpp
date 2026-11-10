@@ -196,6 +196,12 @@ public:
         }
     }
 
+    /// Depth and pressure the function is integrated from.
+    const InitCond& initialCondition() const
+    {
+        return this->initial_;
+    }
+
 private:
     enum Direction : std::size_t { Up, Down, NumDir };
 
