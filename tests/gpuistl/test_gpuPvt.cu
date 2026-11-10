@@ -17,6 +17,7 @@
 #include <opm/common/utility/SaltArray.hpp>
 
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
 
@@ -61,20 +62,18 @@ struct Fixture {
         gpuComputedResultOnCpu = 0.0;
 
         // move pvt evaluations to gpu
-        OPM_GPU_SAFE_CALL(cudaMalloc(&gpuTemp, sizeof(Evaluation)));
-        OPM_GPU_SAFE_CALL(cudaMemcpy(gpuTemp, &temp, sizeof(Evaluation), cudaMemcpyHostToDevice));
-        OPM_GPU_SAFE_CALL(cudaMalloc(&gpuPressure, sizeof(Evaluation)));
-        OPM_GPU_SAFE_CALL(cudaMemcpy(gpuPressure, &pressure, sizeof(Evaluation), cudaMemcpyHostToDevice));
-    }
-    ~Fixture(){
-        OPM_GPU_SAFE_CALL(cudaFree(gpuTemp));
-        OPM_GPU_SAFE_CALL(cudaFree(gpuPressure));
+        gpuTempOwner = Opm::gpuistl::make_gpu_unique_ptr(temp);
+        gpuPressureOwner = Opm::gpuistl::make_gpu_unique_ptr(pressure);
+        gpuTemp = gpuTempOwner.get();
+        gpuPressure = gpuPressureOwner.get();
     }
 
     Evaluation temp; // [K]
     Evaluation pressure; // [Pa]
     Evaluation* gpuTemp; // [K]
     Evaluation* gpuPressure; // [Pa]
+    decltype(Opm::gpuistl::make_gpu_unique_ptr<Evaluation>()) gpuTempOwner;
+    decltype(Opm::gpuistl::make_gpu_unique_ptr<Evaluation>()) gpuPressureOwner;
 
     double gpuComputedResultOnCpu;
 
@@ -114,26 +113,17 @@ __global__ void brineCo2PvtInternalEnergy(GpuViewBrineCo2Pvt gpuViewBrineCo2Pvt,
 // Helper function to launch a kernel and retrieve the result on the CPU to reduce code duplicatoin
 template <typename KernelFunc, typename... Args>
 double launchKernelAndRetrieveResult(KernelFunc kernel, Args... args) {
-    double* resultOnGpu;
-    double gpuComputedResultOnCpu;
-
-    // Allocate memory for the result on the GPU
-    OPM_GPU_SAFE_CALL(cudaMalloc(&resultOnGpu, sizeof(double)));
+    auto resultOnGpu = Opm::gpuistl::make_gpu_unique_ptr<double>();
 
     // Launch the kernel
-    kernel<<<1, 1>>>(args..., resultOnGpu);
+    kernel<<<1, 1>>>(args..., resultOnGpu.get());
 
     // Check for any errors in kernel launch
     OPM_GPU_SAFE_CALL(cudaPeekAtLastError());
     OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
 
     // Retrieve the result from the GPU to the CPU
-    OPM_GPU_SAFE_CALL(cudaMemcpy(&gpuComputedResultOnCpu, resultOnGpu, sizeof(double), cudaMemcpyDeviceToHost));
-
-    // Free allocated GPU memory
-    OPM_GPU_SAFE_CALL(cudaFree(resultOnGpu));
-
-    return gpuComputedResultOnCpu;
+    return Opm::gpuistl::copyFromGPU(resultOnGpu);
 }
 
 bool compareSignificantDigits(double a, double b, int significantDigits) {
@@ -189,11 +179,9 @@ BOOST_FIXTURE_TEST_CASE(TestUseBrineDynamicOnGpu, Fixture) {
     double enthalpyReference = BrineDyn::liquidEnthalpy(temp, pressure, salinity).value();
 
     // Allocate GPU memory for the Evaluation inputs
-    Evaluation* gpuSalinity = nullptr;
-    OPM_GPU_SAFE_CALL(cudaMalloc(&gpuSalinity, sizeof(Evaluation)));
-    OPM_GPU_SAFE_CALL(cudaMemcpy(gpuSalinity, &salinity, sizeof(Evaluation), cudaMemcpyHostToDevice));
+    auto gpuSalinity = Opm::gpuistl::make_gpu_unique_ptr(salinity);
 
-    gpuComputedResultOnCpu = launchKernelAndRetrieveResult(brineDynamicLiquidEnthalpy, gpuTemp, gpuPressure, gpuSalinity);
+    gpuComputedResultOnCpu = launchKernelAndRetrieveResult(brineDynamicLiquidEnthalpy, gpuTemp, gpuPressure, gpuSalinity.get());
 
     // Verify that the CPU and GPU results match within a reasonable tolerance
     BOOST_CHECK(std::fabs(gpuComputedResultOnCpu - enthalpyReference) < ABS_TOL);
@@ -258,19 +246,11 @@ BOOST_FIXTURE_TEST_CASE(TestBrineCo2Pvt, Fixture) {
     GpuBufBrineCo2Pvt gpuBufBrineCo2Pvt = Opm::gpuistl::copy_to_gpu(cpuBrineCo2Pvt);
     GpuViewBrineCo2Pvt gpuViewBrineCo2Pvt = Opm::gpuistl::make_view(gpuBufBrineCo2Pvt);
 
-    // Allocate memory for the result on the GPU
-    double* resultOnGpu = nullptr;
-    OPM_GPU_SAFE_CALL(cudaMalloc(&resultOnGpu, sizeof(double)));
-
     // Allocate GPU memory for the Evaluation inputs
-    Evaluation* gpuRs = nullptr;
-    Evaluation* gpuSaltConcentration = nullptr;
-    OPM_GPU_SAFE_CALL(cudaMalloc(&gpuRs, sizeof(Evaluation)));
-    OPM_GPU_SAFE_CALL(cudaMemcpy(gpuRs, &rs, sizeof(Evaluation), cudaMemcpyHostToDevice));
-    OPM_GPU_SAFE_CALL(cudaMalloc(&gpuSaltConcentration, sizeof(Evaluation)));
-    OPM_GPU_SAFE_CALL(cudaMemcpy(gpuSaltConcentration, &saltConcentration, sizeof(Evaluation), cudaMemcpyHostToDevice));
+    auto gpuRs = Opm::gpuistl::make_gpu_unique_ptr(rs);
+    auto gpuSaltConcentration = Opm::gpuistl::make_gpu_unique_ptr(saltConcentration);
 
-    gpuComputedResultOnCpu = launchKernelAndRetrieveResult(brineCo2PvtInternalEnergy, gpuViewBrineCo2Pvt, gpuTemp, gpuPressure, gpuRs, gpuSaltConcentration);
+    gpuComputedResultOnCpu = launchKernelAndRetrieveResult(brineCo2PvtInternalEnergy, gpuViewBrineCo2Pvt, gpuTemp, gpuPressure, gpuRs.get(), gpuSaltConcentration.get());
 
     BOOST_CHECK(compareSignificantDigits(gpuComputedResultOnCpu, internalEnergyReference, 6));
 }

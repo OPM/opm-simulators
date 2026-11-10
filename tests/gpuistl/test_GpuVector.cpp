@@ -26,6 +26,7 @@
 #include <dune/istl/bvector.hh>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_memcpy.hpp>
 #include <random>
 #include <limits>
 
@@ -120,7 +121,7 @@ BOOST_AUTO_TEST_CASE(TestDataPointer)
     auto vectorOnGPU = Opm::gpuistl::GpuVector<double>(data.data(), data.size());
 
     std::vector<double> buffer(data.size(), 0.0);
-    OPM_GPU_SAFE_CALL(cudaMemcpy(buffer.data(), vectorOnGPU.data(), sizeof(double) * data.size(), cudaMemcpyDeviceToHost));
+    Opm::gpuistl::detail::gpuMemcpyDeviceToHost(buffer.data(), vectorOnGPU.data(), data.size());
     BOOST_CHECK_EQUAL_COLLECTIONS(data.begin(), data.end(), buffer.begin(), buffer.end());
 }
 

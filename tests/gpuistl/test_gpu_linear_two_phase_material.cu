@@ -90,12 +90,10 @@ BOOST_AUTO_TEST_CASE(TestSimpleInterpolation)
         auto cpuMadeAd = NorneEvaluation(x_i, 0);
         NorneEvaluation cpuInterpolatedEval = CPUTwoPhaseMaterialLaw::twoPhaseSatPcnw<NorneEvaluation>(cpuParams, cpuMadeAd);
 
-        NorneEvaluation gpuAdResOnCPU;
-
-        OPM_GPU_SAFE_CALL(cudaMemcpy(gpuAdInput, &cpuMadeAd, sizeof(NorneEvaluation), cudaMemcpyHostToDevice));
+        Opm::gpuistl::copyToGPU(cpuMadeAd, gpuAdInputOwner);
         gpuTwoPhaseSatPcnwWrapper<<<1,1>>>(gpuViewParams, gpuAdInput, gpuAdResOnGPU);
         OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-        OPM_GPU_SAFE_CALL(cudaMemcpy(&gpuAdResOnCPU, gpuAdResOnGPU, sizeof(NorneEvaluation), cudaMemcpyDeviceToHost));
+        const auto gpuAdResOnCPU = Opm::gpuistl::copyFromGPU(gpuAdResOnGPUOwner);
 
         BOOST_CHECK(gpuAdResOnCPU == cpuInterpolatedEval);
     }

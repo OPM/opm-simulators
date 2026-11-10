@@ -19,6 +19,7 @@
 #include <boost/test/unit_test.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 #include <cuda_runtime.h>
 
 namespace{
@@ -37,15 +38,12 @@ BOOST_AUTO_TEST_CASE(TestInstantiateADObject)
     double testValue = 123.456;
     Evaluation cpuMadeAd = Evaluation(testValue, 0);
 
-    Evaluation gpuMadeAd; // allocate space for one more AD object on the CPU
-    Evaluation *d_ad;
+    auto d_ad = Opm::gpuistl::make_gpu_unique_ptr<Evaluation>();
 
     // allocate space on GPU, run kernel, and move results back to the CPU
-    OPM_GPU_SAFE_CALL(cudaMalloc(&d_ad, sizeof(Evaluation)));
-    instantiate_ad_object<<<1,1>>>(d_ad, testValue);
+    instantiate_ad_object<<<1,1>>>(d_ad.get(), testValue);
     OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-    OPM_GPU_SAFE_CALL(cudaMemcpy(&gpuMadeAd, d_ad, sizeof(Evaluation), cudaMemcpyDeviceToHost));
-    OPM_GPU_SAFE_CALL(cudaFree(d_ad));
+    const auto gpuMadeAd = Opm::gpuistl::copyFromGPU(d_ad);
 
     // Check that the object made in a GPU kernel is equivalent to that made on the CPU
     BOOST_CHECK(cpuMadeAd == gpuMadeAd);
