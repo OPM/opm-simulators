@@ -666,20 +666,12 @@ update(bool global, const TransUpdateQuantities update_quantities,
                                                            faceIdToDir(inside.faceIdx));
                 }
 
-                // Dual-continuum runs: the matrix and fracture halves never
-                // connect through grid faces (their coupling comes exclusively
-                // through the input NNCs).  Matrix-matrix faces carry flow
-                // only in dual-permeability runs; in single-permeability dual
-                // porosity the matrix half has no internal flow.
-                if (dualPorosity) {
-                    const bool insideFracture  = isFractureCell(inside.cartElemIdx);
-                    const bool outsideFracture = isFractureCell(outside.cartElemIdx);
-                    if (insideFracture != outsideFracture) {
-                        trans = 0.0;
-                    }
-                    else if (!insideFracture && !dualPermeability) {
-                        trans = 0.0;
-                    }
+                // Dual-continuum runs: the continua are separate grids, so no face connects
+                // a matrix cell to a fracture cell; their coupling comes exclusively through
+                // the input NNCs. Matrix-matrix faces carry flow only in dual-permeability
+                // runs; in single-permeability dual porosity the matrix has no internal flow.
+                if (dualPorosity && !dualPermeability && !isFractureCell(inside.cartElemIdx)) {
+                    trans = 0.0;
                 }
 
                 transMap.insert_or_assign(details::isId(inside.elemIdx, outside.elemIdx), trans);

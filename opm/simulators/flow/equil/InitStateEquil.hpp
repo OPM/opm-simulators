@@ -725,8 +725,7 @@ private:
     template <class RMap>
     void updateInitialSaltSaturation_(const EclipseState& eclState, const RMap& reg);
 
-    void updateCellProps_(const EclipseState& eclipseState,
-                          const GridView& gridView,
+    void updateCellProps_(const GridView& gridView,
                           const NumericalAquifers& aquifer,
                           const std::vector<Scalar>* editedCellDepths);
 

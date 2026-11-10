@@ -254,8 +254,8 @@ BOOST_AUTO_TEST_CASE(DualPermeabilityTransPolicy)
     }
 
     // The fracture half likewise matches its own single-porosity analogue.
-    // Fracture half occupies depths 2020-2040 (natural stacking).
-    const auto spFracture = computeTransFromDeck(singlePorosityDeck(1000.0, 500.0, 0.01, 2020.0));
+    // The fracture cells are co-located with the matrix, depths 2000-2020.
+    const auto spFracture = computeTransFromDeck(singlePorosityDeck(1000.0, 500.0, 0.01, 2000.0));
     for (const auto& [c1, c2] : {std::pair<std::size_t,std::size_t>{0,1}, {2,3}, {0,2}, {1,3}}) {
         BOOST_CHECK_CLOSE(res.trans(c1 + 4, c2 + 4), spFracture.trans(c1, c2), 1e-6);
     }

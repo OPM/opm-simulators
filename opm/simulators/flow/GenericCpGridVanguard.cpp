@@ -29,6 +29,8 @@
 #include <dune/grid/common/partitionset.hh>
 #include <dune/common/version.hh>
 
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/TimingMacros.hpp>
 #include <opm/common/utility/ActiveGridCells.hpp>
 
@@ -470,6 +472,20 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::
 doCreateGrids_(const bool edge_conformal, EclipseState& eclState)
 {
     const auto isRoot = this->mpiRank == 0;
+
+#if HAVE_MPI
+    // Dual-continuum runs are supported in serial only. The check is collective, as the
+    // RUNSPEC flags are available on every rank, and it comes before any rank starts
+    // building the grid: the grid of a dual-continuum run is assembled from one grid per
+    // continuum on a single process.
+    if (eclState.runspec().porosityModel().dualContinuum() && FlowGenericVanguard::comm().size() > 1) {
+        const std::string msg =
+            "Dual-continuum runs (DUALPORO/DUALPERM) are supported in serial only. "
+            "Rerun on a single process.";
+        OpmLog::error(msg);
+        OPM_THROW(std::runtime_error, msg);
+    }
+#endif
 
     // At this stage the ParallelEclipseState instance is still in global
     // view; on rank 0 we have undistributed data for the entire grid, on
