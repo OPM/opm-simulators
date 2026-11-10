@@ -355,6 +355,7 @@ if(CUDA_FOUND OR hip_FOUND)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/CuBlasHandle.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/CuSparseHandle.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/kernel_enums.hpp)
+  ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuAssembly.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuBuffer.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/preconditionerKernels/DILUKernels.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/preconditionerKernels/ILU_variants_helper_kernels.hpp)
@@ -925,6 +926,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/discretization/common/linearizationtype.hh
   opm/models/discretization/common/restrictprolong.hh
   opm/models/discretization/common/tpfalinearizer.hh
+  opm/models/discretization/common/tpfalinearizergpu.hh
   opm/models/discretization/common/tpfalinearizergpukernels.hh
   opm/models/discretization/common/tpfalinearizergpuparams.hh
   opm/models/discretization/common/tpfalinearizerstructs.hh
@@ -1224,6 +1226,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/foreignoverlapfrombcrsmatrix.hh
   opm/simulators/linalg/getQuasiImpesWeights.hpp
   opm/simulators/linalg/globalindices.hh
+  opm/simulators/linalg/gpuistl_assembly_if_available.hpp
   opm/simulators/linalg/GraphColoring.hpp
   opm/simulators/linalg/ilufirstelement.hh
   opm/simulators/linalg/is_gpu_operator.hpp
