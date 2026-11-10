@@ -24,8 +24,6 @@
 
 #include <opm/simulators/flow/CompositionalContainer.hpp>
 
-#include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
-
 #include <opm/material/fluidsystems/GenericOilGasWaterFluidSystem.hpp>
 #include <opm/output/data/Solution.hpp>
 
@@ -129,14 +127,13 @@ BOOST_AUTO_TEST_CASE(CellSaturationPressureSelectsThePhaseAndTheBranch)
     // 100 degC with Peng-Robinson, as in the solver's tests.  Phase presence
     // comes from the flash liquid fraction L, not from the saturations.
     constexpr double temperature = 373.15;
-    constexpr auto eos = Opm::CompositionalConfig::EOSType::PR;
     using CompVec = std::array<double, 3>;
 
     // Both hydrocarbon phases present: the cell is at its saturation pressure
     // and the solver is not consulted.
     {
         const auto psat = Container::cellSaturationPressure(
-            0.3, 75.0e5, CompVec{0.0, 0.5, 0.5}, temperature, eos);
+            0.3, 75.0e5, CompVec{0.0, 0.5, 0.5}, temperature, /*eosRegionIdx=*/0);
         BOOST_REQUIRE(psat.has_value());
         BOOST_CHECK_CLOSE(*psat, 75.0e5, 1.0e-12);
     }
@@ -145,7 +142,7 @@ BOOST_AUTO_TEST_CASE(CellSaturationPressureSelectsThePhaseAndTheBranch)
     // reference bubble pressure is 160.5601 bar.
     {
         const auto psat = Container::cellSaturationPressure(
-            1.0, 150.0e5, CompVec{0.0, 0.5, 0.5}, temperature, eos);
+            1.0, 150.0e5, CompVec{0.0, 0.5, 0.5}, temperature, /*eosRegionIdx=*/0);
         BOOST_REQUIRE(psat.has_value());
         BOOST_CHECK_CLOSE(*psat / 1.0e5, 160.56010, 1.0e-3);
     }
@@ -155,7 +152,7 @@ BOOST_AUTO_TEST_CASE(CellSaturationPressureSelectsThePhaseAndTheBranch)
     // known to single precision, hence the tolerance.
     {
         const auto psat = Container::cellSaturationPressure(
-            0.0, 150.0e5, CompVec{0.0, 0.987784, 0.012216}, temperature, eos);
+            0.0, 150.0e5, CompVec{0.0, 0.987784, 0.012216}, temperature, /*eosRegionIdx=*/0);
         BOOST_REQUIRE(psat.has_value());
         BOOST_CHECK_CLOSE(*psat / 1.0e5, 160.56010, 1.0e-2);
     }
@@ -164,7 +161,7 @@ BOOST_AUTO_TEST_CASE(CellSaturationPressureSelectsThePhaseAndTheBranch)
     // pressure, and the cell pressure must not stand in for one.
     {
         const auto psat = Container::cellSaturationPressure(
-            0.0, 150.0e5, CompVec{0.0, 1.0, 0.0}, temperature, eos);
+            0.0, 150.0e5, CompVec{0.0, 1.0, 0.0}, temperature, /*eosRegionIdx=*/0);
         BOOST_CHECK(!psat.has_value());
     }
 
@@ -172,7 +169,7 @@ BOOST_AUTO_TEST_CASE(CellSaturationPressureSelectsThePhaseAndTheBranch)
     // two phases, even when round-off puts them slightly outside (0, 1).
     for (const double liquidFraction : {1.0 + 2.0e-16, -1.0e-16, 1.0 - 1.0e-12, 1.0e-12}) {
         const auto psat = Container::cellSaturationPressure(
-            liquidFraction, 75.0e5, CompVec{0.0, 0.5, 0.5}, temperature, eos);
+            liquidFraction, 75.0e5, CompVec{0.0, 0.5, 0.5}, temperature, /*eosRegionIdx=*/0);
         BOOST_REQUIRE_MESSAGE(psat.has_value(), "L = " << liquidFraction);
         BOOST_CHECK_CLOSE(*psat, 75.0e5, 1.0e-12);
     }
@@ -184,7 +181,6 @@ BOOST_AUTO_TEST_CASE(RoundOffInTheGasSaturationDoesNotHideTheBubblePoint)
     // Classifying this liquid-only cell by saturation would return the cell
     // pressure instead of the bubble point.
     constexpr double temperature = 373.15;
-    constexpr auto eos = Opm::CompositionalConfig::EOSType::PR;
     const std::array<double, 3> liquid{0.0, 0.5, 0.5};
 
     constexpr double waterSaturation = 0.3;
@@ -195,7 +191,7 @@ BOOST_AUTO_TEST_CASE(RoundOffInTheGasSaturationDoesNotHideTheBubblePoint)
 
     // The flash's liquid-only label must select the bubble point.
     const auto psat = Container::cellSaturationPressure(
-        1.0, 200.0e5, liquid, temperature, eos);
+        1.0, 200.0e5, liquid, temperature, /*eosRegionIdx=*/0);
     BOOST_REQUIRE(psat.has_value());
     BOOST_CHECK_CLOSE(*psat / 1.0e5, 160.56010, 1.0e-3);
 }
