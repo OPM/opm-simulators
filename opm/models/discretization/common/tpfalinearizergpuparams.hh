@@ -55,7 +55,13 @@ template <class TypeTag> class TpfaLinearizerGpuParams;
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/simulators/flow/SimpleFIBlackOilModel.hpp>
 #include <opm/simulators/flow/ThermalGasWaterFlowProblem.hpp>
+
+// This header is not hipified; select the generated bridge for HIP builds.
+#if USE_HIP
+#include <opm/simulators/linalg/gpuistl_hip/GpuFlowGasWaterEnergyBridge.hpp>
+#else
 #include <opm/simulators/linalg/gpuistl/GpuFlowGasWaterEnergyBridge.hpp>
+#endif
 
 #include <opm/models/discretization/common/tpfalinearizerstructs.hh>
 
@@ -175,6 +181,19 @@ private:
     std::vector<MatrixBlockGPU> sourceJacobianStaging_;
     std::size_t sourceCapacity_{0};
 
+    bool bindPropertyAssemblyBridge_(Model& model)
+    {
+        // Custom model TypeTags may support assembly without a property dispatcher.
+        if constexpr (requires { model.gpuPropertyAssemblyBridge(); }) {
+            if (model.hasGpuPropertyAssemblyBridge()) {
+                propertyAssemblyBridge_ = &model.gpuPropertyAssemblyBridge();
+                return true;
+            }
+        }
+        propertyAssemblyBridge_ = nullptr;
+        return false;
+    }
+
 public:
     /*!
      * \brief Construct and populate all GPU buffers needed for one linearization pass.
@@ -251,8 +270,7 @@ public:
             return gpuistl::copy_to_gpu(gpuFlowProblem);
         }());
 
-        if (model.hasGpuPropertyAssemblyBridge()) {
-            propertyAssemblyBridge_ = &model.gpuPropertyAssemblyBridge();
+        if (bindPropertyAssemblyBridge_(model)) {
             propertyAssemblyBridge_->waitForAssembly(/*timeIdx=*/0);
             boundaryInfoBuffer_
                 = gpuistl::copy_to_gpu<VectorBlockGPU, GpuScalarFluidState, BoundaryInfoGPU>(
@@ -285,8 +303,7 @@ public:
         if (numCells != residualBuffer_.size()) {
             OPM_THROW(std::logic_error, "GPU assembly topology changed without erasing the matrix");
         }
-        if (model.hasGpuPropertyAssemblyBridge()) {
-            propertyAssemblyBridge_ = &model.gpuPropertyAssemblyBridge();
+        if (bindPropertyAssemblyBridge_(model)) {
             propertyAssemblyBridge_->waitForAssembly(/*timeIdx=*/0);
             boundaryInfoBuffer_ =
                 gpuistl::copy_to_gpu<VectorBlockGPU, GpuScalarFluidState, BoundaryInfoGPU>(

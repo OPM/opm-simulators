@@ -657,17 +657,6 @@ struct TemporaryFile {
 
 using ProductionTypeTag = Opm::Properties::TTag::FlowGasWaterEnergyProblem;
 using ProductionSimulator = Opm::GetPropType<ProductionTypeTag, Opm::Properties::Simulator>;
-using ProductionPrimaryVariables =
-    Opm::GetPropType<ProductionTypeTag, Opm::Properties::PrimaryVariables>;
-using ProductionIntensiveQuantities =
-    Opm::GetPropType<ProductionTypeTag, Opm::Properties::IntensiveQuantities>;
-
-/// Per-cell pointers passed to the production dispatcher.
-struct ProductionDispatcherInputs
-{
-    std::vector<const ProductionPrimaryVariables*> primaryVariables;
-    std::vector<ProductionIntensiveQuantities*> intensiveQuantities;
-};
 
 /// Read \p deckPath and set up a simulator for the production TypeTag, with
 /// its initial solution and CPU intensive quantities.
@@ -695,39 +684,27 @@ static std::unique_ptr<ProductionSimulator> makeProductionSimulator(const std::s
     return sim;
 }
 
-/// Collect pointers to the initial solution and the cached CPU intensive
-/// quantities of every cell of \p sim.
-static ProductionDispatcherInputs makeProductionDispatcherInputs(ProductionSimulator& sim)
-{
-    const auto& solution = sim.problem().model().solution(/*timeIdx=*/0);
-    const std::size_t numCells = sim.model().numGridDof();
-    BOOST_REQUIRE_EQUAL(solution.size(), numCells);
-
-    ProductionDispatcherInputs inputs;
-    inputs.primaryVariables.resize(numCells);
-    inputs.intensiveQuantities.resize(numCells);
-    for (std::size_t i = 0; i < numCells; ++i) {
-        inputs.primaryVariables[i] = &solution[i];
-        inputs.intensiveQuantities[i]
-            = const_cast<ProductionIntensiveQuantities*>(
-                sim.model().cachedIntensiveQuantities(static_cast<unsigned>(i), 0));
-        BOOST_REQUIRE(inputs.intensiveQuantities[i] != nullptr);
-    }
-    return inputs;
-}
-
 static void runProductionDispatcherTest(const std::string& deckPath)
 {
+    using IntensiveQuantities =
+        Opm::GetPropType<ProductionTypeTag, Opm::Properties::IntensiveQuantities>;
     const auto sim = makeProductionSimulator(deckPath);
-    const auto& problem = sim->problem();
-    const auto [primaryVariables, intensiveQuantities] = makeProductionDispatcherInputs(*sim);
-    const std::size_t numCells = intensiveQuantities.size();
 
+    const auto& problem = sim->problem();
+    const auto& solution = problem.model().solution(/*timeIdx=*/0);
+    const std::size_t numCells = problem.model().numGridDof();
+    BOOST_REQUIRE_EQUAL(solution.size(), numCells);
+
+    std::vector<IntensiveQuantities*> intensiveQuantities(numCells);
     std::vector<double> mobilityBefore(numCells * 2u);
     std::vector<double> waterDensityBefore(numCells);
     constexpr unsigned activePhases[] = {FluidSystem::waterPhaseIdx,
                                          FluidSystem::gasPhaseIdx};
     for (std::size_t i = 0; i < numCells; ++i) {
+        intensiveQuantities[i]
+            = const_cast<IntensiveQuantities*>(
+                sim->model().cachedIntensiveQuantities(static_cast<unsigned>(i), 0));
+        BOOST_REQUIRE(intensiveQuantities[i] != nullptr);
         for (unsigned phaseOffset = 0; phaseOffset < 2u; ++phaseOffset) {
             mobilityBefore[2u * i + phaseOffset]
                 = asDouble(intensiveQuantities[i]->mobility(activePhases[phaseOffset]));
@@ -746,14 +723,43 @@ static void runProductionDispatcherTest(const std::string& deckPath)
     dispatcher.materializeHostIntensiveQuantities(
         /*timeIdx=*/0, intensiveQuantities.data(), numCells);
 
-    // History must remain available when the current slot is updated again,
-    // and the current device allocation must remain stable for borrowed views.
+    // Compare two distinct states so slot aliasing or overwriting history fails.
+    auto changedSolution = solution;
+    using Indices = Opm::GetPropType<ProductionTypeTag, Opm::Properties::Indices>;
+    std::vector<IntensiveQuantities> changedReference(numCells);
+    for (std::size_t i = 0; i < numCells; ++i) {
+        changedSolution[i][Indices::pressureSwitchIdx] *= 1.1;
+    }
+    // Use the production CPU update, including its element-context path.
+    sim->model().solution(/*timeIdx=*/0) = changedSolution;
+    sim->model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
+    for (std::size_t i = 0; i < numCells; ++i) {
+        changedReference[i] = *sim->model().cachedIntensiveQuantities(static_cast<unsigned>(i), 0);
+    }
+    BOOST_REQUIRE_GT(std::abs(asDouble(changedReference[0].fluidState().density(
+                                FluidSystem::waterPhaseIdx)) - waterDensityBefore[0]),
+                     1e-6 * std::abs(waterDensityBefore[0]));
+
+    // Both allocations must remain stable while current B replaces current A.
     const auto* currentIqData = dispatcher.bridge().intensiveQuantitiesView(0).data();
+    const auto* previousIqData = dispatcher.bridge().intensiveQuantitiesView(1).data();
+    BOOST_CHECK(currentIqData != previousIqData);
     dispatcher.advanceTimeLevel();
     BOOST_REQUIRE(dispatcher.hasDeviceModelView());
-    dispatcher.update(problem, solution, /*timeIdx=*/0);
+    dispatcher.update(problem, changedSolution, /*timeIdx=*/0);
     BOOST_CHECK(currentIqData == dispatcher.bridge().intensiveQuantitiesView(0).data());
+    BOOST_CHECK(previousIqData == dispatcher.bridge().intensiveQuantitiesView(1).data());
     dispatcher.bridge().waitForAssembly(/*timeIdx=*/0);
+    dispatcher.materializeHostIntensiveQuantities(
+        /*timeIdx=*/0, intensiveQuantities.data(), numCells);
+    for (std::size_t i = 0; i < numCells; ++i) {
+        for (const unsigned phaseIdx : activePhases) {
+            BOOST_CHECK_CLOSE(asDouble(changedReference[i].mobility(phaseIdx)),
+                              asDouble(intensiveQuantities[i]->mobility(phaseIdx)), 1e-6);
+            BOOST_CHECK_CLOSE(asDouble(changedReference[i].fluidState().density(phaseIdx)),
+                              asDouble(intensiveQuantities[i]->fluidState().density(phaseIdx)), 1e-6);
+        }
+    }
     for (std::size_t i = 0; i < numCells; ++i) {
         intensiveQuantities[i]->fluidState().setDensity(FluidSystem::waterPhaseIdx, -1.0);
     }
@@ -780,13 +786,11 @@ static void runProductionDispatcherRejectionTest(const std::string& deckPath,
                                                  std::string_view expectedMessage)
 {
     const auto sim = makeProductionSimulator(deckPath);
-    const auto [primaryVariables, intensiveQuantities] = makeProductionDispatcherInputs(*sim);
 
     Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcher<ProductionTypeTag> dispatcher;
     BOOST_CHECK_EXCEPTION(dispatcher.update(sim->problem(),
-                                            primaryVariables.data(),
-                                            intensiveQuantities.data(),
-                                            intensiveQuantities.size()),
+                                            sim->model().solution(/*timeIdx=*/0),
+                                            /*timeIdx=*/0),
                           std::logic_error,
                           [expectedMessage](const std::logic_error& e) {
                               return std::string_view{e.what()}.find(expectedMessage)

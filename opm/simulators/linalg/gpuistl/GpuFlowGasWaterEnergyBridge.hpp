@@ -26,6 +26,9 @@
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/simulators/flow/SimpleFIBlackOilModel.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuFlowGasWaterEnergyContract.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_constants.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_memcpy.hpp>
+#include <opm/simulators/linalg/gpuistl/gpu_resources.hpp>
 
 #include <array>
 #include <memory>
@@ -33,12 +36,6 @@
 #include <stdexcept>
 #include <type_traits>
 #include <vector>
-
-#if USE_HIP
-#include <hip/hip_runtime.h>
-#else
-#include <cuda_runtime.h>
-#endif
 
 namespace Opm::gpuistl {
 
@@ -96,30 +93,15 @@ public:
     using DevicePrimaryVariablesView = gpuistl::GpuView<const DevicePrimaryVariables>;
     using DeviceModelViewPublic = DeviceModelView;
 
-    GpuFlowGasWaterEnergyBridge()
-    {
-#if USE_HIP
-        OPM_GPU_SAFE_CALL(hipStreamCreate(&stream_));
-        OPM_GPU_SAFE_CALL(hipEventCreate(&propertyReady_));
-#else
-        OPM_GPU_SAFE_CALL(cudaStreamCreate(&stream_));
-        OPM_GPU_SAFE_CALL(cudaEventCreate(&propertyReady_));
-#endif
-    }
+    GpuFlowGasWaterEnergyBridge() = default;
 
     GpuFlowGasWaterEnergyBridge(const GpuFlowGasWaterEnergyBridge&) = delete;
     GpuFlowGasWaterEnergyBridge& operator=(const GpuFlowGasWaterEnergyBridge&) = delete;
 
     ~GpuFlowGasWaterEnergyBridge()
     {
+        // Also cover a failed update that queued work before recording its event.
         waitForLastWriter_();
-#if USE_HIP
-        OPM_GPU_WARN_IF_ERROR(hipEventDestroy(propertyReady_));
-        OPM_GPU_WARN_IF_ERROR(hipStreamDestroy(stream_));
-#else
-        OPM_GPU_WARN_IF_ERROR(cudaEventDestroy(propertyReady_));
-        OPM_GPU_WARN_IF_ERROR(cudaStreamDestroy(stream_));
-#endif
     }
 
     void updatePrimaryVariables(const Problem& cpuProblem,
@@ -139,26 +121,15 @@ public:
             hostPrimaryVariables[i] = DevicePrimaryVariables(solution[i]);
         }
 
-#if USE_HIP
-        OPM_GPU_SAFE_CALL(hipMemcpyAsync(primaryVariablesBuffer_[timeIdx]->data(),
-                                         hostPrimaryVariables.data(),
-                                         numDof_ * sizeof(DevicePrimaryVariables),
-                                         hipMemcpyHostToDevice,
-                                         stream_));
-#else
-        OPM_GPU_SAFE_CALL(cudaMemcpyAsync(primaryVariablesBuffer_[timeIdx]->data(),
-                                          hostPrimaryVariables.data(),
-                                          numDof_ * sizeof(DevicePrimaryVariables),
-                                          cudaMemcpyHostToDevice,
-                                          stream_));
-#endif
+        detail::gpuMemcpyHostToDeviceAsync(primaryVariablesBuffer_[timeIdx]->data(),
+                                           hostPrimaryVariables.data(), numDof_, stream_.get());
         deviceIqValid_[timeIdx] = false;
         lastWriterTimeIdx_ = timeIdx;
     }
 
     auto stream() const
     {
-        return stream_;
+        return stream_.get();
     }
 
     DevicePrimaryVariablesView primaryVariablesView(unsigned timeIdx) const
@@ -176,11 +147,7 @@ public:
     void recordPropertyReady(unsigned timeIdx)
     {
         validateReadySlot_(timeIdx);
-#if USE_HIP
-        OPM_GPU_SAFE_CALL(hipEventRecord(propertyReady_, stream_));
-#else
-        OPM_GPU_SAFE_CALL(cudaEventRecord(propertyReady_, stream_));
-#endif
+        recordEvent(propertyReady_, stream_.get());
         deviceIqValid_[timeIdx] = true;
         lastWriterTimeIdx_ = timeIdx;
     }
@@ -194,11 +161,7 @@ public:
     {
         validateValidSlot_(timeIdx);
         if (lastWriterTimeIdx_ != invalidTimeIdx) {
-#if USE_HIP
-            OPM_GPU_SAFE_CALL(hipStreamWaitEvent(nullptr, propertyReady_, 0));
-#else
-            OPM_GPU_SAFE_CALL(cudaStreamWaitEvent(nullptr, propertyReady_, 0));
-#endif
+            waitForEventAsync(detail::DEFAULT_STREAM, propertyReady_);
         }
     }
 
@@ -263,11 +226,7 @@ public:
         }
 
         if (lastWriterTimeIdx_ != invalidTimeIdx) {
-#if USE_HIP
-            OPM_GPU_SAFE_CALL(hipEventSynchronize(propertyReady_));
-#else
-            OPM_GPU_SAFE_CALL(cudaEventSynchronize(propertyReady_));
-#endif
+            synchronizeEvent(propertyReady_);
         }
         hostIntensiveQuantities_.assign(numDof_, *prototype_);
         intensiveQuantitiesBuffer_[timeIdx]->copyToHost(hostIntensiveQuantities_);
@@ -285,19 +244,9 @@ public:
             deviceIqValid_[1] = false;
             return;
         }
-#if USE_HIP
-        OPM_GPU_SAFE_CALL(hipMemcpyAsync(intensiveQuantitiesBuffer_[1]->data(),
-                                         intensiveQuantitiesBuffer_[0]->data(),
-                                         numDof_ * sizeof(DeviceIntensiveQuantities),
-                                         hipMemcpyDeviceToDevice,
-                                         stream_));
-#else
-        OPM_GPU_SAFE_CALL(cudaMemcpyAsync(intensiveQuantitiesBuffer_[1]->data(),
-                                          intensiveQuantitiesBuffer_[0]->data(),
-                                          numDof_ * sizeof(DeviceIntensiveQuantities),
-                                          cudaMemcpyDeviceToDevice,
-                                          stream_));
-#endif
+        detail::gpuMemcpyDeviceToDeviceAsync(intensiveQuantitiesBuffer_[1]->data(),
+                                             intensiveQuantitiesBuffer_[0]->data(),
+                                             numDof_, stream_.get());
         recordPropertyReady(/*timeIdx=*/1);
     }
 
@@ -402,13 +351,7 @@ private:
 
     void waitForLastWriter_() const
     {
-        if (lastWriterTimeIdx_ != invalidTimeIdx) {
-#if USE_HIP
-            OPM_GPU_WARN_IF_ERROR(hipEventSynchronize(propertyReady_));
-#else
-            OPM_GPU_WARN_IF_ERROR(cudaEventSynchronize(propertyReady_));
-#endif
-        }
+        synchronizeStreamNoThrow(stream_.get());
     }
 
     void reset_()
@@ -429,13 +372,9 @@ private:
         numDof_ = 0;
     }
 
-#if USE_HIP
-    hipStream_t stream_{nullptr};
-    hipEvent_t propertyReady_{nullptr};
-#else
-    cudaStream_t stream_{nullptr};
-    cudaEvent_t propertyReady_{nullptr};
-#endif
+    // Construct the stream first so event-construction failure releases it.
+    GPUStream stream_;
+    GPUEvent propertyReady_;
     std::size_t numDof_{0};
     std::array<std::unique_ptr<gpuistl::GpuBuffer<DevicePrimaryVariables>>, numTimeSlots>
         primaryVariablesBuffer_{};
