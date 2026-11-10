@@ -211,6 +211,25 @@ add_test_compare_restarted_simulation(
 
 add_test_compare_restarted_simulation(
   CASENAME
+    swatinit_gaswater
+  FILENAME
+    SWATINIT_GASWATER
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_gaswater
+  ABS_TOL
+    ${abs_tol_restart}
+  REL_TOL
+    ${rel_tol_restart}
+  RESTART_STEP
+    4
+  DIR
+    swatinit
+)
+
+add_test_compare_restarted_simulation(
+  CASENAME
     network_01_restart
   FILENAME
     NETWORK-01-RESTART
