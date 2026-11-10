@@ -1,0 +1,79 @@
+-- The top cells of the first two columns fall below MINPV.  On an
+-- edge-conformal grid they are merged into the cells below, whose tops
+-- then move up to 1000 m.  EDIT changes the depth of cell (3,1,1) only.
+
+RUNSPEC
+
+DIMENS
+ 4 1 2 /
+
+OIL
+WATER
+
+METRIC
+
+TABDIMS
+/
+
+START
+ 1 JAN 2020 /
+
+GRID
+
+DX
+ 8*10 /
+DY
+ 8*10 /
+DZ
+ 8*1 /
+TOPS
+ 4*1000 /
+
+PORO
+ 2*0.0001 6*0.2 /
+PERMX
+ 8*100 /
+PERMY
+ 8*100 /
+PERMZ
+ 8*10 /
+
+MINPV
+ 0.5 /
+
+EDIT
+
+EQUALS
+ DEPTH 1005 3 3 1 1 1 1 /
+/
+
+PROPS
+
+SWOF
+ 0.2 0.0 1.0 0.0
+ 1.0 1.0 0.0 0.0 /
+
+PVTW
+ 1.0 1.0 1.0e-5 0.5 0.0 /
+
+PVDO
+   1.0 1.00 1.0
+ 400.0 0.99 1.0 /
+
+DENSITY
+ 800 1000 1 /
+
+ROCK
+ 1.0 1.0e-5 /
+
+SOLUTION
+
+EQUIL
+ 1000 100 1100 0 /
+
+SCHEDULE
+
+TSTEP
+ 1 /
+
+END
