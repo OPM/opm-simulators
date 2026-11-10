@@ -69,13 +69,6 @@ BOOST_AUTO_TEST_CASE(TestCopyFromHostConstructor)
     BOOST_CHECK_EQUAL_COLLECTIONS(buffer.begin(), buffer.end(), data.begin(), data.end());
 }
 
-BOOST_AUTO_TEST_CASE(TestCopyFromHostConstructorWithGPUPointer)
-{
-    std::vector<double> data {{1, 2, 3, 4, 5, 6, 7}};
-    auto bufferOnGPU = Opm::gpuistl::GpuBuffer<double>(data.data(), data.size());
-    BOOST_CHECK_THROW(Opm::gpuistl::GpuBuffer<double>(bufferOnGPU.data(), data.size()), std::invalid_argument);
-}
-
 BOOST_AUTO_TEST_CASE(TestCopyFromHostFunction)
 {
     std::vector<double> data {{1, 2, 3, 4, 5, 6, 7}};
@@ -338,6 +331,13 @@ BOOST_AUTO_TEST_CASE(TestCopyToHostAsyncWrongSizeThrows)
 }
 
 #ifndef NDEBUG
+BOOST_AUTO_TEST_CASE(TestCopyFromHostConstructorWithGPUPointerInDebug)
+{
+    std::vector<double> data {{1, 2, 3, 4, 5, 6, 7}};
+    auto bufferOnGPU = Opm::gpuistl::GpuBuffer<double>(data.data(), data.size());
+    BOOST_CHECK_THROW(Opm::gpuistl::GpuBuffer<double>(bufferOnGPU.data(), data.size()), std::invalid_argument);
+}
+
 BOOST_AUTO_TEST_CASE(TestCopyFromHostRejectsDevicePointerInDebug)
 {
     // Exercises detail::gpuMemcpyHostToDevice's debug pointer-kind checks
