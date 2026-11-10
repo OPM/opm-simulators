@@ -101,6 +101,31 @@ BOOST_AUTO_TEST_CASE(SaturationPressureRequiresRestartOutput)
     BOOST_CHECK(!container.saturationPressureAllocated());
 }
 
+BOOST_AUTO_TEST_CASE(LiCorrelationFactorIsWrittenWithEveryRestart)
+{
+    Container container;
+    std::map<std::string, int> keywords;
+    std::vector<double> oilSaturation;
+
+    container.allocate(2, keywords, RestartOutput::Disabled);
+    BOOST_CHECK(!container.liCorrelationFactorAllocated());
+    Opm::data::Solution substep;
+    container.outputRestart(substep, oilSaturation);
+    BOOST_CHECK(!substep.has("LIFACT"));
+
+    container.allocate(2, keywords, RestartOutput::Enabled);
+    BOOST_REQUIRE(container.liCorrelationFactorAllocated());
+    container.assignLiCorrelationFactor(1, 0.93);
+    Opm::data::Solution restart;
+    container.outputRestart(restart, oilSaturation);
+    BOOST_REQUIRE(restart.has("LIFACT"));
+    const auto& factor = restart.data<double>("LIFACT");
+    BOOST_REQUIRE_EQUAL(factor.size(), 2);
+    BOOST_CHECK_EQUAL(factor[0], 1.0);
+    BOOST_CHECK_EQUAL(factor[1], 0.93);
+    BOOST_CHECK(restart.at("LIFACT").dim == Opm::UnitSystem::measure::identity);
+}
+
 BOOST_AUTO_TEST_CASE(DisabledSaturationPressureClearsPreviousRequest)
 {
     Container container;
