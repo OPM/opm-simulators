@@ -393,11 +393,37 @@ public:
     /// \param[in] ptable Previously equilibrated phase pressure table
     ///    pertaining to the equilibration region \p reg.
     ///
+    /// \param[in] scaleToSwatinit Whether to scale the capillary pressure
+    ///    curve to honour SWATINIT at this point.  If false, the phase
+    ///    saturations are derived from the cell's current, possibly
+    ///    previously scaled, capillary pressure curve.  No effect unless
+    ///    SWATINIT is used in the simulation model.
+    ///
     /// \return Set of phase saturation values defined at particular point.
     const PhaseQuantityValue<Scalar>&
     deriveSaturations(const Position& x,
                       const Region&   reg,
-                      const PTable&   ptable);
+                      const PTable&   ptable,
+                      const bool      scaleToSwatinit = true);
+
+    /// Scale the capillary pressure curve of a cell to honour SWATINIT at
+    /// a particular point, typically the cell centre.  No-op unless
+    /// SWATINIT is used in the simulation model.
+    ///
+    /// Intended for subdivided cells: scale once per cell and then call
+    /// deriveSaturations() with \c scaleToSwatinit = false for each
+    /// sub-layer.
+    ///
+    /// \param[in] x Specific geometric point (depth within a specific cell).
+    ///
+    /// \param[in] reg Equilibration information for a single equilibration
+    ///    region; notably contact depths.
+    ///
+    /// \param[in] ptable Previously equilibrated phase pressure table
+    ///    pertaining to the equilibration region \p reg.
+    void scaleToSwatinitAt(const Position& x,
+                           const Region&   reg,
+                           const PTable&   ptable);
 
     /// Retrieve saturation-corrected phase pressures
     ///
@@ -445,6 +471,16 @@ private:
 
     /// Client's SWATINIT data.
     const std::vector<Scalar>& swatInit_;
+
+    /// Whether the current evaluation scales the capillary pressure curve
+    /// to honour SWATINIT.
+    bool scaleToSwatinit_{true};
+
+    /// Whether SWATINIT scaling applies to the current evaluation.
+    bool applySwatinitScaling() const
+    {
+        return this->scaleToSwatinit_ && !this->swatInit_.empty();
+    }
 
     /// Evaluated phase saturations.
     PhaseQuantityValue<Scalar> sat_;

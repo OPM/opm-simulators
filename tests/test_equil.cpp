@@ -916,6 +916,38 @@ BOOST_AUTO_TEST_CASE(DeckWithDepthEdit)
     }
 }
 
+BOOST_AUTO_TEST_CASE(DeckWithSwatinitSubdivision)
+{
+    // SWATINIT with horizontal subdivision (EQUIL item 9 = -2).  The
+    // capillary pressure curve is scaled once per cell, to honour SWATINIT
+    // at the cell centre, and the sub-layers are integrated with that curve.
+    // Cell 4 straddles the contact with SWATINIT = Swmax = 1 and a small
+    // non-zero Pc at Sw = 1, so the sub-layers above the contact are
+    // undersaturated relative to SWATINIT.
+    using TypeTag = Opm::Properties::TTag::TestEquilTypeTag;
+    using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
+
+    auto simulator = initSimulator<TypeTag>("equil_swatinit_subdivision.DATA");
+    EquilFixture::Initializer comp(simulator->problem().materialLawManager(),
+                                   simulator->vanguard().eclState(),
+                                   simulator->vanguard().grid(),
+                                   simulator->vanguard().gridView(),
+                                   simulator->vanguard().cartesianMapper(), 9.80665);
+
+    const auto& sw = comp.saturation()[FluidSystem::waterPhaseIdx];
+    const auto& sg = comp.saturation()[FluidSystem::gasPhaseIdx];
+    BOOST_REQUIRE_EQUAL(sw.size(), 7U);
+
+    const std::vector<double> sw_expected {
+        0.302422, 0.303604, 0.310356, 0.966823, 1.0, 1.0, 1.0
+    };
+
+    for (std::size_t cell = 0; cell < sw.size(); ++cell) {
+        BOOST_CHECK_SMALL(sw[cell] - sw_expected[cell], 1.0e-5);
+        BOOST_CHECK_SMALL(sw[cell] + sg[cell] - 1.0, 1.0e-12);
+    }
+}
+
 BOOST_AUTO_TEST_CASE(DeckWithWetGas)
 {
     using TypeTag = Opm::Properties::TTag::TestEquilTypeTag;

@@ -741,6 +741,7 @@ list (APPEND TEST_DATA_FILES
   tests/equil_co2store_go.DATA
   tests/equil_co2store_gw.DATA
   tests/equil_co2store_gw_depthedit.DATA
+  tests/equil_swatinit_subdivision.DATA
   tests/equil_wetgas.DATA
   tests/equil_liveoil.DATA
   tests/equil_humidwetgas.DATA
