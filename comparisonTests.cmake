@@ -31,3 +31,29 @@ add_test_compareSeparateECLFiles(
   MPI_PROCS
     1
 )
+
+# Dual-continuum runs: a corner-point (COORD/ZCORN) deck must give the same
+# results as the block-centred (DX/DY/DZ/TOPS) deck describing the same grid.
+foreach(model dp dk)
+  string(TOUPPER ${model} MODEL)
+  add_test_compareSeparateECLFiles(
+    CASENAME
+      dualporo_${model}_cornerpoint_vs_blockcentred
+    DIR1
+      dualporo
+    FILENAME1
+      ${MODEL}_BASIC
+    DIR2
+      dualporo
+    FILENAME2
+      ${MODEL}_CP1
+    SIMULATOR
+      flow_oilwater
+    ABS_TOL
+      ${abs_tol}
+    REL_TOL
+      ${rel_tol}
+    MPI_PROCS
+      1
+  )
+endforeach()
