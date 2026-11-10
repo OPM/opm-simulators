@@ -310,17 +310,17 @@ private:
                       && !getPropValue<CpuTypeTag, Properties::EnableDispersion>()) {
             std::vector<DeviceIntensiveQuantities> initialIq;
             initialIq.reserve(numDof_);
-            bool hostCacheIsValid = true;
             for (std::size_t i = 0; i < numDof_; ++i) {
-                hostCacheIsValid =
-                    hostCacheIsValid
-                    && cpuModel.cachedIntensiveQuantities(static_cast<unsigned>(i), previousTimeIdx) != nullptr;
+                const auto* cached =
+                    cpuModel.cachedIntensiveQuantities(static_cast<unsigned>(i), previousTimeIdx);
+                if (cached == nullptr) {
+                    return;
+                }
                 initialIq.emplace_back(
-                    cpuModel.intensiveQuantityCache()[previousTimeIdx][i]
-                        .template withOtherFluidSystem<DeviceTypeTag>(deviceFluidSystem()));
+                    cached->template withOtherFluidSystem<DeviceTypeTag>(deviceFluidSystem()));
             }
             intensiveQuantitiesBuffer_[previousTimeIdx]->copyFromHost(initialIq);
-            deviceIqValid_[previousTimeIdx] = hostCacheIsValid;
+            deviceIqValid_[previousTimeIdx] = true;
         }
     }
 
