@@ -1371,6 +1371,10 @@ applyNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompr
     // First scale NNCs with EDITNNC.
     const auto& nnc_input = eclState_.getInputNNC().input();
 
+    // Couplings of a dual-continuum run to a cell that was removed after the coupling was
+    // made, e.g. by MINPV.
+    std::size_t numInactiveTwinCouplings = 0;
+
     for (const auto& nncEntry : nnc_input) {
         auto c1 = nncEntry.cell1;
         auto c2 = nncEntry.cell2;
@@ -1401,10 +1405,18 @@ applyNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompr
                 const std::size_t half =
                     (static_cast<std::size_t>(cd[0]) * cd[1] * cd[2]) / 2;
                 if ((c2 > c1 ? c2 - c1 : c1 - c2) == half) {
-                    OPM_THROW(std::runtime_error,
-                              "Dual-continuum coupling between cells " + std::to_string(c1) +
-                              " and " + std::to_string(c2) + " cannot be built: one of the two "
-                              "cells is inactive or not owned by this process.");
+                    if (gridView_.comm().size() > 1) {
+                        OPM_THROW(std::runtime_error,
+                                  "Dual-continuum coupling between cells " + std::to_string(c1) +
+                                  " and " + std::to_string(c2) + " cannot be built: one of the two "
+                                  "cells is inactive or not owned by this process.");
+                    }
+
+                    // On a single process the cell is inactive. The coupling is made when
+                    // both twins are active in the deck, and a twin removed afterwards, by
+                    // MINPV, takes its coupling with it.
+                    ++numInactiveTwinCouplings;
+                    continue;
                 }
             }
             // Discard the NNC if it is between active cell and inactive cell
@@ -1446,6 +1458,11 @@ applyNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompr
         //         candidate->second += nncEntry.transDiffusion;
         //     }
         // }
+    }
+
+    if (numInactiveTwinCouplings > 0) {
+        OpmLog::info(std::to_string(numInactiveTwinCouplings) +
+                     " matrix-fracture coupling(s) dropped because a cell is inactive.");
     }
 }
 
