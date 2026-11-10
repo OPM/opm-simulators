@@ -57,3 +57,19 @@ foreach(model dp dk)
       1
   )
 endforeach()
+
+# The matrix-fracture coupling together with inactive cells, MINPV and PINCH: a twin
+# removed by MINPV takes its coupling with it.
+opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-test.sh "")
+foreach(case M1_DP_SIG M1_DK_ALL_SIG)
+  add_test_runSimulator(
+    CASENAME
+      dualporo_model1_coupled_${case}
+    DIR
+      dualporo_model1
+    FILENAME
+      ${case}
+    SIMULATOR
+      flow_blackoil
+  )
+endforeach()
