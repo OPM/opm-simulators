@@ -47,6 +47,25 @@ add_test_compare_parallel_simulation(
 
 add_test_compare_parallel_simulation(
   CASENAME
+    equil_1d_compvd_water_gascap_swatinit_ppcwmax_swl
+  FILENAME
+    EQUIL_1D_COMPVD_WATER_GASCAP_SWATINIT_PPCWMAX_SWL
+  SIMULATOR
+    flow_comp
+  # The SWATINIT scaling of each cell, including the cells whose connate water
+  # PPCWMAX raises, must follow the cell across the partitioning.
+  ABS_TOL
+    1e-6
+  REL_TOL
+    1e-6
+  DIR
+    compositional/equilibration
+  MPI_PROCS
+    2
+)
+
+add_test_compare_parallel_simulation(
+  CASENAME
     sshift_compositional
   FILENAME
     SIMPLE_COMP_SSHIFT
