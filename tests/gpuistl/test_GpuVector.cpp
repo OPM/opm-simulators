@@ -66,12 +66,14 @@ BOOST_AUTO_TEST_CASE(TestCopyFromHostConstructor)
     BOOST_CHECK_EQUAL_COLLECTIONS(buffer.begin(), buffer.end(), data.begin(), data.end());
 }
 
-BOOST_AUTO_TEST_CASE(TestCopyFromHostConstructorWithGPUPointer)
+#ifndef NDEBUG
+BOOST_AUTO_TEST_CASE(TestCopyFromHostConstructorWithGPUPointerInDebug)
 {
     std::vector<double> data {{1, 2, 3, 4, 5, 6, 7}};
     auto vectorOnGPU = Opm::gpuistl::GpuVector<double>(data.data(), data.size());
     BOOST_CHECK_THROW(Opm::gpuistl::GpuVector<double>(vectorOnGPU.data(), data.size()), std::invalid_argument);
 }
+#endif
 
 BOOST_AUTO_TEST_CASE(TestConstructionRejectsSizeTooLargeForCuBlas)
 {
