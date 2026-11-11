@@ -750,6 +750,7 @@ list (APPEND TEST_DATA_FILES
   tests/equil_rsvd_and_rvvd_and_rvwvd.DATA
   tests/tpsa_ex.data
   tests/trueimpes_weight_scaling.DATA
+  tests/trueimpes_weight_scaling_solvent.DATA
   tests/wetgas.DATA
   tests/satfuncEPS_B.DATA
   tests/wells_manager_data.data

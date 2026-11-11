@@ -67,6 +67,10 @@ namespace Details
             typename Model::Indices;
             Model::Indices::conti0EqIdx;
             Model::Indices::numPhases;
+            Model::Indices::enableSolvent;
+            Model::Indices::contiSolventEqIdx;
+            Model::Indices::enableExtbo;
+            Model::Indices::contiZfracEqIdx;
             elemCtx.intensiveQuantities(0, 0).porosity();
         };
 } // namespace Details
@@ -262,13 +266,29 @@ namespace Amg
                     using Indices = typename Model::Indices;
                     if (options.scaling == TrueImpesWeightsOptions::Scaling::PoreVolume) {
                         // Scale to reservoir volume units, where the weighted
-                        // storage of the mass conservation equations equals the
+                        // storage of the fluid conservation equations equals the
                         // porosity.  Keeping the same units in every cell keeps the
                         // CPR pressure matrix close to symmetric, which matters to
                         // AMG; the max-abs scaling below changes the units between,
                         // e.g., cells with and without oil.
+                        //
+                        // The true-IMPES weights are proportional to the partial
+                        // volumes of the stored fluid amounts, so their weighted sum
+                        // is the fluid volume, i.e. the porosity, provided every
+                        // fluid amount is included: omitting, e.g., the solvent
+                        // would scale the row by 1/(1 - S_solvent).  The extbo
+                        // z-fraction equation stores part of the hydrocarbon amount
+                        // and is included by the same argument.
                         double weightedStorage = 0.0;
                         for (int eq = Indices::conti0EqIdx; eq < Indices::conti0EqIdx + Indices::numPhases; ++eq) {
+                            weightedStorage += static_cast<double>(bweights[eq]) * getValue(storage[eq]);
+                        }
+                        if constexpr (Indices::enableSolvent) {
+                            constexpr int eq = Indices::contiSolventEqIdx;
+                            weightedStorage += static_cast<double>(bweights[eq]) * getValue(storage[eq]);
+                        }
+                        if constexpr (Indices::enableExtbo) {
+                            constexpr int eq = Indices::contiZfracEqIdx;
                             weightedStorage += static_cast<double>(bweights[eq]) * getValue(storage[eq]);
                         }
                         const auto& intQuants = localElemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);

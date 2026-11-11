@@ -1,0 +1,102 @@
+-- One column with a gas cap, an oil zone and water at the bottom.  The oil
+-- zone holds solvent with saturations between 0 and 0.4 (SSOL), so the
+-- true-IMPES weights include a solvent conservation equation with nonzero
+-- storage.
+
+RUNSPEC
+TITLE
+ True-IMPES weight scaling with solvent
+
+DIMENS
+ 1 1 10 /
+
+OIL
+GAS
+WATER
+SOLVENT
+METRIC
+
+TABDIMS
+ /
+
+EQLDIMS
+ /
+
+START
+ 1 'JAN' 2020 /
+
+GRID
+DX
+ 10*100 /
+DY
+ 10*100 /
+DZ
+ 10*10 /
+TOPS
+ 2000 /
+PORO
+ 10*0.25 /
+PERMX
+ 10*200 /
+PERMY
+ 10*200 /
+PERMZ
+ 10*20 /
+
+PROPS
+DENSITY
+ 850 1000 1.0 /
+
+SDENSITY
+ 1.5 /
+
+PVTW
+ 200 1.02 4.0E-5 0.5 0 /
+
+ROCK
+ 200 4.0E-5 /
+
+PVDO
+ 100.0 1.30 1.00
+ 200.0 1.28 1.05
+ 300.0 1.26 1.10 /
+
+PVDG
+ 100.0 0.0125 0.015
+ 200.0 0.0060 0.020
+ 300.0 0.0041 0.026 /
+
+PVDS
+ 100.0 0.0100 0.020
+ 200.0 0.0050 0.025
+ 300.0 0.0035 0.030 /
+
+SWOF
+ 0.25 0.0  1.0 0
+ 0.40 0.05 0.5 0
+ 0.60 0.20 0.2 0
+ 0.75 0.40 0.0 0
+ 1.00 1.00 0.0 0 /
+
+SGOF
+ 0.00 0.0  1.0  0
+ 0.10 0.02 0.60 0
+ 0.40 0.30 0.15 0
+ 0.75 0.90 0.0  0 /
+
+SSFN
+ 0.0 0.0 0.0
+ 1.0 1.0 1.0 /
+
+SOLUTION
+-- GOC at 2020 m and OWC at 2090 m: two gas cap cells, seven oil cells and
+-- one water cell.
+EQUIL
+ 2050 200 2090 0 2020 0 1* 1* 0 /
+
+SSOL
+ 0.0 0.0 0.05 0.1 0.2 0.3 0.4 0.1 0.0 0.0 /
+
+SCHEDULE
+TSTEP
+ 1 /
