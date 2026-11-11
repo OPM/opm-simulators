@@ -27,6 +27,9 @@
  * whose gas-oil and oil-water contacts both lie inside the grid. The GPU side
  * uses the TypeTag of GpuFlowBlackoilNohystTypeTag.hpp, and every cell is
  * compared, values and derivatives.
+ *
+ * Also checks that the production dispatcher for this TypeTag rejects a deck
+ * with endpoint scaling, which the GPU material law manager does not apply.
  */
 #include <config.h>
 
@@ -63,6 +66,7 @@
 #include <opm/simulators/flow/FlowProblemNohystTypeTag.hpp>
 #include <opm/simulators/flow/GpuFlowProblem.hpp>
 #include <opm/simulators/flow/Main.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuBlackoilIntensiveQuantitiesDispatcher.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuFlowBlackoilNohystTypeTag.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
@@ -75,6 +79,7 @@
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -310,14 +315,16 @@ void initSimulatorOnce()
     done = true;
 }
 
-} // namespace
+using Simulator = Opm::GetPropType<CpuTypeTag, Opm::Properties::Simulator>;
 
-BOOST_AUTO_TEST_CASE(ThreePhaseLiveOilDryGasGpuVsCpu)
+/// Write \p deck to a temporary file and set up a simulator with the initial
+/// solution applied.
+std::unique_ptr<Simulator> makeSimulator(const std::string& deck)
 {
     const TemporaryFile deckFile("test_blackoilintensivequantities_gpu_threephase.DATA");
     {
         std::ofstream f(deckFile.path);
-        f << deckString;
+        f << deck;
     }
     const std::string deckPath = deckFile.path.string();
 
@@ -336,10 +343,87 @@ BOOST_AUTO_TEST_CASE(ThreePhaseLiveOilDryGasGpuVsCpu)
                                       /*handleHelp=*/false,
                                       /*myRank=*/0);
 
-    using Simulator = Opm::GetPropType<CpuTypeTag, Opm::Properties::Simulator>;
     Opm::FlowGenericVanguard::readDeck(deckPath, /*ignoredKeywords=*/"");
     auto sim = std::make_unique<Simulator>();
     sim->model().applyInitialSolution();
+    return sim;
+}
+
+/// Run the production GPU intensive-quantities dispatcher once on the initial
+/// solution of \p sim, as flow does for the first linearization.
+void runDispatcher(const Simulator& sim)
+{
+    using Dispatcher = Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>;
+    using PrimaryVariables = typename Dispatcher::PrimaryVariables;
+    using IntensiveQuantities = typename Dispatcher::IntensiveQuantities;
+
+    const auto& problem = sim.problem();
+    const auto& solution = problem.model().solution(/*timeIdx=*/0);
+    const std::size_t numCells = problem.model().numGridDof();
+
+    std::vector<IntensiveQuantities> intensiveQuantities(numCells);
+    std::vector<const PrimaryVariables*> primaryVariablesPtrs(numCells);
+    std::vector<IntensiveQuantities*> intensiveQuantitiesPtrs(numCells);
+    for (std::size_t i = 0; i < numCells; ++i) {
+        primaryVariablesPtrs[i] = &solution[i];
+        intensiveQuantitiesPtrs[i] = &intensiveQuantities[i];
+    }
+
+    Dispatcher dispatcher;
+    dispatcher.update(problem,
+                      primaryVariablesPtrs.data(),
+                      intensiveQuantitiesPtrs.data(),
+                      numCells,
+                      /*timeIdx=*/0u);
+}
+
+/// The test deck with endpoint scaling: ENDSCALE in RUNSPEC and a SWL array,
+/// but no ENKRVD. SWL equals the connate water saturation of each cell's
+/// SATNUM table (0.15 and 0.20), so the scaled end-points equal the unscaled
+/// ones and pass the saturation function consistency checks.
+std::string deckWithEndpointScaling()
+{
+    std::string deck = deckString;
+    const auto insertAfter = [&deck](std::string_view anchor, std::string_view text) {
+        const auto pos = deck.find(anchor);
+        BOOST_REQUIRE(pos != std::string::npos);
+        deck.insert(pos + anchor.size(), text);
+    };
+    insertAfter("METRIC\n", "ENDSCALE\n/\n");
+    // Same layout as SATNUM: 1 1 2 repeated.
+    insertAfter("PROPS\n",
+                "SWL\n"
+                " 2*0.15 0.20 2*0.15 0.20 2*0.15 0.20\n"
+                " 2*0.15 0.20 2*0.15 0.20 2*0.15 0.20\n"
+                " 2*0.15 0.20 2*0.15 0.20 2*0.15 0.20\n"
+                " 2*0.15 0.20 2*0.15 0.20 2*0.15 0.20\n"
+                " 2*0.15 0.20 2*0.15 0.20 2*0.15 0.20\n"
+                " 2*0.15 0.20 2*0.15 0.20 2*0.15 0.20 /\n");
+    return deck;
+}
+
+} // namespace
+
+BOOST_AUTO_TEST_CASE(DispatcherRejectsEndpointScaling)
+{
+    // Control: the deck without endpoint scaling is accepted.
+    BOOST_CHECK_NO_THROW(runDispatcher(*makeSimulator(deckString)));
+
+    // The GPU material law manager ignores endpoint scaling, so a deck that
+    // uses it must be rejected instead of being evaluated with unscaled tables.
+    const auto sim = makeSimulator(deckWithEndpointScaling());
+    BOOST_REQUIRE(sim->problem().materialLawManager().oilWaterConfig().enableSatScaling());
+    BOOST_CHECK_EXCEPTION(runDispatcher(*sim),
+                          std::logic_error,
+                          [](const std::logic_error& e) {
+                              return std::string_view(e.what()).find("endpoint scaling")
+                                  != std::string_view::npos;
+                          });
+}
+
+BOOST_AUTO_TEST_CASE(ThreePhaseLiveOilDryGasGpuVsCpu)
+{
+    const auto sim = makeSimulator(deckString);
     const auto& cpuProblem = sim->problem();
 
     // GPU fluid system. The fluid state holds a pointer to it and is read back

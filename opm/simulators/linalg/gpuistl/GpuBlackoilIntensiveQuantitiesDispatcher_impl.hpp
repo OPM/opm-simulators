@@ -166,13 +166,20 @@ void rejectUnsupportedSaturationFunctions(const MaterialLawManager& materialLawM
         OPM_THROW(std::logic_error,
                   "GPU property evaluation requires piecewise-linear saturation tables");
     }
+    // enableEndPointScaling() is only set by ENKRVD. ENDSCALE, including the
+    // capillary pressure scaling of SWATINIT, is enabled in the per-system
+    // endpoint scaling configurations.
+    const bool endPointScaling = materialLawManager.enableEndPointScaling()
+        || materialLawManager.gasOilConfig().enableSatScaling()
+        || materialLawManager.oilWaterConfig().enableSatScaling()
+        || materialLawManager.gasWaterConfig().enableSatScaling();
     if (materialLawManager.enableHysteresis()
-        || materialLawManager.enableEndPointScaling()
+        || endPointScaling
         || materialLawManager.hasDirectionalRelperms()
         || materialLawManager.hasDirectionalImbnum()) {
         OPM_THROW(std::logic_error,
-                  "GPU property evaluation does not support hysteresis, endpoint scaling, "
-                  "or directional saturation functions");
+                  "GPU property evaluation does not support hysteresis, endpoint scaling "
+                  "(ENDSCALE, ENKRVD, SWATINIT), or directional saturation functions");
     }
 }
 
