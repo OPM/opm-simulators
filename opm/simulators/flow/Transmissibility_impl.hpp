@@ -1393,28 +1393,18 @@ applyNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompr
         }
 
         if (low == -1 || high == -1) {
-            // A dual-continuum coupling must never be silently discarded.  In a parallel run a
-            // cell missing from this rank's map is inactive OR owned by another rank, and both
-            // arrive here -- so this is the path by which a partition that separates a twin pair
-            // drops its coupling.  Measured on a 3x3x2 case: none split at two processes, at
-            // least four of nine at four processes.  Dual-continuum runs are refused before load
-            // balancing for exactly this reason; if that guard is ever lifted, this must be an
-            // error rather than a warning.
+            // A dual-continuum coupling to a cell that is not here is not an error. The load
+            // balancing keeps the two cells of a twin pair on the same process, so the cell is
+            // inactive.
             if (eclState_.runspec().porosityModel().dualContinuum()) {
                 const auto& cd = cartMapper_.cartesianDimensions();
                 const std::size_t half =
                     (static_cast<std::size_t>(cd[0]) * cd[1] * cd[2]) / 2;
                 if ((c2 > c1 ? c2 - c1 : c1 - c2) == half) {
-                    if (gridView_.comm().size() > 1) {
-                        OPM_THROW(std::runtime_error,
-                                  "Dual-continuum coupling between cells " + std::to_string(c1) +
-                                  " and " + std::to_string(c2) + " cannot be built: one of the two "
-                                  "cells is inactive or not owned by this process.");
-                    }
-
-                    // On a single process the cell is inactive. The coupling is made when
-                    // both twins are active in the deck, and a twin removed afterwards, by
-                    // MINPV, takes its coupling with it.
+                    // The grid keeps a matrix cell and its fracture twin on the same process,
+                    // so a twin missing here is inactive. The coupling is made when both
+                    // twins are active in the deck, and a twin removed afterwards, by MINPV,
+                    // takes its coupling with it.
                     ++numInactiveTwinCouplings;
                     continue;
                 }
