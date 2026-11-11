@@ -1,0 +1,144 @@
+-- Two columns, each with an oil-free gas cap (Rv primary variable) above an
+-- oil zone, so that the true-IMPES weights are formed for cells with different
+-- primary variables.  Column 1 (PVT/EQL region 1) has a PVTG table where Bg
+-- changes by 15% between Rv = 0 and a saturated Rv of order 1e-7, which gives
+-- badly scaled max-abs normalised weights in its gas cap.  Column 2 (region 2)
+-- has a regular wet gas table.
+
+RUNSPEC
+TITLE
+ True-IMPES weight scaling
+
+DIMENS
+ 2 1 10 /
+
+OIL
+GAS
+WATER
+DISGAS
+VAPOIL
+METRIC
+
+TABDIMS
+ 1 2 /
+
+EQLDIMS
+ 2 /
+
+START
+ 1 'JAN' 2020 /
+
+GRID
+DX
+ 20*100 /
+DY
+ 20*100 /
+DZ
+ 20*10 /
+TOPS
+ 2*2000 /
+PORO
+ 20*0.25 /
+PERMX
+ 20*200 /
+PERMY
+ 20*200 /
+PERMZ
+ 20*20 /
+
+PROPS
+DENSITY
+ 850 1000 1.0 /
+ 850 1000 1.0 /
+
+PVTW
+ 200 1.02 4.0E-5 0.5 0 /
+ 200 1.02 4.0E-5 0.5 0 /
+
+ROCK
+ 200 4.0E-5 /
+ 200 4.0E-5 /
+
+PVTO
+ 20.0  30.0  1.100 1.20 /
+ 43.0 100.0  1.220 0.90
+      300.0  1.200 1.05 /
+ 60.0 170.0  1.310 0.75
+      300.0  1.290 0.85 /
+ 80.0 250.0  1.400 0.65
+      350.0  1.385 0.72 /
+/
+ 20.0  30.0  1.100 1.20 /
+ 43.0 100.0  1.220 0.90
+      300.0  1.200 1.05 /
+ 60.0 170.0  1.310 0.75
+      300.0  1.290 0.85 /
+ 80.0 250.0  1.400 0.65
+      350.0  1.385 0.72 /
+/
+
+PVTG
+ 100.0  2.0E-7  0.0125   0.0150
+        0.0     0.0106   0.0150 /
+ 150.0  4.0E-7  0.0080   0.0170
+        0.0     0.0068   0.0170 /
+ 200.0  6.0E-7  0.0060   0.0200
+        0.0     0.0051   0.0200 /
+ 250.0  8.0E-7  0.0048   0.0230
+        0.0     0.0041   0.0230 /
+ 300.0  1.0E-6  0.0041   0.0260
+        0.0     0.0035   0.0260 /
+/
+ 100.0  4.0E-5  0.0125   0.0150
+        0.0     0.01238  0.0150 /
+ 150.0  6.0E-5  0.0080   0.0170
+        0.0     0.00792  0.0170 /
+ 200.0  8.0E-5  0.0060   0.0200
+        0.0     0.00594  0.0200 /
+ 250.0  1.0E-4  0.0048   0.0230
+        0.0     0.00475  0.0230 /
+ 300.0  1.2E-4  0.0041   0.0260
+        0.0     0.00406  0.0260 /
+/
+
+-- Maximum gas saturation equals 1 - Swl, so the gas cap holds no oil.
+SWOF
+ 0.25 0.0  1.0 0
+ 0.40 0.05 0.5 0
+ 0.60 0.20 0.2 0
+ 0.75 0.40 0.0 0
+ 1.00 1.00 0.0 0 /
+
+SGOF
+ 0.00 0.0  1.0  0
+ 0.10 0.02 0.60 0
+ 0.40 0.30 0.15 0
+ 0.75 0.90 0.0  0 /
+
+REGIONS
+PVTNUM
+ 1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2 /
+EQLNUM
+ 1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2 /
+
+SOLUTION
+-- GOC at 2040 m: the four upper cells of each column are in the gas cap.
+EQUIL
+ 2040 200 2200 0 2040 0 1 1 0 /
+ 2040 200 2200 0 2040 0 1 1 0 /
+
+RSVD
+ 2000 50
+ 2100 50 /
+ 2000 50
+ 2100 50 /
+
+RVVD
+ 2000 3.0E-7
+ 2100 3.0E-7 /
+ 2000 4.0E-5
+ 2100 4.0E-5 /
+
+SCHEDULE
+TSTEP
+ 1 /

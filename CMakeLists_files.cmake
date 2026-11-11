@@ -566,6 +566,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_tpsa_matrix.cpp
   tests/test_tpsa_preconditioner.cpp
   tests/test_tpsa_primaryvariables.cpp
+  tests/test_trueimpes_weight_scaling.cpp
   tests/test_upwindtransportmatrix.cpp
   tests/test_vfpproperties.cpp
   tests/test_SystemCprwPressureStage.cpp
@@ -748,6 +749,7 @@ list (APPEND TEST_DATA_FILES
   tests/equil_rsvd_and_rvvd.DATA
   tests/equil_rsvd_and_rvvd_and_rvwvd.DATA
   tests/tpsa_ex.data
+  tests/trueimpes_weight_scaling.DATA
   tests/wetgas.DATA
   tests/satfuncEPS_B.DATA
   tests/wells_manager_data.data
@@ -1291,6 +1293,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/setupPropertyTree.hpp
   opm/simulators/linalg/superlubackend.hh
   opm/simulators/linalg/TPSALinearSolverParameters.hpp
+  opm/simulators/linalg/TrueImpesWeightsOptions.hpp
   opm/simulators/linalg/twolevelmethodcpr.hh
   opm/simulators/linalg/vertexborderlistfromgrid.hh
   opm/simulators/linalg/weightedresidreductioncriterion.hh

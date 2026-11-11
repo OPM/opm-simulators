@@ -26,6 +26,7 @@
 #include <fmt/format.h>
 
 #include <opm/grid/utility/ElementChunks.hpp>
+#include <opm/simulators/linalg/TrueImpesWeightsOptions.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/models/parallel/threadmanager.hpp>
@@ -57,6 +58,17 @@ namespace Details
 
         return tmp;
     }
+
+    /// Whether Model is a black-oil type model, for which the true-IMPES
+    /// weights can be scaled to reservoir volume units.
+    template <class Model, class ElementContext>
+    constexpr bool isBlackOilTrueImpesModel =
+        requires (const ElementContext& elemCtx) {
+            typename Model::Indices;
+            Model::Indices::conti0EqIdx;
+            Model::Indices::numPhases;
+            elemCtx.intensiveQuantities(0, 0).porosity();
+        };
 } // namespace Details
 
 namespace Amg
@@ -161,12 +173,15 @@ namespace Amg
     }
 #endif
 
+    /// True-IMPES CPR weights from the storage derivatives of each cell,
+    /// scaled according to options.scaling.
     template<class Vector, class ElementContext, class Model, class ElementChunksType>
     void getTrueImpesWeights(int pressureVarIndex, Vector& weights,
                              const ElementContext& elemCtx,
                              const Model& model,
                              const ElementChunksType& element_chunks,
-                             [[maybe_unused]] bool enable_thread_parallel)
+                             [[maybe_unused]] bool enable_thread_parallel,
+                             [[maybe_unused]] const TrueImpesWeightsOptions& options = {})
     {
         using VectorBlockType = typename Vector::block_type;
         using Matrix = typename std::decay_t<decltype(model.linearizer().jacobian())>;
@@ -242,14 +257,35 @@ namespace Amg
                     };
                 }
 
+                const auto index = localElemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+                if constexpr (Details::isBlackOilTrueImpesModel<Model, ElementContext>) {
+                    using Indices = typename Model::Indices;
+                    if (options.scaling == TrueImpesWeightsOptions::Scaling::PoreVolume) {
+                        // Scale to reservoir volume units, where the weighted
+                        // storage of the mass conservation equations equals the
+                        // porosity.  Keeping the same units in every cell keeps the
+                        // CPR pressure matrix close to symmetric, which matters to
+                        // AMG; the max-abs scaling below changes the units between,
+                        // e.g., cells with and without oil.
+                        double weightedStorage = 0.0;
+                        for (int eq = Indices::conti0EqIdx; eq < Indices::conti0EqIdx + Indices::numPhases; ++eq) {
+                            weightedStorage += static_cast<double>(bweights[eq]) * getValue(storage[eq]);
+                        }
+                        const auto& intQuants = localElemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+                        const double factor = getValue(intQuants.porosity()) / weightedStorage;
+                        if (weightedStorage > 0.0 && std::isfinite(factor)) {
+                            bweights *= factor;
+                            weights[index] = bweights;
+                            continue;
+                        }
+                    }
+                }
+
                 const double abs_max =
                     *std::ranges::max_element(bweights,
                                               [](double a, double b)
                                               { return std::fabs(a) < std::fabs(b); });
-                // probably a scaling which could give approximately total compressibility would be better
-                bweights /=  std::fabs(abs_max); // given normal densities this scales weights to about 1.
-
-                const auto index = localElemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+                bweights /= std::fabs(abs_max); // given normal densities this scales weights to about 1.
                 weights[index] = bweights;
             }
         }

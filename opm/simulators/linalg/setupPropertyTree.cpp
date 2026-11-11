@@ -25,6 +25,7 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
+#include <opm/simulators/linalg/TrueImpesWeightsOptions.hpp>
 
 #include <filesystem>
 #include <fmt/format.h>
@@ -392,6 +393,7 @@ setupCPRW(const std::string& /*conf*/, const FlowLinearSolverParameters& p)
     // standard wells ignore it and pressure-controlled MSWs keep a unit diagonal.
     prm.put("preconditioner.well_coarse_diagonal", "row_sum"s);
     prm.put("preconditioner.weight_type", "trueimpes"s);
+    Amg::TrueImpesWeightsOptions{}.put(prm, "preconditioner.");
     prm.put("preconditioner.pre_smooth", p.cpr_pre_smooth_);
     prm.put("preconditioner.post_smooth", 1);
     //prm.put("preconditioner.finesmoother.type", "paroverilu0"s);
@@ -421,6 +423,7 @@ setupCPR(const std::string& conf, const FlowLinearSolverParameters& p)
         prm.put("preconditioner.weight_type", "quasiimpes"s);
     } else if (conf == "cpr_trueimpes") {
         prm.put("preconditioner.weight_type", "trueimpes"s);
+        Amg::TrueImpesWeightsOptions{}.put(prm, "preconditioner.");
     } else {
         prm.put("preconditioner.weight_type", "trueimpesanalytic"s);
     }
@@ -675,6 +678,7 @@ setupSystemCPR(const std::string& conf, const FlowLinearSolverParameters& p)
     prm.put("preconditioner.reservoir_solver.preconditioner.add_wells",
             add_wells ? "true"s : "false"s);
     prm.put("preconditioner.reservoir_solver.preconditioner.weight_type", "trueimpes"s);
+    Amg::TrueImpesWeightsOptions{}.put(prm, "preconditioner.reservoir_solver.preconditioner.");
     prm.put("preconditioner.reservoir_solver.preconditioner.pre_smooth", 0);
     prm.put("preconditioner.reservoir_solver.preconditioner.post_smooth", 0);
     // Set unused finesmoother to jac to avoid spending time setuping an ILU smoother that won't be used.
