@@ -78,8 +78,11 @@ using Opm::gpuistl::GpuView;
 using Opm::VectorWithDefaultAllocator;
 using Indices = Opm::BlackOilDefaultFluidSystemIndices;
 
+//! The AD variables of the fluid state, see makeFluidState().
+enum VarIdx : int { pressureVarIdx, rsVarIdx, rvVarIdx, sgVarIdx, numVars };
+
 template <class Scalar>
-using Evaluation = Opm::DenseAd::Evaluation<Scalar, 3>;
+using Evaluation = Opm::DenseAd::Evaluation<Scalar, numVars>;
 
 template <class Scalar>
 using CpuFluidSystem = Opm::BlackOilFluidSystem<Scalar>;
@@ -320,15 +323,21 @@ void initCpuFluidSystem(const char* deckString)
 template <class Scalar>
 constexpr Scalar relTol = std::is_same_v<Scalar, float> ? 1e-4 : 1e-10;
 
-//! One evaluation point. Pressure in [Pa], temperature in [K], Rs in [sm3/sm3].
+//! One evaluation point. Pressure in [Pa], temperature in [K], Rs and Rv in [sm3/sm3].
+//! The oil saturation is given explicitly, so that So = 0 is exact.
 template <class Scalar>
 struct TestPoint {
     unsigned regionIdx;
     Scalar p;
     Scalar T;
     Scalar rs;
+    Scalar rv;
     Scalar sw;
     Scalar sg;
+    Scalar so;
+    //! The size of Rv used to scale its derivatives in isClose(). Rv is far below 1
+    //! (about 1e-5 in Norne), so the saturated Rv at the point is used.
+    Scalar rvScale;
 };
 
 //! The parts of a fluid state used by the tested fluid system methods. Providing Rs(),
@@ -350,8 +359,8 @@ struct TestFluidState {
     OPM_HOST_DEVICE const ValueType& Rs() const
     { return rs; }
 
-    OPM_HOST_DEVICE ValueType Rv() const
-    { return ValueType(0.0); }
+    OPM_HOST_DEVICE const ValueType& Rv() const
+    { return rv; }
 
     OPM_HOST_DEVICE ValueType Rvw() const
     { return ValueType(0.0); }
@@ -365,22 +374,26 @@ struct TestFluidState {
     ValueType p;
     ValueType T;
     ValueType rs;
+    ValueType rv;
     ValueType s[3]; // indexed by the canonical phase index
 };
 
-//! The fluid state of \p pt, with pressure (0), Rs (1) and Sg (2) as AD variables.
+//! The fluid state of \p pt, with pressure, Rs, Rv and Sg as AD variables (see VarIdx).
+//! So = 1 - Sw - Sg, but its value is taken from \p pt.
 template <class Scalar>
 OPM_HOST_DEVICE TestFluidState<Scalar> makeFluidState(const TestPoint<Scalar>& pt)
 {
     using Eval = Evaluation<Scalar>;
     TestFluidState<Scalar> fs;
-    fs.p = Eval::createVariable(pt.p, 0);
+    fs.p = Eval::createVariable(pt.p, pressureVarIdx);
     fs.T = Eval(pt.T);
-    fs.rs = Eval::createVariable(pt.rs, 1);
-    const Eval sg = Eval::createVariable(pt.sg, 2);
+    fs.rs = Eval::createVariable(pt.rs, rsVarIdx);
+    fs.rv = Eval::createVariable(pt.rv, rvVarIdx);
     fs.s[Indices::waterPhaseIdx] = Eval(pt.sw);
-    fs.s[Indices::gasPhaseIdx] = sg;
-    fs.s[Indices::oilPhaseIdx] = Eval(Scalar(1.0) - pt.sw) - sg;
+    fs.s[Indices::gasPhaseIdx] = Eval::createVariable(pt.sg, sgVarIdx);
+    Eval so(pt.so);
+    so.setDerivative(sgVarIdx, Scalar(-1.0));
+    fs.s[Indices::oilPhaseIdx] = so;
     return fs;
 }
 
@@ -500,9 +513,11 @@ bool isClose(const Evaluation<Scalar>& a, const Evaluation<Scalar>& b, const Tes
         return false;
     }
 
-    // The AD variables are pressure, Rs and Sg, see makeFluidState().
-    static_assert(Evaluation<Scalar>::numVars == 3);
-    const std::array<Scalar, 3> varScale{pt.p, std::max(std::abs(pt.rs), Scalar(1)), Scalar(1)};
+    std::array<Scalar, numVars> varScale{};
+    varScale[pressureVarIdx] = pt.p;
+    varScale[rsVarIdx] = std::max(std::abs(pt.rs), Scalar(1));
+    varScale[rvVarIdx] = pt.rvScale;
+    varScale[sgVarIdx] = Scalar(1);
     const Scalar valueScale = std::max(std::abs(a.value()), std::abs(b.value()));
     for (int varIdx = 0; varIdx < Evaluation<Scalar>::numVars; ++varIdx) {
         const Scalar da = a.derivative(varIdx);
@@ -531,8 +546,61 @@ void checkResults(const std::vector<Result>& cpu,
         BOOST_CHECK_MESSAGE(close,
                             name << " at point " << i << " (region " << points[i].regionIdx
                                  << ", p = " << points[i].p << ", Rs = " << points[i].rs
-                                 << ", Sw = " << points[i].sw << ", Sg = " << points[i].sg
+                                 << ", Rv = " << points[i].rv << ", Sw = " << points[i].sw
+                                 << ", Sg = " << points[i].sg << ", So = " << points[i].so
                                  << "): CPU = " << cpu[i] << ", GPU = " << gpu[i]);
+    }
+}
+
+//! Evaluates \p f with the CPU and the GPU fluid system, and compares the results.
+template <class Functor, class CpuFs, class GpuFs, class Scalar>
+void checkOnGpu(Functor f,
+                const CpuFs& cpuFluidSystem,
+                const GpuFs& gpuFluidSystem,
+                const std::vector<TestPoint<Scalar>>& points,
+                const std::string& name)
+{
+    checkResults(evaluateOnCpu(f, cpuFluidSystem, points),
+                 evaluateOnGpu(f, gpuFluidSystem, points),
+                 points, name);
+}
+
+template <class CpuFs>
+std::string quantityName(const CpuFs& cpuFluidSystem, Quantity quantity, unsigned phaseIdx)
+{
+    std::ostringstream name;
+    name << quantity << " (" << cpuFluidSystem.phaseName(phaseIdx) << ")";
+    return name.str();
+}
+
+constexpr std::array allPhases{Indices::waterPhaseIdx, Indices::oilPhaseIdx, Indices::gasPhaseIdx};
+
+/*!
+ * \brief Copies the current CPU fluid system to the GPU with \p PvtApproaches and
+ *        compares all tested quantities of all phases at \p points.
+ */
+template <class PvtApproaches, class Scalar>
+void checkFluidSystemOnGpu(const std::vector<TestPoint<Scalar>>& points)
+{
+    const auto& cpuFluidSystem = CpuFluidSystem<Scalar>::getNonStaticInstance();
+    auto gpuFluidSystemBuffer = Opm::gpuistl::copy_to_gpu<PvtApproaches>(cpuFluidSystem);
+    const auto gpuFluidSystemView = Opm::gpuistl::make_view(gpuFluidSystemBuffer);
+
+    constexpr std::array quantities{
+        Quantity::Density,
+        Quantity::InverseFormationVolumeFactor,
+        Quantity::Viscosity,
+        Quantity::SaturatedDissolutionFactor,
+        Quantity::SaturatedDissolutionFactorMaxSo,
+    };
+
+    for (const unsigned phaseIdx : allPhases) {
+        for (const auto quantity : quantities) {
+            checkOnGpu(FluidSystemQuantity{quantity, phaseIdx}, cpuFluidSystem, gpuFluidSystemView,
+                       points, quantityName(cpuFluidSystem, quantity, phaseIdx));
+        }
+        checkOnGpu(ReferenceDensity{phaseIdx}, cpuFluidSystem, gpuFluidSystemView, points,
+                   "referenceDensity (" + std::string(cpuFluidSystem.phaseName(phaseIdx)) + ")");
     }
 }
 
@@ -557,9 +625,14 @@ std::vector<TestPoint<Scalar>> makeTestPoints()
             const Scalar p = pBar * 1e5;
             const Scalar rsSat
                 = CpuFluidSystem<Scalar>::oilPvt().saturatedGasDissolutionFactor(regionIdx, T, p);
-            points.push_back({regionIdx, p, T, Scalar(0.5) * rsSat, 0.2, 0.0});
-            points.push_back({regionIdx, p, T, Scalar(0.5) * rsSat, 0.2, 0.3});
-            points.push_back({regionIdx, p, T, Scalar(1.001) * rsSat, 0.2, 0.3});
+            const auto point = [&](Scalar rs, Scalar sg) {
+                return TestPoint<Scalar>{.regionIdx = regionIdx, .p = p, .T = T, .rs = rs,
+                                         .rv = 0.0, .sw = 0.2, .sg = sg,
+                                         .so = Scalar(0.8) - sg, .rvScale = 1.0};
+            };
+            points.push_back(point(Scalar(0.5) * rsSat, 0.0));
+            points.push_back(point(Scalar(0.5) * rsSat, 0.3));
+            points.push_back(point(Scalar(1.001) * rsSat, 0.3));
         }
     }
     return points;
@@ -581,9 +654,6 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(Spe1FluidSystemOnGpu, Scalar, Scalars)
     BOOST_REQUIRE(cpuFluidSystem.enableDissolvedGas());
     BOOST_REQUIRE(cpuFluidSystem.useSaturatedTables());
 
-    auto gpuFluidSystemBuffer = Opm::gpuistl::copy_to_gpu<Opm::LiveOilDryGasPvtApproaches>(cpuFluidSystem);
-    const auto gpuFluidSystemView = Opm::gpuistl::make_view(gpuFluidSystemBuffer);
-
     const auto points = makeTestPoints<Scalar>();
 
     // Make sure the points take both oil branches, so the checks below cover them.
@@ -596,31 +666,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(Spe1FluidSystemOnGpu, Scalar, Scalars)
     BOOST_CHECK_GT(numSaturated, 0u);
     BOOST_CHECK_LT(numSaturated, points.size());
 
-    constexpr std::array phases{Indices::waterPhaseIdx, Indices::oilPhaseIdx, Indices::gasPhaseIdx};
-    constexpr std::array quantities{
-        Quantity::Density,
-        Quantity::InverseFormationVolumeFactor,
-        Quantity::Viscosity,
-        Quantity::SaturatedDissolutionFactor,
-        Quantity::SaturatedDissolutionFactorMaxSo,
-    };
-
-    for (const unsigned phaseIdx : phases) {
-        const std::string phaseName(cpuFluidSystem.phaseName(phaseIdx));
-        for (const auto quantity : quantities) {
-            const FluidSystemQuantity f{quantity, phaseIdx};
-            std::ostringstream name;
-            name << quantity << " (" << phaseName << ")";
-            checkResults(evaluateOnCpu(f, cpuFluidSystem, points),
-                         evaluateOnGpu(f, gpuFluidSystemView, points),
-                         points, name.str());
-        }
-
-        const ReferenceDensity f{phaseIdx};
-        checkResults(evaluateOnCpu(f, cpuFluidSystem, points),
-                     evaluateOnGpu(f, gpuFluidSystemView, points),
-                     points, "referenceDensity (" + phaseName + ")");
-    }
+    checkFluidSystemOnGpu<Opm::LiveOilDryGasPvtApproaches>(points);
 }
 
 BOOST_AUTO_TEST_CASE(RejectsMismatchingPvtApproaches)
