@@ -640,31 +640,31 @@ protected:
             }
         }
 
-        // Derivative matrix. Only the row of cell I is written, so that each matrix row has a single
-        // writing thread: the flux is carried by the concentration of the upstream cell, i.e.
-        // d(residual_I)/d(c_up) = flux.
+        // Derivative matrix, as in the TPFA linearizer of the main simulator: this element (cell I) writes
+        // d(residual_I)/d(c_I) into the diagonal and d(residual_J)/d(c_I) = -d(residual_I)/d(c_I) into the
+        // entry (J, I), i.e. the row of the neighbor J and the column of I. The entry (J, I) is only
+        // written from this element, which makes the assembly thread safe. The coupling of the interior
+        // cell I to a neighboring cell J that is not interior is not assembled (the rows of those
+        // cells are Dirichlet rows), so the matrix is decoupled between the ranks.
+        // The flux is carried by the concentration of the upstream cell.
         if (isUpF) {
             (*tr.mat)[I][I][Free][Free] += fFlux.derivative(0);
-        }
-        else {
-            (*tr.mat)[I][J][Free][Free] += fFlux.value();
+            (*tr.mat)[J][I][Free][Free] -= fFlux.derivative(0);
         }
         if (isUpS) {
             (*tr.mat)[I][I][Solution][Solution] += sFlux.derivative(0);
-        }
-        else {
-            (*tr.mat)[I][J][Solution][Solution] += sFlux.value();
+            (*tr.mat)[J][I][Solution][Solution] -= sFlux.derivative(0);
         }
 
-        // Diffusion and dispersion: d(residual_I)/d(c_I) = +D and d(residual_I)/d(c_J) = -D,
+        // Diffusion and dispersion: d(residual_I)/d(c_I) = +D and d(residual_J)/d(c_I) = -D,
         // for every face irrespective of the flow direction.
         if (hasFickianFree) {
             (*tr.mat)[I][I][Free][Free] += fickianFree.derivative(0);
-            (*tr.mat)[I][J][Free][Free] -= fickianFree.derivative(0);
+            (*tr.mat)[J][I][Free][Free] -= fickianFree.derivative(0);
         }
         if (hasFickianSolution) {
             (*tr.mat)[I][I][Solution][Solution] += fickianSolution.derivative(0);
-            (*tr.mat)[I][J][Solution][Solution] -= fickianSolution.derivative(0);
+            (*tr.mat)[J][I][Solution][Solution] -= fickianSolution.derivative(0);
         }
     }
 
