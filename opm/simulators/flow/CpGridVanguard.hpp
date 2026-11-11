@@ -239,18 +239,6 @@ public:
     void loadBalance()
     {
 #if HAVE_MPI
-        // Dual-continuum runs are supported in serial only.  The check is collective -- the
-        // RUNSPEC flags are distributed to every rank -- and it is raised before load balancing
-        // so the run stops with a diagnosable message instead of failing later inside the
-        // partitioner.
-        if (this->eclState().runspec().porosityModel().dualContinuum() && this->comm().size() > 1) {
-            const std::string msg =
-                "Dual-continuum runs (DUALPORO/DUALPERM) are supported in serial only. "
-                "Rerun on a single process.";
-            OpmLog::error(msg);
-            OPM_THROW(std::runtime_error, msg);
-        }
-
         if (const auto& extPFile = this->externalPartitionFile();
             !extPFile.empty() && (extPFile != "none"))
         {
