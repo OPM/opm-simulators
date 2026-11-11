@@ -22,13 +22,16 @@
 /*!
  * \file
  *
- * \brief Unit tests for the black-oil fluid system on the GPU with the live oil and dry
- *        gas PVT classes.
+ * \brief Unit tests for the black-oil fluid system on the GPU with the live oil PVT class
+ *        and the dry or wet gas PVT class.
  *
- * A CPU fluid system is initialized from an SPE1-like deck (PVDG, PVTO, PVTW and
- * DISGAS) with two PVT regions, copied to the GPU with
- * copy_to_gpu<LiveOilDryGasPvtApproaches>()/make_view(), and evaluated in kernels. All GPU
- * results are compared to the same evaluations of the CPU fluid system.
+ * Two configurations are tested, each with two PVT regions:
+ * - an SPE1-like deck (PVDG, PVTO, PVTW and DISGAS), copied to the GPU with
+ *   copy_to_gpu<LiveOilDryGasPvtApproaches>(), and
+ * - a deck with vaporized oil as in Norne (PVTG, PVTO, PVTW, DISGAS and VAPOIL), copied
+ *   with copy_to_gpu<LiveOilWetGasPvtApproaches>().
+ * The GPU fluid systems are evaluated in kernels, and all GPU results are compared to the
+ * same evaluations of the CPU fluid system.
  *
  * The test also checks the compile-time mapping from PVT approaches to PVT classes, and
  * that copy_to_gpu() rejects a CPU fluid system whose PVT approaches differ from the
@@ -69,6 +72,7 @@
 #include <stdexcept>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -105,6 +109,7 @@ using PvtTypes = Opm::BlackOilPvtTypes<Scalar, Storage, PvtApproaches>;
 template <class Scalar>
 struct CheckPvtTypes {
     using LiveOilDryGas = Opm::LiveOilDryGasPvtApproaches;
+    using LiveOilWetGas = Opm::LiveOilWetGasPvtApproaches;
     using Co2 = Opm::Co2StorePvtApproaches;
 
     // Live oil, dry gas (SPE1)
@@ -128,6 +133,18 @@ struct CheckPvtTypes {
                                  Opm::ConstantCompressibilityWaterPvt<Scalar, GpuBuffer>>);
     static_assert(std::is_same_v<typename PvtTypes<Scalar, GpuView, LiveOilDryGas>::WaterPvt,
                                  Opm::ConstantCompressibilityWaterPvt<Scalar, GpuView>>);
+
+    // Live oil, wet gas (Norne). Oil and water are as for live oil and dry gas.
+    static_assert(std::is_same_v<typename PvtTypes<Scalar, VectorWithDefaultAllocator, LiveOilWetGas>::GasPvt,
+                                 Opm::WetGasPvt<Scalar>>);
+    static_assert(std::is_same_v<typename PvtTypes<Scalar, GpuBuffer, LiveOilWetGas>::GasPvt,
+                                 Opm::WetGasPvt<Scalar, GpuBuffer, GpuView>>);
+    static_assert(std::is_same_v<typename PvtTypes<Scalar, GpuView, LiveOilWetGas>::GasPvt,
+                                 Opm::WetGasPvt<Scalar, GpuView, GpuView>>);
+    static_assert(std::is_same_v<typename PvtTypes<Scalar, GpuView, LiveOilWetGas>::OilPvt,
+                                 typename PvtTypes<Scalar, GpuView, LiveOilDryGas>::OilPvt>);
+    static_assert(std::is_same_v<typename PvtTypes<Scalar, GpuView, LiveOilWetGas>::WaterPvt,
+                                 typename PvtTypes<Scalar, GpuView, LiveOilDryGas>::WaterPvt>);
 
     // CO2STORE
     static_assert(std::is_same_v<typename PvtTypes<Scalar, VectorWithDefaultAllocator, Co2>::GasPvt,
@@ -180,15 +197,23 @@ struct CheckPvtTypes {
     using CpuNonStatic = Opm::BlackOilFluidSystemNonStatic<Scalar, Indices>;
     static_assert(std::is_same_v<decltype(Opm::gpuistl::copy_to_gpu<LiveOilDryGas>(std::declval<const CpuNonStatic&>())),
                                  GpuBufFluidSystem<Scalar>>);
+    static_assert(std::is_same_v<decltype(Opm::gpuistl::copy_to_gpu<LiveOilWetGas>(
+                                     std::declval<const CpuNonStatic&>())),
+                                 GpuBufFluidSystem<Scalar, LiveOilWetGas>>);
     static_assert(std::is_same_v<decltype(Opm::gpuistl::copy_to_gpu<Co2>(std::declval<const CpuNonStatic&>())),
                                  GpuBufFluidSystem<Scalar, Co2>>);
     static_assert(std::is_same_v<decltype(Opm::gpuistl::make_view(std::declval<GpuBufFluidSystem<Scalar>&>())),
                                  GpuViewFluidSystem<Scalar>>);
+    using WetGasBuf = GpuBufFluidSystem<Scalar, LiveOilWetGas>;
+    static_assert(std::is_same_v<decltype(Opm::gpuistl::make_view(std::declval<WetGasBuf&>())),
+                                 GpuViewFluidSystem<Scalar, LiveOilWetGas>>);
 
-    // The owning GPU PVT objects of DryGasPvt and LiveOilPvt are move-only, so the owning
-    // GPU fluid system is as well.
+    // The owning GPU PVT objects of DryGasPvt, WetGasPvt and LiveOilPvt are move-only, so
+    // the owning GPU fluid systems are as well.
     static_assert(!std::is_copy_constructible_v<GpuBufFluidSystem<Scalar>>);
     static_assert(std::is_move_constructible_v<GpuBufFluidSystem<Scalar>>);
+    static_assert(!std::is_copy_constructible_v<GpuBufFluidSystem<Scalar, LiveOilWetGas>>);
+    static_assert(std::is_move_constructible_v<GpuBufFluidSystem<Scalar, LiveOilWetGas>>);
 };
 template struct CheckPvtTypes<double>;
 template struct CheckPvtTypes<float>;
@@ -236,6 +261,90 @@ PVDG
   60.0 0.0200 0.013
  150.0 0.0080 0.018
  350.0 0.0040 0.027 /
+PVTO
+-- RS     P      BO     MU
+   20.0   50.0  1.10   1.20 /
+   50.0  100.0  1.20   1.00 /
+   90.0  150.0  1.30   0.80
+         200.0  1.28   0.85
+         250.0  1.26   0.90 /
+/
+   10.0   40.0  1.05   1.50
+          80.0  1.04   1.55 /
+   30.0   70.0  1.12   1.30 /
+   60.0  110.0  1.21   1.10
+         160.0  1.20   1.12
+         210.0  1.19   1.15 /
+  120.0  170.0  1.40   0.85
+         230.0  1.38   0.88 /
+/
+)";
+
+// Vaporized oil as in Norne: PVTO, PVTW and DENSITY as in the SPE1 deck, and the PVTG
+// tables of test_gpuWetGasPvt.cu, which are checked there to be unchanged by the parser's
+// low-pressure padding. One region has many pressure rows, the other a row with many Rv
+// points. At low pressures region 1 has Rv in Norne's range (about 1e-5).
+constexpr const char* vapoilDeckString = R"(
+RUNSPEC
+DIMENS
+ 1 1 1 /
+TABDIMS
+ * 2 /
+OIL
+GAS
+WATER
+DISGAS
+VAPOIL
+METRIC
+GRID
+DX
+ 1*100 /
+DY
+ 1*100 /
+DZ
+ 1*10 /
+TOPS
+ 1*1000 /
+PORO
+ 1*0.2 /
+PROPS
+DENSITY
+ 850.0 1030.0 0.90 /
+ 870.0 1020.0 0.80 /
+PVTW
+ 250.0 1.03 4.5E-5 0.40 0.0 /
+ 200.0 1.02 4.0E-5 0.50 1.0E-5 /
+PVTG
+-- PG     RV        BG       MUG
+   50.0   0.00010   0.0200   0.0140
+          0.00000   0.0198   0.0136 /
+  100.0   0.00025   0.0120   0.0160 /
+  150.0   0.00040   0.0085   0.0185
+          0.00030   0.0084   0.0182
+          0.00020   0.0083   0.0179 /
+/
+   40.0   0.00002   0.0250   0.0130
+          0.00000   0.0249   0.0129 /
+   60.0   0.00012   0.0180   0.0138
+          0.00000   0.0178   0.0135 /
+   90.0   0.00025   0.0125   0.0150
+          0.00010   0.0123   0.0147 /
+  120.0   0.00038   0.0098   0.0163
+          0.00030   0.0097   0.0161
+          0.00022   0.0096   0.0159
+          0.00016   0.0095   0.0157
+          0.00010   0.0094   0.0155
+          0.00006   0.0093   0.0153
+          0.00003   0.0092   0.0151
+          0.00000   0.0091   0.0149 /
+  150.0   0.00052   0.0082   0.0178 /
+  180.0   0.00065   0.0072   0.0192
+          0.00030   0.0070   0.0185 /
+  210.0   0.00075   0.0065   0.0205 /
+  240.0   0.00082   0.0060   0.0218
+          0.00050   0.0058   0.0210
+          0.00020   0.0056   0.0202 /
+/
 PVTO
 -- RS     P      BO     MU
    20.0   50.0  1.10   1.20 /
@@ -403,6 +512,9 @@ enum class Quantity {
     Viscosity,
     SaturatedDissolutionFactor,
     SaturatedDissolutionFactorMaxSo,
+    // Rvw: zero for DryGasPvt and WetGasPvt. Kept to check that the call compiles on the
+    // device. The saturated Rv is checked by SaturatedDissolutionFactor of the gas phase.
+    SaturatedVaporizationFactor,
 };
 
 std::ostream& operator<<(std::ostream& os, Quantity q)
@@ -413,6 +525,7 @@ std::ostream& operator<<(std::ostream& os, Quantity q)
     case Quantity::Viscosity: return os << "viscosity";
     case Quantity::SaturatedDissolutionFactor: return os << "saturatedDissolutionFactor";
     case Quantity::SaturatedDissolutionFactorMaxSo: return os << "saturatedDissolutionFactor(maxSo)";
+    case Quantity::SaturatedVaporizationFactor: return os << "saturatedVaporizationFactor";
     }
     return os;
 }
@@ -440,6 +553,8 @@ struct FluidSystemQuantity {
         case Quantity::SaturatedDissolutionFactorMaxSo:
             return fluidSystem.saturatedDissolutionFactor(fs, phaseIdx, pt.regionIdx,
                                                           Evaluation<Scalar>(1.0));
+        case Quantity::SaturatedVaporizationFactor:
+            return fluidSystem.saturatedVaporizationFactor(fs, phaseIdx, pt.regionIdx);
         }
         return Evaluation<Scalar>(0.0);
     }
@@ -592,6 +707,7 @@ void checkFluidSystemOnGpu(const std::vector<TestPoint<Scalar>>& points)
         Quantity::Viscosity,
         Quantity::SaturatedDissolutionFactor,
         Quantity::SaturatedDissolutionFactorMaxSo,
+        Quantity::SaturatedVaporizationFactor,
     };
 
     for (const unsigned phaseIdx : allPhases) {
@@ -605,37 +721,76 @@ void checkFluidSystemOnGpu(const std::vector<TestPoint<Scalar>>& points)
 }
 
 /*!
- * \brief Evaluation points covering both oil branches of the fluid system.
+ * \brief Evaluation points covering both branches of the oil phase and, with vaporized
+ *        oil, of the gas phase.
  *
- * For each region and pressure there is
- * - an undersaturated point: Rs below the saturated Rs, with and without free gas, and
- * - a saturated point: free gas and Rs slightly above the saturated Rs, so that
- *   inverseFormationVolumeFactor() and viscosity() use the saturated tables.
- *   Rs is not set to exactly the saturated Rs: the branch is chosen by comparing Rs with
- *   the saturated Rs computed on the device, which may differ in the last bits.
+ * For each region and pressure, with RsSat and RvSat the saturated Rs and Rv of the CPU
+ * PVT objects (RvSat = 0 without vaporized oil):
+ *
+ * | Sw  | Sg  | So  | Rs          | Rv          | Branches                              |
+ * |-----|-----|-----|-------------|-------------|---------------------------------------|
+ * | 0.2 | 0.3 | 0.5 | 0.5 RsSat   | 0.5 RvSat   | oil and gas undersaturated            |
+ * | 0.2 | 0.3 | 0.5 | 1.001 RsSat | 1.001 RvSat | oil and gas saturated                 |
+ * | 0.2 | 0   | 0.8 | 0.5 RsSat   | 0.5 RvSat   | oil undersaturated (no free gas)      |
+ * | 0.2 | 0.8 | 0   | 0.5 RsSat   | 0.5 RvSat   | gas undersaturated (no oil)           |
+ * | 0.2 | 0.8 | 0   | 0.5 RsSat   | 1.001 RvSat | gas undersaturated, since So = 0      |
+ *
+ * The saturated tables are used when Rs (Rv) is at least the saturated value and the
+ * other phase is present. Rs and Rv are not set to exactly the saturated values: the
+ * branch is chosen by comparing with the saturated value computed on the device, which
+ * may differ in the last bits.
+ *
+ * \param pressuresBar Pressures in [bar], which should cover extrapolation below and
+ *                     above the tables, and give positive RsSat and RvSat.
  */
 template <class Scalar>
-std::vector<TestPoint<Scalar>> makeTestPoints()
+std::vector<TestPoint<Scalar>> makeTestPoints(const std::vector<Scalar>& pressuresBar)
 {
+    struct Case { Scalar sg; Scalar so; Scalar rsFactor; Scalar rvFactor; };
+    constexpr std::array<Case, 5> cases{{
+        {0.3, 0.5, 0.5, 0.5},
+        {0.3, 0.5, 1.001, 1.001},
+        {0.0, 0.8, 0.5, 0.5},
+        {0.8, 0.0, 0.5, 0.5},
+        {0.8, 0.0, 0.5, 1.001},
+    }};
+
     const Scalar T = CpuFluidSystem<Scalar>::reservoirTemperature();
     std::vector<TestPoint<Scalar>> points;
     for (unsigned regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
-        // [bar], covering extrapolation below and above the tables.
-        for (const Scalar pBar : {30.0, 60.0, 95.0, 140.0, 220.0, 400.0}) {
+        for (const Scalar pBar : pressuresBar) {
             const Scalar p = pBar * 1e5;
             const Scalar rsSat
                 = CpuFluidSystem<Scalar>::oilPvt().saturatedGasDissolutionFactor(regionIdx, T, p);
-            const auto point = [&](Scalar rs, Scalar sg) {
-                return TestPoint<Scalar>{.regionIdx = regionIdx, .p = p, .T = T, .rs = rs,
-                                         .rv = 0.0, .sw = 0.2, .sg = sg,
-                                         .so = Scalar(0.8) - sg, .rvScale = 1.0};
-            };
-            points.push_back(point(Scalar(0.5) * rsSat, 0.0));
-            points.push_back(point(Scalar(0.5) * rsSat, 0.3));
-            points.push_back(point(Scalar(1.001) * rsSat, 0.3));
+            const Scalar rvSat
+                = CpuFluidSystem<Scalar>::gasPvt().saturatedOilVaporizationFactor(regionIdx, T, p);
+            for (const auto& c : cases) {
+                points.push_back({.regionIdx = regionIdx, .p = p, .T = T,
+                                  .rs = c.rsFactor * rsSat, .rv = c.rvFactor * rvSat,
+                                  .sw = 0.2, .sg = c.sg, .so = c.so,
+                                  // Without vaporized oil Rv and its derivatives are zero.
+                                  .rvScale = rvSat > 0.0 ? rvSat : Scalar(1.0)});
+            }
         }
     }
     return points;
+}
+
+//! The number of points that take the saturated branch of the oil and of the gas phase.
+template <class Scalar>
+std::pair<std::size_t, std::size_t> countSaturated(const std::vector<TestPoint<Scalar>>& points)
+{
+    std::size_t numOil = 0;
+    std::size_t numGas = 0;
+    for (const auto& pt : points) {
+        const Scalar rsSat = CpuFluidSystem<Scalar>::oilPvt()
+                                 .saturatedGasDissolutionFactor(pt.regionIdx, pt.T, pt.p);
+        const Scalar rvSat = CpuFluidSystem<Scalar>::gasPvt()
+                                 .saturatedOilVaporizationFactor(pt.regionIdx, pt.T, pt.p);
+        numOil += (pt.sg > 0.0 && pt.rs >= rsSat) ? 1 : 0;
+        numGas += (pt.so > 0.0 && pt.rv >= rvSat) ? 1 : 0;
+    }
+    return {numOil, numGas};
 }
 
 } // namespace
@@ -654,19 +809,47 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(Spe1FluidSystemOnGpu, Scalar, Scalars)
     BOOST_REQUIRE(cpuFluidSystem.enableDissolvedGas());
     BOOST_REQUIRE(cpuFluidSystem.useSaturatedTables());
 
-    const auto points = makeTestPoints<Scalar>();
+    const auto points = makeTestPoints<Scalar>({30.0, 60.0, 95.0, 140.0, 220.0, 400.0});
 
     // Make sure the points take both oil branches, so the checks below cover them.
-    std::size_t numSaturated = 0;
-    for (const auto& pt : points) {
-        const Scalar rsSat = CpuFluidSystem<Scalar>::oilPvt()
-                                 .saturatedGasDissolutionFactor(pt.regionIdx, pt.T, pt.p);
-        numSaturated += (pt.sg > 0.0 && pt.rs >= rsSat) ? 1 : 0;
-    }
-    BOOST_CHECK_GT(numSaturated, 0u);
-    BOOST_CHECK_LT(numSaturated, points.size());
+    const std::size_t numSaturatedOil = countSaturated(points).first;
+    BOOST_CHECK_GT(numSaturatedOil, 0u);
+    BOOST_CHECK_LT(numSaturatedOil, points.size());
 
     checkFluidSystemOnGpu<Opm::LiveOilDryGasPvtApproaches>(points);
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(WetGasFluidSystemOnGpu, Scalar, Scalars)
+{
+    using Opm::GasPvtApproach;
+
+    initCpuFluidSystem<Scalar>(vapoilDeckString);
+    const auto& cpuFluidSystem = CpuFluidSystem<Scalar>::getNonStaticInstance();
+
+    BOOST_REQUIRE_EQUAL(cpuFluidSystem.numRegions(), std::size_t{numRegions});
+    BOOST_REQUIRE_EQUAL(cpuFluidSystem.numActivePhases(), 3u);
+    BOOST_REQUIRE(cpuFluidSystem.enableDissolvedGas());
+    BOOST_REQUIRE(cpuFluidSystem.enableVaporizedOil());
+    BOOST_REQUIRE(!cpuFluidSystem.enableVaporizedWater());
+    BOOST_REQUIRE(cpuFluidSystem.useSaturatedTables());
+    BOOST_REQUIRE(CpuFluidSystem<Scalar>::gasPvt().approach() == GasPvtApproach::WetGas);
+
+    // Below both the PVTO and the PVTG tables in both regions (but high enough for a
+    // positive extrapolated RvSat), inside them, between the end of region 0's PVTG table
+    // and the end of the PVTO tables, and above all tables. None is a table row.
+    const auto points = makeTestPoints<Scalar>({38.0, 45.0, 75.0, 115.0, 165.0, 220.0, 300.0});
+
+    // Make sure the points take both branches of the oil and the gas phase.
+    const auto [numSaturatedOil, numSaturatedGas] = countSaturated(points);
+    BOOST_CHECK_GT(numSaturatedOil, 0u);
+    BOOST_CHECK_LT(numSaturatedOil, points.size());
+    BOOST_CHECK_GT(numSaturatedGas, 0u);
+    BOOST_CHECK_LT(numSaturatedGas, points.size());
+
+    // saturationPressure(), and so bubblePointPressure() and dewPointPressure(), are not
+    // tested: the Newton iteration of LiveOilPvt and WetGasPvt is CPU only, and the GPU
+    // intensive quantities do not use them.
+    checkFluidSystemOnGpu<Opm::LiveOilWetGasPvtApproaches>(points);
 }
 
 BOOST_AUTO_TEST_CASE(RejectsMismatchingPvtApproaches)
@@ -695,13 +878,27 @@ BOOST_AUTO_TEST_CASE(RejectsMismatchingPvtApproaches)
                                                  WaterPvtApproach::ConstantCompressibilityWater>;
         BOOST_CHECK_THROW(Opm::gpuistl::copy_to_gpu<NoOil>(cpuFluidSystem), std::logic_error);
 
+        // Only the gas approach differs.
+        BOOST_CHECK_THROW(Opm::gpuistl::copy_to_gpu<Opm::LiveOilWetGasPvtApproaches>(cpuFluidSystem),
+                          std::logic_error);
+
         // The matching approaches are accepted.
         BOOST_CHECK_NO_THROW(Opm::gpuistl::copy_to_gpu<Opm::LiveOilDryGasPvtApproaches>(cpuFluidSystem));
     }
 
+    // A fluid system with vaporized oil and the dry gas approaches. initFromState() sets
+    // the gas approach from the deck (WetGas for PVTG).
+    initCpuFluidSystem<Scalar>(vapoilDeckString);
+    {
+        const auto& cpuFluidSystem = CpuFluidSystem<Scalar>::getNonStaticInstance();
+        BOOST_CHECK_THROW(Opm::gpuistl::copy_to_gpu<Opm::LiveOilDryGasPvtApproaches>(cpuFluidSystem),
+                          std::logic_error);
+        BOOST_CHECK_NO_THROW(Opm::gpuistl::copy_to_gpu<Opm::LiveOilWetGasPvtApproaches>(cpuFluidSystem));
+    }
+
     // A CO2STORE fluid system with the live oil and dry gas approaches. The oil phase is
     // inactive in this deck, so initFromState() does not touch the oil multiplexer, which
-    // still holds the LiveOilPvt from the SPE1 deck. Reset it, as a fluid system initialized
+    // still holds the LiveOilPvt from the previous deck. Reset it, as a fluid system initialized
     // only from the CO2STORE deck would have it.
     CpuFluidSystem<Scalar>::setOilPvt(std::make_shared<typename CpuFluidSystem<Scalar>::OilPvt>());
     initCpuFluidSystem<Scalar>(co2StoreDeckString);
