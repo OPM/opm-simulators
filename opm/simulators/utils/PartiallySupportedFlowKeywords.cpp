@@ -391,12 +391,6 @@ partiallySupported()
             },
          },
          {
-            "EQLDIMS",
-            {
-               {4,{true, allow_values<int> {1}, "EQLDIMS(NTTRVD): tracer regions (TNUM) not supported. This item should be defaulted to 1."}}, // NTTRVD
-            },
-         },
-         {
             "EQUIL",
             {
                {9,{true, [](int x) { return x >= -20 && x <= 20; }, "EQUIL(OIP_INIT): only values between -20 and 20 are allowed (default is -5)"}}, // OIP_INIT
