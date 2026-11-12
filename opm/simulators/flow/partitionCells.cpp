@@ -25,21 +25,21 @@
 
 #include <opm/simulators/utils/compressPartition.hpp>
 
-#if HAVE_MPI && HAVE_ZOLTAN
+#if HAVE_MPI
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/gatherDeferredLogger.hpp>
-#include <opm/simulators/utils/ParallelNLDDPartitioningZoltan.hpp>
-#include <opm/simulators/utils/SetupPartitioningParams.hpp>
+#include <opm/simulators/utils/MPISerializer.hpp>
 
 #include <opm/input/eclipse/Schedule/Well/Connection.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
-#endif // HAVE_MPI && HAVE_ZOLTAN
+#endif // HAVE_MPI
 
-#if HAVE_MPI
-#include <opm/simulators/utils/MPISerializer.hpp>
-#endif
+#if HAVE_MPI && HAVE_ZOLTAN
+#include <opm/simulators/utils/ParallelNLDDPartitioningZoltan.hpp>
+#include <opm/simulators/utils/SetupPartitioningParams.hpp>
+#endif // HAVE_MPI && HAVE_ZOLTAN
 
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/polyhedralgrid.hh>
