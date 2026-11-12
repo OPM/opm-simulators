@@ -1209,6 +1209,24 @@ if(CUDA_FOUND OR hip_FOUND)
     REL_TOL
       8e-5
   )
+  # Wet gas with vaporized oil (Norne PVT tables) and a gas cap: the live oil
+  # and wet gas configuration.
+  add_test_compare_gpu_properties_simulation(
+    CASENAME
+      gecon_01
+    FILENAME
+      GECON-01
+    SIMULATOR
+      flow
+    DEV_SIMULATOR
+      flow_blackoil_nohyst
+    ABS_TOL
+      0.02
+    REL_TOL
+      8e-5
+    DIR
+      gecon
+  )
 endif()
 
 
