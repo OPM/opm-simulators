@@ -83,6 +83,10 @@ public:
 
     void solveJacobianSystem(BVector& x);
 
+    /// Apply a CVCRIT keyword.  Only the Newton iteration limits are used so far.
+    /// An item the keyword defaults falls back to the command-line value.
+    void updateCVCRIT(const Cvcrit& cvcrit);
+
     bool hasNlddSolver() const
     { return false; }
 
@@ -113,6 +117,10 @@ private:
     std::vector<Scalar> reservoirResidualMetrics() const;
 
     double linear_solve_setup_time_ = 0.0;
+
+    // The limits a CVCRIT falls back to when it defaults items 2 and 9
+    int cli_newton_max_iter_{};
+    int cli_newton_min_iter_{};
 };
 
 } // namespace Opm
