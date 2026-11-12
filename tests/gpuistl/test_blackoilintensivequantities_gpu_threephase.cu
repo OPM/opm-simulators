@@ -21,12 +21,13 @@
  *
  * \brief Compares BlackOilIntensiveQuantities::update() on the GPU with the CPU
  *        for the TypeTag that flow uses for three-phase black-oil decks with live
- *        oil and dry gas (e.g. SPE1).
+ *        oil and dry gas (e.g. SPE1) or wet gas (e.g. Norne).
  *
  * The CPU simulator is set up with \c FlowProblemNohyst from an SPE1-like deck
- * whose gas-oil and oil-water contacts both lie inside the grid. The GPU side
- * uses the TypeTag of GpuFlowBlackoilNohystTypeTag.hpp, and every cell is
- * compared, values and derivatives.
+ * whose gas-oil and oil-water contacts both lie inside the grid, and from a
+ * variant of it with vaporized oil. The GPU side uses the TypeTags of
+ * GpuFlowBlackoilNohystTypeTag.hpp, and every cell is compared, values and
+ * derivatives.
  *
  * Also checks that the production dispatcher for this TypeTag rejects a deck
  * with endpoint scaling, which the GPU material law manager does not apply.
@@ -93,7 +94,6 @@ namespace Opm {
 namespace {
 
 using CpuTypeTag = Opm::Properties::TTag::FlowProblemNohyst;
-using GpuTypeTag = Opm::Properties::TTag::FlowBlackoilNohystGPU;
 using Scalar = Opm::GetPropType<CpuTypeTag, Opm::Properties::Scalar>;
 using FluidSystem = Opm::GetPropType<CpuTypeTag, Opm::Properties::FluidSystem>;
 
@@ -377,6 +377,63 @@ void runDispatcher(const Simulator& sim)
                       /*timeIdx=*/0u);
 }
 
+/// Replace the text from \p begin up to, but not including, \p end.
+void replaceSection(std::string& deck, std::string_view begin, std::string_view end,
+                    std::string_view text)
+{
+    const auto first = deck.find(begin);
+    BOOST_REQUIRE(first != std::string::npos);
+    const auto last = deck.find(end, first);
+    BOOST_REQUIRE(last != std::string::npos);
+    deck.replace(first, last - first, text);
+}
+
+void replaceOnce(std::string& deck, std::string_view from, std::string_view to)
+{
+    const auto pos = deck.find(from);
+    BOOST_REQUIRE(pos != std::string::npos);
+    BOOST_REQUIRE(deck.find(from, pos + 1) == std::string::npos);
+    deck.replace(pos, from.size(), to);
+}
+
+/// Add VAPOIL, with RVVD for the initial Rv (EQUIL item 8). Without RVVD,
+/// EQUIL requires the datum depth at the gas-oil contact.
+void addVaporizedOil(std::string& deck)
+{
+    replaceOnce(deck, "DISGAS\n", "DISGAS\nVAPOIL\n");
+    replaceOnce(deck, " 2030 200 2045 0 2015 0 1 0 0 /", " 2030 200 2045 0 2015 0 1 1 0 /");
+    replaceOnce(deck, " 2060 120.0 /\n", " 2060 120.0 /\nRVVD\n 2000 0.0003\n 2060 0.0003 /\n");
+}
+
+/// The test deck with wet gas: PVDG replaced by a PVTG table with the same
+/// saturated Bg, which covers the pressures of the deck. With \p vaporizedOil,
+/// VAPOIL is added, with an Rv below the saturated value (5e-4 at 200 bar),
+/// and the gas-oil contact moves 3 m down. The top layer then holds no oil
+/// (Rv meaning), and the cell centres of the second layer lie in the
+/// capillary transition zone (oil and gas, Sg meaning).
+std::string deckWithWetGas(bool vaporizedOil)
+{
+    std::string deck = deckString;
+    replaceSection(deck, "PVDG\n", "PVTO\n",
+                   "PVTG\n"
+                   "-- PG     RV        BG       MUG\n"
+                   "   20.0   0.00004   0.0600   0.0118\n"
+                   "          0.00000   0.0598   0.0115 /\n"
+                   "  100.0   0.00025   0.0120   0.0160\n"
+                   "          0.00000   0.0118   0.0155 /\n"
+                   "  200.0   0.00050   0.0060   0.0210\n"
+                   "          0.00025   0.0059   0.0205\n"
+                   "          0.00000   0.0058   0.0200 /\n"
+                   "  300.0   0.00070   0.0045   0.0250\n"
+                   "          0.00000   0.0044   0.0240 /\n"
+                   "/\n");
+    if (vaporizedOil) {
+        addVaporizedOil(deck);
+        replaceOnce(deck, " 2030 200 2045 0 2015 0 1 1 0 /", " 2030 200 2045 0 2018 0 1 1 0 /");
+    }
+    return deck;
+}
+
 /// The test deck with endpoint scaling: ENDSCALE in RUNSPEC and a SWL array,
 /// but no ENKRVD. SWL equals the connate water saturation of each cell's
 /// SATNUM table (0.15 and 0.20), so the scaled end-points equal the unscaled
@@ -404,31 +461,21 @@ std::string deckWithEndpointScaling()
 
 } // namespace
 
-BOOST_AUTO_TEST_CASE(DispatcherRejectsEndpointScaling)
-{
-    // Control: the deck without endpoint scaling is accepted.
-    BOOST_CHECK_NO_THROW(runDispatcher(*makeSimulator(deckString)));
+namespace {
 
-    // The GPU material law manager ignores endpoint scaling, so a deck that
-    // uses it must be rejected instead of being evaluated with unscaled tables.
-    const auto sim = makeSimulator(deckWithEndpointScaling());
-    BOOST_REQUIRE(sim->problem().materialLawManager().oilWaterConfig().enableSatScaling());
-    BOOST_CHECK_EXCEPTION(runDispatcher(*sim),
-                          std::logic_error,
-                          [](const std::logic_error& e) {
-                              return std::string_view(e.what()).find("endpoint scaling")
-                                  != std::string_view::npos;
-                          });
-}
-
-BOOST_AUTO_TEST_CASE(ThreePhaseLiveOilDryGasGpuVsCpu)
+/// Update the intensive quantities of every cell of \p deck on the GPU with
+/// \p GpuTypeTag and on the CPU, and compare them cell by cell.
+template <class GpuTypeTag, class PvtApproaches>
+void compareGpuWithCpu(const std::string& deck)
 {
-    const auto sim = makeSimulator(deckString);
+    const auto sim = makeSimulator(deck);
+    const bool vaporizedOil = FluidSystem::enableVaporizedOil();
+    BOOST_REQUIRE_EQUAL(vaporizedOil, PvtApproaches::gas == Opm::GasPvtApproach::WetGas);
     const auto& cpuProblem = sim->problem();
 
     // GPU fluid system. The fluid state holds a pointer to it and is read back
     // on the host, so the view lives in managed memory.
-    auto gpuFluidSystemBuffer = Opm::gpuistl::copy_to_gpu<Opm::LiveOilDryGasPvtApproaches>(
+    auto gpuFluidSystemBuffer = Opm::gpuistl::copy_to_gpu<PvtApproaches>(
         FluidSystem::getNonStaticInstance());
     auto gpuFluidSystemView = Opm::gpuistl::make_view(gpuFluidSystemBuffer);
     using GpuFluidSystemView = std::decay_t<decltype(gpuFluidSystemView)>;
@@ -460,28 +507,40 @@ BOOST_AUTO_TEST_CASE(ThreePhaseLiveOilDryGasGpuVsCpu)
     const auto& cpuSolution = cpuProblem.model().solution(/*timeIdx=*/0);
     BOOST_REQUIRE_EQUAL(cpuSolution.size(), numCells);
 
-    // Check that the deck gives both the saturated and the undersaturated branch.
+    // Check that the deck gives both the saturated and the undersaturated
+    // branch of the oil, and with vaporized oil also gas-only cells.
+    using GasMeaning = typename PrimaryVariablesCpu::GasMeaning;
+    using Indices = Opm::GetPropType<CpuTypeTag, Opm::Properties::Indices>;
     std::size_t numSgCells = 0;
     std::size_t numRsCells = 0;
+    std::size_t numRvCells = 0;
     std::vector<PrimaryVariablesGpu> hostPrimaryVariablesGpu;
     hostPrimaryVariablesGpu.reserve(numCells);
     for (std::size_t i = 0; i < numCells; ++i) {
         const PrimaryVariablesCpu& priVars = cpuSolution[i];
         // The water zone also gets the Sg meaning, but with Sg = 0.
-        using Indices = Opm::GetPropType<CpuTypeTag, Opm::Properties::Indices>;
-        if (priVars.primaryVarsMeaningGas() == PrimaryVariablesCpu::GasMeaning::Sg
+        if (priVars.primaryVarsMeaningGas() == GasMeaning::Sg
             && priVars[Indices::compositionSwitchIdx] > 0.0) {
             ++numSgCells;
         }
-        else if (priVars.primaryVarsMeaningGas() == PrimaryVariablesCpu::GasMeaning::Rs) {
+        else if (priVars.primaryVarsMeaningGas() == GasMeaning::Rs) {
             ++numRsCells;
+        }
+        else if (priVars.primaryVarsMeaningGas() == GasMeaning::Rv) {
+            ++numRvCells;
         }
         hostPrimaryVariablesGpu.emplace_back(priVars);
     }
     BOOST_TEST_MESSAGE("Gas meaning: Sg > 0 in " << numSgCells << " cells, Rs in "
-                       << numRsCells << " cells");
+                       << numRsCells << " cells, Rv in " << numRvCells << " cells");
     BOOST_REQUIRE_GT(numSgCells, 0u);
     BOOST_REQUIRE_GT(numRsCells, 0u);
+    if (vaporizedOil) {
+        BOOST_REQUIRE_GT(numRvCells, 0u);
+    }
+    else {
+        BOOST_REQUIRE_EQUAL(numRvCells, 0u);
+    }
     Opm::gpuistl::GpuBuffer<PrimaryVariablesGpu> primaryVariablesBuffer(hostPrimaryVariablesGpu);
 
     // Intensive quantities
@@ -555,8 +614,17 @@ BOOST_AUTO_TEST_CASE(ThreePhaseLiveOilDryGasGpuVsCpu)
 
             checkValueAndDerivatives(cpuFs.Rs(), gpuFs.Rs(),
                                      tol, checkDerivatives, "Rs", derivativeComparisons);
-            BOOST_CHECK_EQUAL(asDouble(cpuFs.Rv()), 0.0);
-            BOOST_CHECK_EQUAL(asDouble(gpuFs.Rv()), 0.0);
+            if (vaporizedOil) {
+                // Rv is about 1e-4, so the absolute part of the derivative
+                // tolerance would hide errors. Compare Rv relative to its value.
+                const double rvScale = asDouble(cpuFs.Rv()) > 0.0 ? asDouble(cpuFs.Rv()) : 1.0;
+                checkValueAndDerivatives(cpuFs.Rv() / rvScale, gpuFs.Rv() / rvScale,
+                                         tol, checkDerivatives, "Rv", derivativeComparisons);
+            }
+            else {
+                BOOST_CHECK_EQUAL(asDouble(cpuFs.Rv()), 0.0);
+                BOOST_CHECK_EQUAL(asDouble(gpuFs.Rv()), 0.0);
+            }
             BOOST_CHECK_EQUAL(static_cast<unsigned>(cpuFs.pvtRegionIndex()),
                               static_cast<unsigned>(gpuFs.pvtRegionIndex()));
 
@@ -571,4 +639,35 @@ BOOST_AUTO_TEST_CASE(ThreePhaseLiveOilDryGasGpuVsCpu)
         }
     }
     BOOST_REQUIRE_GT(derivativeComparisons, 0u);
+}
+
+} // namespace
+
+BOOST_AUTO_TEST_CASE(DispatcherRejectsEndpointScaling)
+{
+    // Control: the deck without endpoint scaling is accepted.
+    BOOST_CHECK_NO_THROW(runDispatcher(*makeSimulator(deckString)));
+
+    // The GPU material law manager ignores endpoint scaling, so a deck that
+    // uses it must be rejected instead of being evaluated with unscaled tables.
+    const auto sim = makeSimulator(deckWithEndpointScaling());
+    BOOST_REQUIRE(sim->problem().materialLawManager().oilWaterConfig().enableSatScaling());
+    BOOST_CHECK_EXCEPTION(runDispatcher(*sim),
+                          std::logic_error,
+                          [](const std::logic_error& e) {
+                              return std::string_view(e.what()).find("endpoint scaling")
+                                  != std::string_view::npos;
+                          });
+}
+
+BOOST_AUTO_TEST_CASE(ThreePhaseLiveOilDryGasGpuVsCpu)
+{
+    compareGpuWithCpu<Opm::Properties::TTag::FlowBlackoilNohystGPU,
+                      Opm::LiveOilDryGasPvtApproaches>(deckString);
+}
+
+BOOST_AUTO_TEST_CASE(ThreePhaseLiveOilWetGasGpuVsCpu)
+{
+    compareGpuWithCpu<Opm::Properties::TTag::FlowBlackoilNohystWetGasGPU,
+                      Opm::LiveOilWetGasPvtApproaches>(deckWithWetGas(true));
 }
