@@ -129,6 +129,9 @@ WBHP
 CPR
 'PROD' /
 /
+BPR
+1 1 3 /
+/
 
 SCHEDULE
 WELSPECS
@@ -208,6 +211,16 @@ TSTEP
 END
 )";
 
+// The deck with the bottom layer at 65 bar, below the BHP. The producer allows
+// crossflow, so it injects into that layer.
+std::string lowPressureBottomLayer()
+{
+    const std::string pressures = "PRESSURE\n3*100 /";
+    auto text = deck;
+    text.replace(text.find(pressures), pressures.size(), "PRESSURE\n2*100 65 /");
+    return text;
+}
+
 // the density [kg/m^3] of the wellbore column between two connections
 float columnDensity(const float upper, const float lower)
 {
@@ -253,6 +266,34 @@ BOOST_AUTO_TEST_CASE(WellboreColumnHoldsTheFluidFlowingPastIt)
             BOOST_CHECK_GT(gas_column, 50.0f);
             BOOST_CHECK_LT(gas_column, 100.0f);
             BOOST_CHECK_GT(mixed_column, 1.15f * gas_column);
+        }
+    }
+}
+
+// Where the flow runs down the wellbore, the column holds what flows down past
+// the lower connection. In the first time step, which neither form damps, the
+// wellbore holds the gas of the top layer, and the column below the oil layer
+// holds that gas flowing into the bottom layer, not the blend of oil and gas in
+// the column above it.
+BOOST_AUTO_TEST_CASE(ColumnHoldsTheFluidFlowingDownPastIt)
+{
+    const Opm::TemporaryDirectory dir("compwell_connection_pressure_flow_down");
+    for (const bool sections : {false, true}) {
+        BOOST_TEST_CONTEXT("section densities damped: " << sections) {
+            const auto smry = Opm::runDeck<TypeTag>(dir.path(), "FLOWDOWN",
+                                                    lowPressureBottomLayer() + bhp_fixed,
+                                                    {dampSections(sections)});
+
+            const auto& top = smry.get("CPR:PROD:1,1,1");
+            const auto& middle = smry.get("CPR:PROD:1,1,2");
+            const auto& bottom = smry.get("CPR:PROD:1,1,3");
+            BOOST_REQUIRE_GT(top.size(), 0u);
+            // the bottom layer takes up fluid
+            BOOST_CHECK_GT(smry.get("BPR:1,1,3").front(), 66.0f);
+            const float gas_column = columnDensity(middle[0], bottom[0]);
+            BOOST_CHECK_GT(gas_column, 50.0f);
+            BOOST_CHECK_LT(gas_column, 100.0f);
+            BOOST_CHECK_GT(columnDensity(top[0], middle[0]), 200.0f);
         }
     }
 }
