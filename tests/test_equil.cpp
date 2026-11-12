@@ -62,6 +62,7 @@
 #include <array>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <numeric>
@@ -913,6 +914,162 @@ BOOST_AUTO_TEST_CASE(DeckWithDepthEdit)
             BOOST_CHECK_CLOSE(edited.press()[phase][cell], ref.press()[phase][cell], reltol);
             BOOST_CHECK_SMALL(edited.saturation()[phase][cell] - ref.saturation()[phase][cell], 1.0e-8);
         }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(DeckWithSwatinitSubdivision)
+{
+    // SWATINIT with horizontal subdivision (EQUIL item 9 = -2).  The
+    // capillary pressure curve is scaled once per cell, to honour SWATINIT
+    // at the cell centre, and the sub-layers are integrated with that curve.
+    // Cell 4 straddles the contact with SWATINIT = Swmax = 1 and a small
+    // non-zero Pc at Sw = 1, so the sub-layers above the contact are
+    // undersaturated relative to SWATINIT.
+    using TypeTag = Opm::Properties::TTag::TestEquilTypeTag;
+    using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
+
+    auto simulator = initSimulator<TypeTag>("equil_swatinit_subdivision.DATA");
+    EquilFixture::Initializer comp(simulator->problem().materialLawManager(),
+                                   simulator->vanguard().eclState(),
+                                   simulator->vanguard().grid(),
+                                   simulator->vanguard().gridView(),
+                                   simulator->vanguard().cartesianMapper(), 9.80665);
+
+    const auto& sw = comp.saturation()[FluidSystem::waterPhaseIdx];
+    const auto& sg = comp.saturation()[FluidSystem::gasPhaseIdx];
+    BOOST_REQUIRE_EQUAL(sw.size(), 7U);
+
+    const std::vector<double> sw_expected {
+        0.302422, 0.303604, 0.310356, 0.966823, 1.0, 1.0, 1.0
+    };
+
+    for (std::size_t cell = 0; cell < sw.size(); ++cell) {
+        BOOST_CHECK_SMALL(sw[cell] - sw_expected[cell], 1.0e-5);
+        BOOST_CHECK_SMALL(sw[cell] + sg[cell] - 1.0, 1.0e-12);
+    }
+}
+
+namespace {
+
+// One-column gas/water model of seven 20 m thick cells, tilted about 5.7
+// degrees in the x direction (top and bottom depths 10 m deeper at x = 100 m
+// than at x = 0).  Cell centres are at 1515 + 20*(k - 1) m, and the
+// gas/water contact is 1 m below the centre of cell 4.  SWATINIT is 0.3 in
+// cells 1-3 and 1.0 (= Swmax) in cells 4-7, and the capillary pressure is
+// small, but non-zero, at Sw = 1.  Writes the deck with EQUIL item 9 =
+// 'accuracy' to the current directory and returns its file name.
+std::string writeTiltedSwatinitDeck(const int accuracy)
+{
+    const auto filename = "equil_swatinit_tilted_" + std::to_string(accuracy) + ".DATA";
+
+    std::ofstream deck(filename);
+    deck << "RUNSPEC\nDIMENS\n 1 1 7 /\nGAS\nWATER\nMETRIC\nSTART\n 1 JAN 2020 /\n"
+         << "TABDIMS\n 1 1 40 20 1 20 /\nEQLDIMS\n 1 100 20 /\nWELLDIMS\n 0 0 0 0 /\n"
+         << "GRID\nCOORD\n"
+         << "  0   0 1400    0   0 1700\n"
+         << "100   0 1400  100   0 1700\n"
+         << "  0 100 1400    0 100 1700\n"
+         << "100 100 1400  100 100 1700 /\n"
+         << "ZCORN\n";
+    for (int k = 0; k < 7; ++k) {
+        const double top = 1500.0 + 20.0*k;
+        for (const double z : {top, top + 20.0}) {
+            deck << ' ' << z << ' ' << z + 10.0 << ' ' << z << ' ' << z + 10.0 << '\n';
+        }
+    }
+    deck << "/\nPORO\n 7*0.25 /\nPERMX\n 7*1000 /\nPERMY\n 7*1000 /\nPERMZ\n 7*1000 /\n"
+         << "PROPS\nSWFN\n"
+         << " 0.10 0.000000 3.578709\n 0.20 0.001372 1.575788\n 0.30 0.010974 0.928554\n"
+         << " 0.40 0.037037 0.575274\n 0.50 0.087791 0.352145\n 0.60 0.171468 0.204071\n"
+         << " 0.70 0.296296 0.106000\n 0.80 0.470508 0.044422\n 0.90 0.702332 0.011193\n"
+         << " 0.95 0.842421 0.003476\n 0.99 0.967036 0.001097\n 1.00 1.000000 0.001000 /\n"
+         << "SGFN\n 0.0 0.0 0.0\n 0.05 0.0 0.0\n 0.5 0.4 0.0\n 0.9 1.0 0.0 /\n"
+         << "SWATINIT\n 3*0.3 4*1.0 /\n"
+         << "PVTW\n 150 1.02 4.0E-05 0.4 0 /\n"
+         << "PVDG\n 50 0.0250 0.015\n 100 0.0120 0.017\n 150 0.0078 0.019\n 300 0.0040 0.025 /\n"
+         << "DENSITY\n 800 1000 0.8 /\nROCK\n 150 5.0E-05 /\n"
+         << "SOLUTION\nEQUIL\n 1576.0 150 1576.0 0 1576.0 0 0 0 " << accuracy << " /\n"
+         << "SCHEDULE\nTSTEP\n 1 /\nEND\n";
+
+    return filename;
+}
+
+} // Anonymous namespace
+
+BOOST_AUTO_TEST_CASE(DeckWithSwatinitTiltedSubdivision)
+{
+    // SWATINIT with tilted-block (EQUIL item 9 > 0) and horizontal (item 9 <
+    // 0) subdivision of tilted cells.  The capillary pressure curve is scaled
+    // once per cell, to honour SWATINIT at the cell centre, so the scaled
+    // curve retained for the dynamic run is the same as with the cell-centre
+    // method (item 9 = 0).  The sub-layers are integrated with that curve.
+    using TypeTag = Opm::Properties::TTag::TestEquilTypeTag;
+    using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
+    constexpr auto watIdx = FluidSystem::waterPhaseIdx;
+    constexpr auto gasIdx = FluidSystem::gasPhaseIdx;
+
+    struct Result {
+        std::vector<double> sw, sg;
+        std::vector<double> maxPc; // SWATINIT-scaled maximum gas/water Pc
+    };
+
+    auto equilibrate = [](const int accuracy)
+    {
+        const auto deck = writeTiltedSwatinitDeck(accuracy);
+        auto simulator = initSimulator<TypeTag>(deck.c_str());
+        auto& matLawMgr = simulator->problem().materialLawManager();
+        EquilFixture::Initializer comp(matLawMgr,
+                                       simulator->vanguard().eclState(),
+                                       simulator->vanguard().grid(),
+                                       simulator->vanguard().gridView(),
+                                       simulator->vanguard().cartesianMapper(), 9.80665);
+
+        Result res { comp.saturation()[watIdx], comp.saturation()[gasIdx], {} };
+        for (std::size_t cell = 0; cell < res.sw.size(); ++cell) {
+            res.maxPc.push_back(matLawMgr.oilWaterScaledEpsInfoDrainage(cell).maxPcgo);
+        }
+        return res;
+    };
+
+    const auto centre = equilibrate(0);
+    const auto tilted = equilibrate(2);
+    const auto horizontal = equilibrate(-2);
+    BOOST_REQUIRE_EQUAL(centre.sw.size(), 7U);
+
+    // Cell-centre method honours SWATINIT exactly.
+    const std::vector<double> swatinit { 0.3, 0.3, 0.3, 1.0, 1.0, 1.0, 1.0 };
+    for (std::size_t cell = 0; cell < swatinit.size(); ++cell) {
+        BOOST_CHECK_SMALL(centre.sw[cell] - swatinit[cell], 1.0e-6);
+    }
+
+    // Unscaled maximum Pc is 3.578709 bar.  Cell 4 straddles the contact
+    // and needs a much larger maximum to have Sw = 1 at its centre.
+    BOOST_CHECK_GT(centre.maxPc[3], 50 * 3.578709e5);
+
+    for (const auto* res : {&tilted, &horizontal}) {
+        for (std::size_t cell = 0; cell < swatinit.size(); ++cell) {
+            BOOST_TEST_CONTEXT("cell " << cell + 1 << (res == &tilted ? " (tilted)" : " (horizontal)")) {
+                BOOST_CHECK_CLOSE(res->maxPc[cell], centre.maxPc[cell], 1.0e-6);
+                BOOST_CHECK_SMALL(res->sw[cell] + res->sg[cell] - 1.0, 1.0e-12);
+            }
+        }
+    }
+
+    // Integrated over the sub-layers, the cell straddling the contact is
+    // undersaturated relative to SWATINIT, as the upper sub-layers are above
+    // the contact.  Cells above the contact are slightly wetter on average
+    // as the capillary pressure curve is convex.
+    const std::vector<double> sw_tilted_expected {
+        0.305876, 0.308742, 0.320630, 0.964097, 1.0, 1.0, 1.0
+    };
+    for (std::size_t cell = 0; cell < sw_tilted_expected.size(); ++cell) {
+        BOOST_TEST_CONTEXT("cell " << cell + 1) {
+            BOOST_CHECK_SMALL(tilted.sw[cell] - sw_tilted_expected[cell], 1.0e-5);
+        }
+    }
+    BOOST_CHECK_LT(tilted.sw[3], 0.99);
+    for (std::size_t cell = 0; cell < 3; ++cell) {
+        BOOST_CHECK_GT(tilted.sw[cell], 0.3);
     }
 }
 

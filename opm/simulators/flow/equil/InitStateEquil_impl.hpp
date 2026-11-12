@@ -572,6 +572,7 @@ PhaseSaturations<MaterialLawManager,FluidSystem,Region,CellID>::
 PhaseSaturations(const PhaseSaturations& rhs)
         : matLawMgr_(rhs.matLawMgr_)
         , swatInit_ (rhs.swatInit_)
+        , scaleToSwatinit_(rhs.scaleToSwatinit_)
         , sat_      (rhs.sat_)
         , press_    (rhs.press_)
 {
@@ -586,8 +587,10 @@ const PhaseQuantityValue<typename FluidSystem::Scalar>&
 PhaseSaturations<MaterialLawManager,FluidSystem,Region,CellID>::
 deriveSaturations(const Position& x,
                   const Region&   reg,
-                  const PTable&   ptable)
+                  const PTable&   ptable,
+                  const bool      scaleToSwatinit)
 {
+    this->scaleToSwatinit_ = scaleToSwatinit;
     this->setEvaluationPoint(x, reg, ptable);
     this->initializePhaseQuantities();
 
@@ -605,6 +608,20 @@ deriveSaturations(const Position& x,
     this->accountForScaledSaturations();
 
     return this->sat_;
+}
+
+template <class MaterialLawManager, class FluidSystem, class Region, typename CellID>
+void PhaseSaturations<MaterialLawManager,FluidSystem,Region,CellID>::
+scaleToSwatinitAt(const Position& x,
+                  const Region&   reg,
+                  const PTable&   ptable)
+{
+    if (this->swatInit_.empty()) {
+        return;
+    }
+
+    // Scaling is a side effect of deriving the saturations with SWATINIT.
+    this->deriveSaturations(x, reg, ptable, /*scaleToSwatinit=*/true);
 }
 
 template <class MaterialLawManager, class FluidSystem, class Region, typename CellID>
@@ -690,7 +707,7 @@ void PhaseSaturations<MaterialLawManager, FluidSystem, Region, CellID>::deriveWa
         // Honour SWATINIT by scaling the gas/water capillary pressure curve,
         // as is done for oil/water below.  Not applicable for a sharp
         // gas/water interface (constant Pc).
-        if (! this->swatInit_.empty() && ! this->isConstCapPress(this->gasPos())) {
+        if (this->applySwatinitScaling() && ! this->isConstCapPress(this->gasPos())) {
             const auto pcgw = this->press_.gas - this->press_.water;
 
             auto [swout, newSwatInit] = this->applySwatInit(pcgw);
@@ -728,7 +745,7 @@ void PhaseSaturations<MaterialLawManager, FluidSystem, Region, CellID>::deriveWa
             // cell.
             const auto pcow = this->press_.oil - this->press_.water;
 
-            if (this->swatInit_.empty()) {
+            if (! this->applySwatinitScaling()) {
                 sw = this->invertCapPress(pcow, this->waterPos(), isIncr);
             }
             else {
@@ -757,7 +774,7 @@ fixUnphysicalTransition()
     // Recalculate phase saturations using the implied gas/water capillary
     // pressure: Pg - Pw.
     const auto pcgw = this->press_.gas - this->press_.water;
-    if (! this->swatInit_.empty()) {
+    if (this->applySwatinitScaling()) {
         // Re-scale Pc to reflect imposed sw for vanishing oil phase.  This
         // seems consistent with ECLIPSE, but fails to honour SWATINIT in
         // case of non-trivial gas/oil capillary pressure.
@@ -2132,11 +2149,17 @@ equilibrateHorizontal(const CellRange&        cells,
         pressures  .reset();
         saturations.reset();
 
+        // Honour SWATINIT once per cell, at the cell centre, and derive the
+        // sub-layer saturations from the resulting capillary pressure curve.
+        const auto centrePos = CellPos { cell, cellCenterDepth_[cell] };
+        psat.scaleToSwatinitAt(centrePos, eqreg, ptable);
+
         Scalar totfrac = 0.0;
         for (const auto& [depth, frac] : Details::horizontalSubdivision(cell, cellZSpan_[cell], acc)) {
             const auto pos = CellPos { cell, depth };
 
-            saturations.axpy(psat.deriveSaturations(pos, eqreg, ptable), frac);
+            saturations.axpy(psat.deriveSaturations(pos, eqreg, ptable,
+                                                    /*scaleToSwatinit=*/false), frac);
             pressures  .axpy(psat.correctedPhasePressures(), frac);
 
             totfrac += frac;
@@ -2238,6 +2261,17 @@ equilibrateTiltedFaultBlockSimple(const CellRange& cells,
             }
         }
 
+        // Honour SWATINIT once per cell, at the cell centre, and derive the
+        // sub-layer saturations from the resulting capillary pressure curve.
+        {
+            const auto& [xc, yc] = cellCenterXY_[cell];
+            const auto centrePos = CellPos {
+                cell, Details::calculateTrueVerticalDepth(cellCenterDepth_[cell], xc, yc,
+                                                          dipAngle, dipAzimuth, referencePoint)
+            };
+            psat.scaleToSwatinitAt(centrePos, eqreg, ptable);
+        }
+
         for (const auto& [depth, weight] : levels) {
             // Convert measured depth to True Vertical Depth for tilted blocks
             const auto& [x, y] = cellCenterXY_[cell];
@@ -2246,7 +2280,8 @@ equilibrateTiltedFaultBlockSimple(const CellRange& cells,
 
             const auto pos = CellPos{cell, tvd};
 
-            auto localSaturations = psat.deriveSaturations(pos, eqreg, ptable);
+            auto localSaturations = psat.deriveSaturations(pos, eqreg, ptable,
+                                                           /*scaleToSwatinit=*/false);
             auto localPressures = psat.correctedPhasePressures();
 
             // Apply cross-section weighted averaging
@@ -2461,6 +2496,18 @@ equilibrateTiltedFaultBlock(const CellRange&        cells,
             }
         }
 
+        // Honour SWATINIT once per cell, at the cell centre, and derive the
+        // sub-layer saturations from the resulting capillary pressure curve.
+        {
+            const auto& xyc = this->cellCenterXY_[cell];
+            const auto centrePos = CellPos {
+                cell, Details::calculateTrueVerticalDepth(this->cellCenterDepth_[cell],
+                                                          xyc.first, xyc.second,
+                                                          dipAngle, dipAzimuth, referencePoint)
+            };
+            psat.scaleToSwatinitAt(centrePos, eqreg, ptable);
+        }
+
         for (const auto& level : levels) {
             Scalar depth = level.first;
             Scalar weight = level.second;
@@ -2472,7 +2519,8 @@ equilibrateTiltedFaultBlock(const CellRange&        cells,
 
             const auto pos = CellPos{cell, tvd};
 
-            auto localSaturations = psat.deriveSaturations(pos, eqreg, ptable);
+            auto localSaturations = psat.deriveSaturations(pos, eqreg, ptable,
+                                                           /*scaleToSwatinit=*/false);
             auto localPressures = psat.correctedPhasePressures();
 
             // Apply cross-section weighted averaging
