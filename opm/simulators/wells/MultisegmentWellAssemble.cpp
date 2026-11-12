@@ -298,7 +298,7 @@ assemblePressureEq(const int seg,
 template<class FluidSystem, class Indices>
 void MultisegmentWellAssemble<FluidSystem,Indices>::
 assembleTrivialEq(const int seg,
-                  const Scalar value,
+                  const EvalWell& rate,
                   Equations& eqns1) const
 {
     /*
@@ -309,8 +309,8 @@ assembleTrivialEq(const int seg,
         This method does *not* need communication.
     */
     MultisegmentWellEquationAccess<Scalar,IndexTraits,numWellEq,Indices::numEq> eqns(eqns1);
-    eqns.residual()[seg][SPres] = value;
-    eqns.D()[seg][seg][SPres][WQTotal] = 1.;
+    eqns.residual()[seg][SPres] = rate.value();
+    eqns.D()[seg][seg][SPres][WQTotal] = rate.derivative(WQTotal + Indices::numEq);
 }
 
 template<class FluidSystem, class Indices>
