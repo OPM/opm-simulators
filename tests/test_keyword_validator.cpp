@@ -21,6 +21,7 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
+#include <algorithm>
 #include <cstddef>
 #include <string>
 #include <utility>
@@ -789,18 +790,26 @@ BOOST_AUTO_TEST_CASE(licenses_is_warned_about_but_not_critical)
     }
 }
 
-BOOST_AUTO_TEST_CASE(cvcrit_is_warned_about_but_not_critical)
+BOOST_AUTO_TEST_CASE(cvcrit_unused_items_are_warned_about_but_not_critical)
 {
     const auto deck = Parser {}.parseString(R"(
 SCHEDULE
 CVCRIT
-  0.5 6 0.000001 20 /
+  0.5 6 0.000001 20 4* 2 /
 )");
     std::vector<ValidationError> errors;
     flowKeywordValidator().validateDeckKeyword(deck["CVCRIT"].back(), errors);
 
-    BOOST_REQUIRE_EQUAL(errors.size(), 1);
-    BOOST_CHECK(!errors.front().critical);
+    // Items 2 and 9, the Newton iteration limits, are used.
+    std::vector<std::size_t> flagged_items;
+    for (const auto& error : errors) {
+        BOOST_CHECK(!error.critical);
+        flagged_items.push_back(error.item_number.value_or(0));
+    }
+    std::ranges::sort(flagged_items);
+    const auto expected = std::vector<std::size_t>{1, 3, 4};
+    BOOST_CHECK_EQUAL_COLLECTIONS(flagged_items.begin(), flagged_items.end(),
+                                  expected.begin(), expected.end());
 }
 
 BOOST_AUTO_TEST_CASE(winjgas_makeup_gas_and_stage_items_are_flagged)

@@ -366,6 +366,15 @@ runStep(SimulatorTimer& timer)
         solver_ = createSolver(wellModel_());
     }
 
+    // Applied here rather than on the CVCRIT_CHANGE event, which a restart
+    // does not raise and which is only handled with adaptive time stepping.
+    // Only the compositional model uses the keyword.
+    if constexpr (requires(Model& m, const Cvcrit& c) { m.updateCVCRIT(c); }) {
+        if (const auto& cvcrit = schedule()[timer.currentStepNum()].cvcrit()) {
+            solver_->model().updateCVCRIT(*cvcrit);
+        }
+    }
+
     // Same position as the OPMRST restore above -- after the episode has been
     // set up and before the solve -- for callers that keep their own state
     // store. Used by the adjoint's checkpoint/recompute driver, which restores
