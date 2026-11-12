@@ -1578,8 +1578,7 @@ private:
                               [&matLawManager = this->simulator_.problem().materialLawManager()]
                               (const Context& ectx)
                               {
-                                  return matLawManager.
-                                      oilWaterScaledEpsInfoDrainage(ectx.globalDofIdx).maxPcow;
+                                  return matLawManager.swatinitMaxPc(ectx.globalDofIdx);
                               }
                   }
             },
