@@ -21,6 +21,10 @@ namespace Opm {
     struct BlackoilModuleParams
     {
         ConvectiveMixingModuleParamT convectiveMixingModuleParam;
+
+        //! Weight the phase densities by the phase saturations when computing the
+        //! face-averaged density in the gravity term of the phase potential.
+        bool saturationWeightedDensity = false;
     };
 } // namespace Opm
 

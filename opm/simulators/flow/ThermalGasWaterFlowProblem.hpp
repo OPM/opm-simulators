@@ -136,7 +136,8 @@ namespace gpuistl
             GpuBuffer<Scalar>(cpuProblem.alpha3()),
             GpuBuffer<Scalar>(cpuProblem.alpha4()),
             GpuBuffer<Scalar>(cpuProblem.alpha5()),
-            ModuleParams {copy_to_gpu(cpuProblem.moduleParams().convectiveMixingModuleParam)});
+            ModuleParams {copy_to_gpu(cpuProblem.moduleParams().convectiveMixingModuleParam),
+                          cpuProblem.moduleParams().saturationWeightedDensity});
     }
 
     template <class Scalar>
@@ -151,7 +152,8 @@ namespace gpuistl
             make_view(buffer.alpha3()),
             make_view(buffer.alpha4()),
             make_view(buffer.alpha5()),
-            ModuleParams {make_view(buffer.moduleParams().convectiveMixingModuleParam)});
+            ModuleParams {make_view(buffer.moduleParams().convectiveMixingModuleParam),
+                          buffer.moduleParams().saturationWeightedDensity});
     }
 
 } // namespace gpuistl
