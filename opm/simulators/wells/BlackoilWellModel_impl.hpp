@@ -383,6 +383,19 @@ namespace Opm {
         }
 
         this->resetWGState();
+#ifdef RESERVOIR_COUPLING_ENABLED
+        // The state just restored is the one committed after the previous time step.  The
+        // master's group control modes are put into the slave groups by
+        // updateSlaveGroupCmodesFromMaster() in the first substep of a sync step, and that is
+        // not repeated when the substep is retried after a failure.  The restored modes are then
+        // the old ones, while the master's new targets are still held, so put the control modes
+        // of the held targets back; otherwise the group targets cannot be used.  Without a
+        // retry the restored modes already match the held targets, and in the first substep of
+        // a sync step they are replaced after the exchange.
+        if (this->isReservoirCouplingSlave()) {
+            this->groupStateHelper().updateSlaveGroupCmodesFromMaster();
+        }
+#endif
         const int reportStepIdx = simulator_.episodeIndex();
 
         this->wellState().updateWellsDefaultALQ(this->schedule(), reportStepIdx, this->summaryState());
