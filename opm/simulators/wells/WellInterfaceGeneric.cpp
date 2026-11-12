@@ -294,10 +294,9 @@ getInjMult(const int local_perf_index,
         const Scalar pres = is_wrev ? bhp : perf_pres;
 
         const auto frac_press = static_cast<Scalar>(
-            UDA::eval_well_uda(injmult.fracture_pressure,
-                               this->name(),
-                               summary_state,
-                               summary_state.get_udq_undefined()));
+            UDA::eval_well_uda_pressure(injmult.fracture_pressure,
+                                        this->name(),
+                                        summary_state));
         const auto gradient = injmult.multiplier_gradient;
         if (pres > frac_press) {
             multiplier = 1. + (pres - frac_press) * gradient;
