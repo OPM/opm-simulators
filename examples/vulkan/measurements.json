@@ -1,0 +1,222 @@
+{
+  "scope": "Original prototype before RFC packaging; not benchmark results for the reformatted binaries",
+  "hardware": "AMD Radeon 8060S",
+  "driver": "RADV Mesa 25.2.8 in container",
+  "opm": "2026.04",
+  "grid_active_cells": 44431,
+  "simulated_days": 56,
+  "configurations": {
+    "1": {
+      "protocol": "Sequential CPU/GPU pairs; all trials numerically validated; warmups excluded",
+      "warmups": 1,
+      "repetitions": 3,
+      "passed": true,
+      "identity": {
+        "image_id": "d14fab9f370d078845e2395247a20209500a13a27e8e7d2d792d95e17e627f73",
+        "binary_sha256": "a5b1159b3403f2baabb985a356d8482a9998b39a3848bce82f16326d272be3ca",
+        "cpu_binary_sha256": "70d182c8002175e4d1b9145ba9bfa29a11f6a248faaaeed6b6cb880cbac61c16",
+        "threads": 1,
+        "linear_tolerance": 1e-08,
+        "max_iterations": 2000,
+        "inputs": {
+          "norne-56days": {
+            "INCLUDE/BC0407_HIST01122006.SCH": "863a589eb545e6171d0abd28b2389867f57b6c64cccdd83d3be2c188c0d2feb7",
+            "INCLUDE/FAULT/FAULTMULT_AUG-2006.INC": "bdd8e9d3d28299f0baea9e9868215681d0574effa236b47f6c93d1cd4ce65c7c",
+            "INCLUDE/FAULT/FAULT_JUN_05.INC": "46cdf7f90bf5e8829ac85d3530bc82154b790e7f97707fbe89dd82232508cf64",
+            "INCLUDE/GRID/ACTNUM_0704.prop": "32e590467b04ca31e487a94d62ff6e91ffb87844ad2af5c40d713cef633f664f",
+            "INCLUDE/GRID/IRAP_1005.GRDECL": "21d156ac65ff5e473601384cc4b5462a295acfc7e837a93e74ecae9f63c2f34f",
+            "INCLUDE/PETRO/E3.prop": "5e6a0f77872ac1b7ff9dbaeb1e477e9022e970eb51a0e5b370ef000b905c252d",
+            "INCLUDE/PETRO/EQLNUM_0704.prop": "65847ac50fb312b0655530e8d7da5471e092af7116a4014dc33b7d627c6a57b3",
+            "INCLUDE/PETRO/EXTRA_REG.inc": "8bd9c897bec20562f0073158f00922abbca15a04e3b43a7e37ef83ba3d528910",
+            "INCLUDE/PETRO/FIPNUM_0704.prop": "cc39524ab6abd8f017624209b9b30c49842c665b15158cd95d9274df6d371de7",
+            "INCLUDE/PETRO/FLUXNUM_0704.prop": "9ac968181a15a7a226027542a691e181327ae48d9adbdeac0351dbcdfac54833",
+            "INCLUDE/PETRO/MULTREGT_D_27.prop": "83facd2e937c2421454dbe8020379f571c5c0b0767efaaaa9cf0d0c363f2a118",
+            "INCLUDE/PETRO/MULTZ_HM_1.INC": "0bd5ae8650fe528a9350be56729e09b85dc0e039bbe02f26e18e41e8100a96e6",
+            "INCLUDE/PETRO/MULTZ_JUN_05_MOD.INC": "00a61f662158e1392be5b7aa28e01b2c64db104d598cececd20f86d0d2cae33a",
+            "INCLUDE/PETRO/NTG_0704.prop": "b5b6a556f0edf6d9767a418adcba3a2821359fdf8ce374bc79cefc50bbe87496",
+            "INCLUDE/PETRO/PERM_0704.prop": "bce56f7ff702dffe6ae2837bdda4ab4f6fa1d54c0be178cccd24005ded787eac",
+            "INCLUDE/PETRO/PORO_0704.prop": "e5147647a2fbee651b9df27e1db4a7a70e8b3ee8231b92f93f7fb6a69a03e8cd",
+            "INCLUDE/PETRO/SWINITIAL.INC": "e93357c814bac4b87d6d7f21c71d33a7eea20690ccecb34697eb951d30e6aad1",
+            "INCLUDE/PI/pimultab_low-high_aug-2006.inc": "0285591e789358f05959fa3bf69832f74d9ad4596d88d60adafe753da006950b",
+            "INCLUDE/PVT/PVT-WET-GAS.INC": "3d4e1c79bd5b3589df9a6243bd1d54bf17b80e7bb6fa669402ae37b1c4beda7a",
+            "INCLUDE/RELPERM/SCAL_NORNE.INC": "e37a626734f9afc3e905ad84aff7eb0a1ed2acef620c89d3a04d9105e39946a9",
+            "INCLUDE/SUMMARY/extra.inc": "97d100b7b4b2beb7a57df59f6ccaae2bead5defffd01030165a50535b5dc2034",
+            "INCLUDE/SUMMARY/gas.inc": "cdde6dd056f7e704916010d7fad03378d846a38c71ffed47bf17918e93a111fb",
+            "INCLUDE/SUMMARY/summary.data": "dfad6ee073231b9edd4ec0e9b1126fbb4f7a225ba977234aa4b160ea68e92c56",
+            "INCLUDE/SUMMARY/tracer.data": "1179629ae81e87b90fadbb32346c779e77c563d32e46401db4f30ea1c2989a5a",
+            "INCLUDE/SUMMARY/wpave.inc": "8bcff1482b5ae8a9d2ac01814dbdd6b9491c3aea1bf29eb4e4911dfe48eb77b1",
+            "INCLUDE/VFP/AlmostVertNew.VFP": "15d06538b8c3287ce1df4fae3c6f42fe44c43e5cbfc87ea0b139ccfad15f0286",
+            "INCLUDE/VFP/B1BH.Ecl": "6b5ee8df2ffd3c3ae4d0142b7f277d051f66afe45e5d6aa40defa9b59f120be9",
+            "INCLUDE/VFP/B2H.Ecl": "fc349ecbfe401db06add0c8036730f7a59192ed2dcb66f0ee0c7fe367b978522",
+            "INCLUDE/VFP/B3H.Ecl": "63b9caba0fb07bd68a9e9890609c206901992232746e64a494893187d293c23a",
+            "INCLUDE/VFP/B4DH.Ecl": "5789d4c5d3940b7aea9904c9ee3145a7213329f8f8457f5baaae9de7ce4bad7c",
+            "INCLUDE/VFP/C1H.Ecl": "5d2d9927aca73b7966f394897e305d8eb9946b3bede2a5276be03de257c91cf5",
+            "INCLUDE/VFP/C2H.Ecl": "58a98ecfc4c5552b218826c4674ca986345b3112fdd2ab17b65e6d63812c2485",
+            "INCLUDE/VFP/C3H.Ecl": "a98cb2688118decdfd16c4659cbc27114e84d8d57bf61d61279aebdbbd4f1f56",
+            "INCLUDE/VFP/C4AH.Ecl": "b9bb7de34eebcb62d7a8c1e6f05be341a5c720a7e93cab53d6e7845f0a30bc30",
+            "INCLUDE/VFP/C4H.Ecl": "c4225343b265fe24e72140a2802e101d36b0d4cf41d376e9c751c77f8e95ed65",
+            "INCLUDE/VFP/D1CH.Ecl": "50b3cae64d608f8229b8ae312ec490e292654b594739c42de681c01397f43378",
+            "INCLUDE/VFP/D2H.Ecl": "ab86cb938ea8234697c41617efaa67387fa78043eb9055d8342e68288ea708a3",
+            "INCLUDE/VFP/D3BH.Ecl": "d3e33834f727867fd9d9bf2cb9ece8674f7c337a2ffd3720537b350eeb85df92",
+            "INCLUDE/VFP/DevNew.VFP": "be33fa56c034a16ade75c32f3a833f65c267c1dd3e9953db7a108bae48f492af",
+            "INCLUDE/VFP/E1H.Ecl": "0da31a0bb7513812a7b34b20c673496230969a71b301ad679f49e663a97700b3",
+            "INCLUDE/VFP/E1h.VFP": "5181b63c07ffb2be1c9ba687c9d1298d7c9901ffef95cba19d4b7c88a7b358a8",
+            "INCLUDE/VFP/E3CH.Ecl": "17f6e0b545df84502f88376a4947a137d3c3db8bdf04029f9f0710e9de728cce",
+            "INCLUDE/VFP/F1H.Ecl": "935d38933ad9fcd92e0bcb6c194aeeac952eb838ed83c2ea359e98f2695406bf",
+            "INCLUDE/VFP/F2H.Ecl": "378cf0e1eab751dcef918cad8af89df6978dc594c7c87007ca183124bedf7d3e",
+            "INCLUDE/VFP/F3H.Ecl": "24246cf45224e5f5684d811d68c9d0a4c0018704d081829fcab718144a920488",
+            "INCLUDE/VFP/F4H.Ecl": "4b3c16c9dd565c564ed06f6ff2dde8f2e3de644e6c5ba77401d1ebad44f63861",
+            "INCLUDE/VFP/GAS_PD2.VFP": "5ccca47fb4404c468a873e87238a5855d4abb96cf72a89d0a80e8cb4fb0bcfc3",
+            "INCLUDE/VFP/GasProd.VFP": "60ed47bf9a6943a501ae619be3ff892471bea3ad7f514d9c280a2ac43ac588f1",
+            "INCLUDE/VFP/K3H.Ecl": "c3e00947c68a39765a15518a0bd99278e239ef0d30fec995f40bdbda8fba82dc",
+            "INCLUDE/VFP/NEW_D2_GAS_0.00003.VFP": "9c1a1fac2022c873d77c60eeb417d84150ceb02f9e22e3baeedccdf252f3ed34",
+            "INCLUDE/VFP/PB1.PIPE.Ecl": "ad70f5993b092a8b98444fa688b3f58c1fb2a538ee0f4d03bfcfceda9aa56dc3",
+            "INCLUDE/VFP/PB2.PIPE.Ecl": "99beb9ffc1d1117e8ae6b4ee2c40e2c0d982e07babb49385b080910570c416c7",
+            "INCLUDE/VFP/PD1.PIPE.Ecl": "5ea34b19e0ff6dcc618a80a7dbd2989859615ba9601cfd264e3f6dd2b8782c45",
+            "INCLUDE/VFP/PD2.PIPE.Ecl": "400db4512ff62b98720adde503b55e0b080f2e79ea9fd22db83d31591420cd97",
+            "INCLUDE/VFP/PE1.PIPE.Ecl": "b87ebd7f81ccb7723bb41c6a4c39b9b33809ad6273decabe8aae7d5636b16b84",
+            "INCLUDE/VFP/PE2.PIPE.Ecl": "ffda6c53139248a903a36a98fb89c7b59ce2e762b801a1a43182cf406334274a",
+            "INCLUDE/VFP/VFPI.CMD": "dd2ea01820d9ab4da738cbae60cbf6c7ca80d5ffc7bbfaa10cfc061a78781f28",
+            "INCLUDE/VFP/VFPI.LOG": "ba9092ee2c53e80997ddb3643a1757ab192531a77e6342a0e26142845e676045",
+            "INCLUDE/VFP/WIC.PIPE.Ecl": "773cd2447125622703974da7862e959c3654e1933863f633f2d92f5b50a271a2",
+            "INCLUDE/VFP/WIF.PIPE.Ecl": "0fea854599c8a7a46fe877182ab5e6cb2dc8ac84395002f1e9211bcf63ae128c",
+            "INCLUDE/VFP/pd2.VFP": "a444c167afd72b7acf311889d51bc2871ee60278e1ee129980873bd623ba468d",
+            "INCLUDE/VFP/pe2.VFP": "c045363b0965a42c8139570acc844bd5baf074946455c8c2e1fba8d35281e329",
+            "NORNE_ATW2013.DATA": "9a74b46670a96664c305d86ac49dc2f3b76343ecf2ab16ed8207889ac072a3c5",
+            "Norne_model_for_atw2013.pdf": "b6c7aaa9eb09470ce9555906cbc2b6a394d08ad6532750b604f8a6f2c364153e",
+            "README": "73be5dd043960904321c8ccc62de52a03036669364c588b3e5de1decce049842",
+            "plothelper.sh": "380d97662683715979ed3289e36818c292d42fde39caa6612d5cecdb78636113",
+            "plotwells.sh": "58b1c25d01f7dad4629a87b5417257d07f127b73f79f97173eb2f15c71f8ff96"
+          }
+        }
+      },
+      "cases": {
+        "norne-56days": {
+          "samples_seconds": {
+            "cpu": [
+              7.481190265039913,
+              7.299267395050265,
+              7.531487945001572
+            ],
+            "vulkan": [
+              7.128857338044327,
+              7.229848543996923,
+              7.280455561995041
+            ]
+          },
+          "median_seconds": {
+            "cpu": 7.481190265039913,
+            "vulkan": 7.229848543996923
+          },
+          "cpu_over_gpu_speedup": 1.034764451774261
+        }
+      }
+    },
+    "16": {
+      "protocol": "Sequential CPU/GPU pairs; all trials numerically validated; warmups excluded",
+      "warmups": 1,
+      "repetitions": 3,
+      "passed": true,
+      "identity": {
+        "image_id": "d14fab9f370d078845e2395247a20209500a13a27e8e7d2d792d95e17e627f73",
+        "binary_sha256": "a5b1159b3403f2baabb985a356d8482a9998b39a3848bce82f16326d272be3ca",
+        "cpu_binary_sha256": "70d182c8002175e4d1b9145ba9bfa29a11f6a248faaaeed6b6cb880cbac61c16",
+        "threads": 16,
+        "linear_tolerance": 1e-08,
+        "max_iterations": 2000,
+        "inputs": {
+          "norne-56days": {
+            "INCLUDE/BC0407_HIST01122006.SCH": "863a589eb545e6171d0abd28b2389867f57b6c64cccdd83d3be2c188c0d2feb7",
+            "INCLUDE/FAULT/FAULTMULT_AUG-2006.INC": "bdd8e9d3d28299f0baea9e9868215681d0574effa236b47f6c93d1cd4ce65c7c",
+            "INCLUDE/FAULT/FAULT_JUN_05.INC": "46cdf7f90bf5e8829ac85d3530bc82154b790e7f97707fbe89dd82232508cf64",
+            "INCLUDE/GRID/ACTNUM_0704.prop": "32e590467b04ca31e487a94d62ff6e91ffb87844ad2af5c40d713cef633f664f",
+            "INCLUDE/GRID/IRAP_1005.GRDECL": "21d156ac65ff5e473601384cc4b5462a295acfc7e837a93e74ecae9f63c2f34f",
+            "INCLUDE/PETRO/E3.prop": "5e6a0f77872ac1b7ff9dbaeb1e477e9022e970eb51a0e5b370ef000b905c252d",
+            "INCLUDE/PETRO/EQLNUM_0704.prop": "65847ac50fb312b0655530e8d7da5471e092af7116a4014dc33b7d627c6a57b3",
+            "INCLUDE/PETRO/EXTRA_REG.inc": "8bd9c897bec20562f0073158f00922abbca15a04e3b43a7e37ef83ba3d528910",
+            "INCLUDE/PETRO/FIPNUM_0704.prop": "cc39524ab6abd8f017624209b9b30c49842c665b15158cd95d9274df6d371de7",
+            "INCLUDE/PETRO/FLUXNUM_0704.prop": "9ac968181a15a7a226027542a691e181327ae48d9adbdeac0351dbcdfac54833",
+            "INCLUDE/PETRO/MULTREGT_D_27.prop": "83facd2e937c2421454dbe8020379f571c5c0b0767efaaaa9cf0d0c363f2a118",
+            "INCLUDE/PETRO/MULTZ_HM_1.INC": "0bd5ae8650fe528a9350be56729e09b85dc0e039bbe02f26e18e41e8100a96e6",
+            "INCLUDE/PETRO/MULTZ_JUN_05_MOD.INC": "00a61f662158e1392be5b7aa28e01b2c64db104d598cececd20f86d0d2cae33a",
+            "INCLUDE/PETRO/NTG_0704.prop": "b5b6a556f0edf6d9767a418adcba3a2821359fdf8ce374bc79cefc50bbe87496",
+            "INCLUDE/PETRO/PERM_0704.prop": "bce56f7ff702dffe6ae2837bdda4ab4f6fa1d54c0be178cccd24005ded787eac",
+            "INCLUDE/PETRO/PORO_0704.prop": "e5147647a2fbee651b9df27e1db4a7a70e8b3ee8231b92f93f7fb6a69a03e8cd",
+            "INCLUDE/PETRO/SWINITIAL.INC": "e93357c814bac4b87d6d7f21c71d33a7eea20690ccecb34697eb951d30e6aad1",
+            "INCLUDE/PI/pimultab_low-high_aug-2006.inc": "0285591e789358f05959fa3bf69832f74d9ad4596d88d60adafe753da006950b",
+            "INCLUDE/PVT/PVT-WET-GAS.INC": "3d4e1c79bd5b3589df9a6243bd1d54bf17b80e7bb6fa669402ae37b1c4beda7a",
+            "INCLUDE/RELPERM/SCAL_NORNE.INC": "e37a626734f9afc3e905ad84aff7eb0a1ed2acef620c89d3a04d9105e39946a9",
+            "INCLUDE/SUMMARY/extra.inc": "97d100b7b4b2beb7a57df59f6ccaae2bead5defffd01030165a50535b5dc2034",
+            "INCLUDE/SUMMARY/gas.inc": "cdde6dd056f7e704916010d7fad03378d846a38c71ffed47bf17918e93a111fb",
+            "INCLUDE/SUMMARY/summary.data": "dfad6ee073231b9edd4ec0e9b1126fbb4f7a225ba977234aa4b160ea68e92c56",
+            "INCLUDE/SUMMARY/tracer.data": "1179629ae81e87b90fadbb32346c779e77c563d32e46401db4f30ea1c2989a5a",
+            "INCLUDE/SUMMARY/wpave.inc": "8bcff1482b5ae8a9d2ac01814dbdd6b9491c3aea1bf29eb4e4911dfe48eb77b1",
+            "INCLUDE/VFP/AlmostVertNew.VFP": "15d06538b8c3287ce1df4fae3c6f42fe44c43e5cbfc87ea0b139ccfad15f0286",
+            "INCLUDE/VFP/B1BH.Ecl": "6b5ee8df2ffd3c3ae4d0142b7f277d051f66afe45e5d6aa40defa9b59f120be9",
+            "INCLUDE/VFP/B2H.Ecl": "fc349ecbfe401db06add0c8036730f7a59192ed2dcb66f0ee0c7fe367b978522",
+            "INCLUDE/VFP/B3H.Ecl": "63b9caba0fb07bd68a9e9890609c206901992232746e64a494893187d293c23a",
+            "INCLUDE/VFP/B4DH.Ecl": "5789d4c5d3940b7aea9904c9ee3145a7213329f8f8457f5baaae9de7ce4bad7c",
+            "INCLUDE/VFP/C1H.Ecl": "5d2d9927aca73b7966f394897e305d8eb9946b3bede2a5276be03de257c91cf5",
+            "INCLUDE/VFP/C2H.Ecl": "58a98ecfc4c5552b218826c4674ca986345b3112fdd2ab17b65e6d63812c2485",
+            "INCLUDE/VFP/C3H.Ecl": "a98cb2688118decdfd16c4659cbc27114e84d8d57bf61d61279aebdbbd4f1f56",
+            "INCLUDE/VFP/C4AH.Ecl": "b9bb7de34eebcb62d7a8c1e6f05be341a5c720a7e93cab53d6e7845f0a30bc30",
+            "INCLUDE/VFP/C4H.Ecl": "c4225343b265fe24e72140a2802e101d36b0d4cf41d376e9c751c77f8e95ed65",
+            "INCLUDE/VFP/D1CH.Ecl": "50b3cae64d608f8229b8ae312ec490e292654b594739c42de681c01397f43378",
+            "INCLUDE/VFP/D2H.Ecl": "ab86cb938ea8234697c41617efaa67387fa78043eb9055d8342e68288ea708a3",
+            "INCLUDE/VFP/D3BH.Ecl": "d3e33834f727867fd9d9bf2cb9ece8674f7c337a2ffd3720537b350eeb85df92",
+            "INCLUDE/VFP/DevNew.VFP": "be33fa56c034a16ade75c32f3a833f65c267c1dd3e9953db7a108bae48f492af",
+            "INCLUDE/VFP/E1H.Ecl": "0da31a0bb7513812a7b34b20c673496230969a71b301ad679f49e663a97700b3",
+            "INCLUDE/VFP/E1h.VFP": "5181b63c07ffb2be1c9ba687c9d1298d7c9901ffef95cba19d4b7c88a7b358a8",
+            "INCLUDE/VFP/E3CH.Ecl": "17f6e0b545df84502f88376a4947a137d3c3db8bdf04029f9f0710e9de728cce",
+            "INCLUDE/VFP/F1H.Ecl": "935d38933ad9fcd92e0bcb6c194aeeac952eb838ed83c2ea359e98f2695406bf",
+            "INCLUDE/VFP/F2H.Ecl": "378cf0e1eab751dcef918cad8af89df6978dc594c7c87007ca183124bedf7d3e",
+            "INCLUDE/VFP/F3H.Ecl": "24246cf45224e5f5684d811d68c9d0a4c0018704d081829fcab718144a920488",
+            "INCLUDE/VFP/F4H.Ecl": "4b3c16c9dd565c564ed06f6ff2dde8f2e3de644e6c5ba77401d1ebad44f63861",
+            "INCLUDE/VFP/GAS_PD2.VFP": "5ccca47fb4404c468a873e87238a5855d4abb96cf72a89d0a80e8cb4fb0bcfc3",
+            "INCLUDE/VFP/GasProd.VFP": "60ed47bf9a6943a501ae619be3ff892471bea3ad7f514d9c280a2ac43ac588f1",
+            "INCLUDE/VFP/K3H.Ecl": "c3e00947c68a39765a15518a0bd99278e239ef0d30fec995f40bdbda8fba82dc",
+            "INCLUDE/VFP/NEW_D2_GAS_0.00003.VFP": "9c1a1fac2022c873d77c60eeb417d84150ceb02f9e22e3baeedccdf252f3ed34",
+            "INCLUDE/VFP/PB1.PIPE.Ecl": "ad70f5993b092a8b98444fa688b3f58c1fb2a538ee0f4d03bfcfceda9aa56dc3",
+            "INCLUDE/VFP/PB2.PIPE.Ecl": "99beb9ffc1d1117e8ae6b4ee2c40e2c0d982e07babb49385b080910570c416c7",
+            "INCLUDE/VFP/PD1.PIPE.Ecl": "5ea34b19e0ff6dcc618a80a7dbd2989859615ba9601cfd264e3f6dd2b8782c45",
+            "INCLUDE/VFP/PD2.PIPE.Ecl": "400db4512ff62b98720adde503b55e0b080f2e79ea9fd22db83d31591420cd97",
+            "INCLUDE/VFP/PE1.PIPE.Ecl": "b87ebd7f81ccb7723bb41c6a4c39b9b33809ad6273decabe8aae7d5636b16b84",
+            "INCLUDE/VFP/PE2.PIPE.Ecl": "ffda6c53139248a903a36a98fb89c7b59ce2e762b801a1a43182cf406334274a",
+            "INCLUDE/VFP/VFPI.CMD": "dd2ea01820d9ab4da738cbae60cbf6c7ca80d5ffc7bbfaa10cfc061a78781f28",
+            "INCLUDE/VFP/VFPI.LOG": "ba9092ee2c53e80997ddb3643a1757ab192531a77e6342a0e26142845e676045",
+            "INCLUDE/VFP/WIC.PIPE.Ecl": "773cd2447125622703974da7862e959c3654e1933863f633f2d92f5b50a271a2",
+            "INCLUDE/VFP/WIF.PIPE.Ecl": "0fea854599c8a7a46fe877182ab5e6cb2dc8ac84395002f1e9211bcf63ae128c",
+            "INCLUDE/VFP/pd2.VFP": "a444c167afd72b7acf311889d51bc2871ee60278e1ee129980873bd623ba468d",
+            "INCLUDE/VFP/pe2.VFP": "c045363b0965a42c8139570acc844bd5baf074946455c8c2e1fba8d35281e329",
+            "NORNE_ATW2013.DATA": "9a74b46670a96664c305d86ac49dc2f3b76343ecf2ab16ed8207889ac072a3c5",
+            "Norne_model_for_atw2013.pdf": "b6c7aaa9eb09470ce9555906cbc2b6a394d08ad6532750b604f8a6f2c364153e",
+            "README": "73be5dd043960904321c8ccc62de52a03036669364c588b3e5de1decce049842",
+            "plothelper.sh": "380d97662683715979ed3289e36818c292d42fde39caa6612d5cecdb78636113",
+            "plotwells.sh": "58b1c25d01f7dad4629a87b5417257d07f127b73f79f97173eb2f15c71f8ff96"
+          }
+        }
+      },
+      "cases": {
+        "norne-56days": {
+          "samples_seconds": {
+            "cpu": [
+              5.37527078599669,
+              5.224999207013752,
+              5.2801978279603645
+            ],
+            "vulkan": [
+              5.274241851991974,
+              5.324614928977098,
+              5.275170891021844
+            ]
+          },
+          "median_seconds": {
+            "cpu": 5.2801978279603645,
+            "vulkan": 5.275170891021844
+          },
+          "cpu_over_gpu_speedup": 1.0009529429552844
+        }
+      }
+    }
+  }
+}
