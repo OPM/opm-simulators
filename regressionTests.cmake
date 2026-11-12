@@ -93,6 +93,23 @@ add_test_compareECLFiles(
     compositional
 )
 
+add_test_compareECLFiles(
+  CASENAME
+    comp_numerical_aquifer
+  FILENAME
+    COMP_NUMERICAL_AQUIFER
+  SIMULATOR
+    flow_comp
+  REFERENCE_SIMULATOR
+    flow_comp
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    compositional/aquifers
+)
+
 # Cover oil-, water-, gas- and liquid-rate controls, and switching an open injector
 # between gas and water while its wellbore still contains the previous fluid.
 # The default absolute tolerance exceeds the 0.1-0.4 sm3/day rates checked.

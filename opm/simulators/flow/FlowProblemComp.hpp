@@ -50,6 +50,7 @@
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
+#include <opm/input/eclipse/EclipseState/Aquifer/NumericalAquifer/NumericalAquifers.hpp>
 #include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
 #include <opm/input/eclipse/Schedule/RPTConfig.hpp>
 
@@ -512,8 +513,52 @@ protected:
                                                      initialState.referencePressures()[cell]);
             }
         }
+        applyNumericalAquifers_();
         // The primary variables are formed from the total composition; see initial().
         zmf_initialization_ = true;
+    }
+
+    // Numerical aquifer cells start full of water, at the AQUNUM pressure when
+    // one is given. Their mole fractions are not touched: the cell keeps the
+    // total composition equilibrated at its depth. With no hydrocarbon in the
+    // cell that composition has no effect, but the flash still needs a valid one.
+    void applyNumericalAquifers_()
+    {
+        const auto& vanguard = this->simulator().vanguard();
+        const auto aquiferCells
+            = vanguard.eclState().aquifer().numericalAquifers().allAquiferCells();
+        if (aquiferCells.empty()) {
+            return;
+        }
+
+        if (!FluidSystem::phaseIsActive(waterPhaseIdx)) {
+            throw std::logic_error("Water phase has to be active for numerical aquifer case");
+        }
+
+        for (std::size_t cell = 0; cell < initialFluidStates_.size(); ++cell) {
+            const auto pos = aquiferCells.find(vanguard.cartesianIndex(cell));
+            if (pos == aquiferCells.end()) {
+                continue;
+            }
+
+            const auto* aquCell = pos->second;
+            auto& fs = initialFluidStates_[cell];
+            fs.setSaturation(oilPhaseIdx, 0.0);
+            fs.setSaturation(gasPhaseIdx, 0.0);
+            fs.setSaturation(waterPhaseIdx, 1.0);
+            if (aquCell->init_pressure) {
+                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                    fs.setPressure(phaseIdx, *aquCell->init_pressure);
+                }
+            }
+
+            OpmLog::info(fmt::format("FOR AQUIFER CELL AT ({}, {}, {}) OF NUMERICAL "
+                                     "AQUIFER {}, WATER SATURATION IS SET TO BE UNITY",
+                                     aquCell->I + 1,
+                                     aquCell->J + 1,
+                                     aquCell->K + 1,
+                                     aquCell->aquifer_id));
+        }
     }
 
     void readEclRestartSolution_()
