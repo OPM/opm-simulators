@@ -669,6 +669,7 @@ static std::unique_ptr<ProductionSimulator> makeProductionSimulator(const std::s
     const char* argv[] = {
         "test_gpu_blackoil_dispatcher",
         filenameArg.c_str(),
+        "--experimental-compute-properties-on-gpu=false",
     };
     Opm::setupParameters_<ProductionTypeTag>(sizeof(argv) / sizeof(argv[0]),
                                               argv,

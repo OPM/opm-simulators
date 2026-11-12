@@ -434,6 +434,11 @@ public:
         return residualView_;
     }
 
+    bool usesGpuPropertyAssemblyBridge() const
+    {
+        return propertyAssemblyBridge_ != nullptr;
+    }
+
     auto modelView()
     {
         if (propertyAssemblyBridge_) {
