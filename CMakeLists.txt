@@ -289,6 +289,10 @@ macro(opm-simulators_prereqs_hook)
 endmacro()
 
 macro(opm-simulators_sources_hook)
+  target_sources(opmsimulators PRIVATE opm/simulators/utils/moduleVersion.cpp)
+  set_property(SOURCE opm/simulators/utils/moduleVersion.cpp
+    APPEND PROPERTY COMPILE_DEFINITIONS OPM_BUILD_TYPE="$<CONFIG>")
+
   if(OpenCL_FOUND)
     include(opencl-source-provider)
     target_sources(opmsimulators PRIVATE ${PROJECT_BINARY_DIR}/clSources.cpp)
@@ -459,6 +463,11 @@ macro(opm-simulators_config_hook)
 endmacro()
 
 macro(opm-simulators_tests_hook)
+  opm_add_test(test_module_version
+    SOURCES tests/test_module_version.cpp
+    TEST_ARGS "config=$<CONFIG>"
+  )
+
   include(${CMAKE_CURRENT_SOURCE_DIR}/modelTests.cmake)
 
   # Look for the opm-tests repository; if found the variable
@@ -765,21 +774,6 @@ macro(opm-simulators_targets_hook)
 
   opm_add_library(
     TARGET
-      moduleVersion
-    TYPE
-      OBJECT
-    SOURCES
-      opm/simulators/utils/moduleVersion.cpp
-  )
-  # The build configuration (moduleBuildType)
-  target_compile_definitions(moduleVersion PRIVATE OPM_BUILD_TYPE="$<CONFIG>")
-
-  # Strictly we only depend on the update-version target,
-  # but this is not exposed in a super-build.
-  add_dependencies(moduleVersion opmsimulators)
-
-  opm_add_library(
-    TARGET
       MainDispatchDynamic
     TYPE
       OBJECT
@@ -787,29 +781,6 @@ macro(opm-simulators_targets_hook)
       opm/simulators/flow/MainDispatchDynamic.cpp
   )
   simulators_add_target_options(TARGET MainDispatchDynamic)
-
-  target_sources(test_outputdir PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-  target_sources(test_ignore_keywords PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-  target_sources(test_drsdt_initial_rs PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-  target_sources(test_numaquifer_equilibration PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-  target_sources(test_equil PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-  target_sources(test_group_higher_constraints PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-  target_sources(test_injection_topup_phase_validation PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-  target_sources(test_istlsolver_quasiimpes PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-  target_sources(test_RestartSerialization PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-  target_sources(test_glift1 PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-  target_sources(test_tpsa_localresidual PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-  target_sources(test_compequil_solvd PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-  target_sources(test_compwell_bhp_limit PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-  target_sources(test_compwell_connection_pressure PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-  target_sources(test_compwell_crossflow PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-  target_sources(test_compwell_pvt_region PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-  target_sources(test_compwell_schedule_stop PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-  target_sources(test_compwell_zero_rate_targets PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-  if(MPI_FOUND)
-    target_sources(test_chopstep PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-    target_sources(test_rescoup_constraints PRIVATE $<TARGET_OBJECTS:moduleVersion>)
-  endif()
 
   set(FLOW_MODELS
     blackoil
@@ -872,7 +843,6 @@ macro(opm-simulators_targets_hook)
         flow_${OBJ}
       SOURCES
         flow/flow_${OBJ}_main.cpp
-        $<TARGET_OBJECTS:moduleVersion>
         $<TARGET_OBJECTS:flow_lib${OBJ}>
       LIBRARIES
         opmsimulators
@@ -885,7 +855,6 @@ macro(opm-simulators_targets_hook)
     SOURCES
       flow/flow.cpp
       ${FLOW_TGTS}
-      $<TARGET_OBJECTS:moduleVersion>
       $<TARGET_OBJECTS:MainDispatchDynamic>
     LIBRARIES
       opmsimulators
@@ -897,7 +866,6 @@ macro(opm-simulators_targets_hook)
     SOURCES
       flow/flow_distribute_z.cpp
       ${FLOW_TGTS}
-      $<TARGET_OBJECTS:moduleVersion>
       $<TARGET_OBJECTS:MainDispatchDynamic>
     LIBRARIES
       opmsimulators
@@ -936,7 +904,6 @@ macro(opm-simulators_targets_hook)
           flow_${OBJ}
         SOURCES
           flow/flow_${OBJ}_main.cpp
-          $<TARGET_OBJECTS:moduleVersion>
           $<TARGET_OBJECTS:flow_lib${OBJ}>
         LIBRARIES
           opmsimulators
@@ -949,7 +916,6 @@ macro(opm-simulators_targets_hook)
       SOURCES
         flow/flow_gpu_main.cpp
         ${FLOW_GPU_TGTS}
-        $<TARGET_OBJECTS:moduleVersion>
       LIBRARIES
         opmsimulators
     )
@@ -958,7 +924,6 @@ macro(opm-simulators_targets_hook)
   if(OPM_ENABLE_PYTHON)
     set_target_properties(
       flow_libblackoil
-      moduleVersion
       MainDispatchDynamic
       PROPERTIES
       POSITION_INDEPENDENT_CODE
@@ -987,7 +952,6 @@ macro(opm-simulators_targets_hook)
     SOURCES
       flowexperimental/comp/flowexp_comp.cpp
       ${FLOWEXP_COMPONENTS_SOURCES}
-      $<TARGET_OBJECTS:moduleVersion>
     LIBRARIES
       opmsimulators
     EXCLUDE_FROM_ALL
@@ -1002,7 +966,6 @@ macro(opm-simulators_targets_hook)
       flowexp_comp2_2p
     SOURCES
       flowexperimental/comp/flowexp_comp2_2p_main.cpp
-      $<TARGET_OBJECTS:moduleVersion>
     LIBRARIES
       opmsimulators
     EXCLUDE_FROM_ALL
@@ -1013,7 +976,6 @@ macro(opm-simulators_targets_hook)
       flowexp_comp3_2p
     SOURCES
       flowexperimental/comp/flowexp_comp3_2p_main.cpp
-      $<TARGET_OBJECTS:moduleVersion>
     LIBRARIES
       opmsimulators
   )
@@ -1036,7 +998,6 @@ macro(opm-simulators_targets_hook)
     SOURCES
       flowexperimental/comp/flow_comp.cpp
       ${FLOW_COMP_DISPATCH_SOURCES}
-      $<TARGET_OBJECTS:moduleVersion>
   )
   target_compile_definitions(flow_comp
     PRIVATE
@@ -1049,7 +1010,6 @@ macro(opm-simulators_targets_hook)
     SOURCES
       flowexperimental/comp/flow_comp2_2p.cpp
       flowexperimental/comp/flow_comp_dispatch2_2p.cpp
-      $<TARGET_OBJECTS:moduleVersion>
     LIBRARIES
       opmsimulators
   )
@@ -1060,7 +1020,6 @@ macro(opm-simulators_targets_hook)
     SOURCES
       flowexperimental/comp/flow_comp3_2p.cpp
       flowexperimental/comp/flow_comp_dispatch3_2p.cpp
-      $<TARGET_OBJECTS:moduleVersion>
     LIBRARIES
       opmsimulators
   )
@@ -1071,7 +1030,6 @@ macro(opm-simulators_targets_hook)
         flow_blackoil_float
       SOURCES
         flow/flow_blackoil_float_main.cpp
-        $<TARGET_OBJECTS:moduleVersion>
       LIBRARIES
         opmsimulators
     )
@@ -1082,7 +1040,6 @@ macro(opm-simulators_targets_hook)
       flowexp_blackoil
     SOURCES
       flowexperimental/flowexp_blackoil.cpp
-      $<TARGET_OBJECTS:moduleVersion>
     LIBRARIES
       opmsimulators
   )
@@ -1093,7 +1050,6 @@ macro(opm-simulators_targets_hook)
         flow_blackoil_alugrid
       SOURCES
         flow/flow_blackoil_alugrid.cpp
-        $<TARGET_OBJECTS:moduleVersion>
       LIBRARIES
         opmsimulators
     )
@@ -1105,7 +1061,6 @@ macro(opm-simulators_targets_hook)
         flow_blackoil_polyhedralgrid
       SOURCES
         flow/flow_blackoil_polyhedralgrid.cpp
-        $<TARGET_OBJECTS:moduleVersion>
       LIBRARIES
         opmsimulators
     )
