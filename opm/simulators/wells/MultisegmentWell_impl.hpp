@@ -742,11 +742,15 @@ namespace Opm
         const Scalar max_pressure_change = this->param_.max_pressure_change_ms_wells_;
         const bool stop_or_zero_rate_target =
             this->stoppedOrZeroRateTarget(groupStateHelper);
+        const auto controlled_phases = stop_or_zero_rate_target
+            ? std::array<bool, 3>{false, false, false}
+            : this->rateControlledPhases(well_state.well(this->index_of_well_));
         this->primary_variables_.updateNewton(dwells,
                                               relaxation_factor,
                                               dFLimit,
                                               stop_or_zero_rate_target,
-                                              max_pressure_change);
+                                              max_pressure_change,
+                                              controlled_phases);
 
         const auto& summary_state = simulator.vanguard().summaryState();
         this->primary_variables_.copyToWellState(*this, getRefDensity(),

@@ -737,6 +737,35 @@ wellUnderGroupControl(const SingleWellState<Scalar, IndexTraits>& ws) const
 }
 
 template<typename Scalar, typename IndexTraits>
+std::array<bool, 3>
+WellInterfaceGeneric<Scalar, IndexTraits>::
+rateControlledPhases(const SingleWellState<Scalar, IndexTraits>& ws) const
+{
+    using PhaseMask = std::array<bool, 3>;
+
+    if (!this->isProducer()) {
+        return PhaseMask{};
+    }
+
+    const auto phasesFor = [](auto mode) {
+        using Mode = decltype(mode);
+        PhaseMask phases{};
+        phases[IndexTraits::oilPhaseIdx] = mode == Mode::ORAT || mode == Mode::LRAT;
+        phases[IndexTraits::waterPhaseIdx] = mode == Mode::WRAT || mode == Mode::LRAT;
+        phases[IndexTraits::gasPhaseIdx] = mode == Mode::GRAT;
+        return phases;
+    };
+
+    if (ws.production_cmode != Well::ProducerCMode::GRUP) {
+        return phasesFor(ws.production_cmode);
+    }
+
+    const auto& target = ws.use_group_target_fallback ? ws.group_target_fallback
+                                                      : ws.group_target;
+    return target ? phasesFor(target->production_cmode) : PhaseMask{};
+}
+
+template<typename Scalar, typename IndexTraits>
 void WellInterfaceGeneric<Scalar, IndexTraits>::resetWellOperability()
 {
     this->operability_status_.resetOperability();
