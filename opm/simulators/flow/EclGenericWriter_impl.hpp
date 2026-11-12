@@ -282,11 +282,16 @@ writeInit()
 {
     if (collectOnIORank_.isIORank()) {
         std::map<std::string, std::vector<int>> integerVectors;
-        // globalRanks() is empty when the I/O-rank cell collection is not set up
-        // (parallel runs with LGRs). Passing it on would write a zero-length
-        // MPI_RANK, which the per-LGR INIT sections then index by father cell.
         if (collectOnIORank_.isParallel() && !collectOnIORank_.globalRanks().empty()) {
-            integerVectors.emplace("MPI_RANK", collectOnIORank_.globalRanks());
+            auto ranks = collectOnIORank_.globalRanks();
+            if constexpr (std::is_same_v<EquilGrid, Dune::CpGrid>) {
+                // MPI_RANK holds one value per level-0 cell, globalRanks() one
+                // per leaf cell.
+                if (this->equilGrid_->maxLevel() > 0) {
+                    ranks = levelZeroRanks(*this->equilGrid_, ranks);
+                }
+            }
+            integerVectors.emplace("MPI_RANK", std::move(ranks));
         }
 
         if (const auto& lgrs = this->eclState_.getLgrs(); lgrs.size() > 0) {
@@ -594,13 +599,15 @@ computeTrans_(const std::vector<std::unordered_map<int,int>>&  levelCartToLevelC
 
             if (maxLevelCartIdx - minLevelCartIdx == 1 && levelCartDims[0] > 1 ) {
                 outputTrans_->at(level).at("TRANX").template data<double>()[minLevelCartIdx] =
-                    gatheredOrGlobalTrans_(std::array{level, minLevelCartIdx, maxLevelCartIdx}, c1, c2);
+                    gatheredOrGlobalTrans_(std::array{level, minLevelCartIdx, maxLevelCartIdx},
+                                           c1, c2, originInIdx, originOutIdx);
                 continue; // skip other if clauses as they are false, last one needs some computation
             }
 
             if (maxLevelCartIdx - minLevelCartIdx == levelCartDims[0] && levelCartDims[1] > 1) {
                 outputTrans_->at(level).at("TRANY").template data<double>()[minLevelCartIdx] =
-                    gatheredOrGlobalTrans_(std::array{level, minLevelCartIdx, maxLevelCartIdx}, c1, c2);
+                    gatheredOrGlobalTrans_(std::array{level, minLevelCartIdx, maxLevelCartIdx},
+                                           c1, c2, originInIdx, originOutIdx);
                 continue; // skipt next if clause as it needs some computation
             }
 
@@ -610,7 +617,8 @@ computeTrans_(const std::vector<std::unordered_map<int,int>>&  levelCartToLevelC
                                          minLevelCartIdx,
                                          maxLevelCartIdx)) {
                 outputTrans_->at(level).at("TRANZ").template data<double>()[minLevelCartIdx] =
-                    gatheredOrGlobalTrans_(std::array{level, minLevelCartIdx, maxLevelCartIdx}, c1, c2);
+                    gatheredOrGlobalTrans_(std::array{level, minLevelCartIdx, maxLevelCartIdx},
+                                           c1, c2, originInIdx, originOutIdx);
             }
         }
     }
@@ -742,9 +750,10 @@ exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToL
                 const auto& [smallerLevel, smallerLevelCartIdx] = smallerPair;
                 const auto& [largerLevel, largerLevelCartIdx] = largerPair;
 
+                const auto [originInIdx, originOutIdx] = computeOriginIndices(is, c1, c2);
                 auto t = this->gatheredOrGlobalTrans_(std::array{smallerLevel, smallerLevelCartIdx,
                                                                  largerLevel, largerLevelCartIdx},
-                                                      c1, c2);
+                                                      c1, c2, originInIdx, originOutIdx);
 
                 // ECLIPSE ignores NNCs with zero transmissibility
                 // (different threshold than for NNC with corresponding
@@ -807,7 +816,7 @@ exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToL
                     // specified via the NNC keyword in the deck.
                     // (levelCartIdxIn/Out are already swapped into min/max order above.)
                     auto t = this->gatheredOrGlobalTrans_(std::array{level, levelCartIdxIn, levelCartIdxOut},
-                                                          c1, c2);
+                                                          c1, c2, originInIdx, originOutIdx);
 
                     if (level == 0) {
                         auto candidate = std::lower_bound(nncData.begin(), nncData.end(),
@@ -1166,7 +1175,9 @@ double
 EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
 gatheredOrGlobalTrans_(const std::array<int,N>& key,
                        unsigned c1,
-                       unsigned c2) const
+                       unsigned c2,
+                       unsigned originIn,
+                       unsigned originOut) const
 {
     if (!gatheredLgrTrans_.has_value()) {
         return this->globalTrans().transmissibility(c1, c2);
@@ -1174,6 +1185,16 @@ gatheredOrGlobalTrans_(const std::array<int,N>& key,
 
     if (const double* value = this->findGatheredTrans_(key); value != nullptr) {
         return *value;
+    }
+
+    // The partitioner leaves a cell out of a rank's overlap layer when the
+    // transmissibility of the level-zero face to it is zero.  The refined cells
+    // on either side of such a face are then never neighbours on one rank, and
+    // no rank records their connection: it is sealed, like the face.
+    if ((originIn != originOut) &&
+        (this->globalTrans().transmissibility(originIn, originOut) == 0.0))
+    {
+        return 0.0;
     }
 
     std::string msg = "Gathered LGR transmissibilities: no value for connection key (";
