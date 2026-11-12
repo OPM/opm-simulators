@@ -170,9 +170,11 @@ GpuSparseMatrixGeneric<T>::preprocessSpMV()
                                                    &bufferSize));
 
     if (bufferSize > 0) {
-#if CUDA_VERSION >= 12040
+        // cusparseSpMV() always needs a valid external buffer (since CUDA 11.0),
+        // so allocate it for every supported CUDA version, not only >= 12.4.
         m_buffer.resize(bufferSize);
-        // Preprocess SpMV operation to optimize for this sparsity pattern (requires CUDA 12.4+)
+#if CUDA_VERSION >= 12040
+        // Preprocess SpMV operation to optimize for this sparsity pattern (requires CUDA 12.4+).
         // TODO: Does the value of the alpha and beta matter in this preprocessing?
         OPM_CUSPARSE_SAFE_CALL(cusparseSpMV_preprocess(m_cusparseHandle.get(),
                                                     CUSPARSE_OPERATION_NON_TRANSPOSE,
