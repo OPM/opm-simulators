@@ -16,7 +16,7 @@
 /*!
  * \file
  *
- * GPU intensive-quantities dispatcher for the CO2STORE configuration
+ * GPU intensive-quantities dispatcher configuration for CO2STORE
  * (water + gas + thermal, \c FlowGasWaterEnergyProblem).
  */
 #include <config.h>
@@ -35,6 +35,7 @@
 #include <opm/simulators/linalg/gpuistl/GpuBlackoilIntensiveQuantitiesDispatcher_impl.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclTwoPhaseMaterialParams.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/BlackOilPvtApproaches.hpp>
 #include <opm/material/thermal/EclSolidEnergyLawMultiplexerParams.hpp>
 #include <opm/material/thermal/EclThermalConductionLawMultiplexerParams.hpp>
 
@@ -54,6 +55,9 @@ struct GasWaterEnergyDispatcherTraits
     using GpuPrimaryVariables = GetPropType<GpuTag, Properties::PrimaryVariables>;
     using GpuIntensiveQuantities = BlackOilIntensiveQuantities<GpuTag>;
     using GpuFlowProblemBuf = dispatcher_detail::GpuFlowProblemBufferFor<GpuTag>;
+
+    static_assert(std::is_same_v<typename FluidSystemView::PvtApproachesType,
+                                 Co2StorePvtApproaches>);
 
     static constexpr const char* name = "CO2STORE: gas-water with energy";
 
@@ -93,7 +97,7 @@ struct GasWaterEnergyDispatcherTraits
 } // namespace dispatcher_detail
 
 template <>
-struct GpuDispatcherTraits<Properties::TTag::FlowGasWaterEnergyProblem>
+struct GpuDispatcherTraits<Properties::TTag::FlowGasWaterEnergyProblem, Co2StorePvtApproaches>
     : dispatcher_detail::GasWaterEnergyDispatcherTraits
 {
 };
@@ -102,19 +106,23 @@ struct GpuDispatcherTraits<Properties::TTag::FlowGasWaterEnergyProblem>
 // FlowGasWaterEnergyProblem, so it has the same CPU-side Problem,
 // PrimaryVariables and IntensiveQuantities, and the same GPU types.
 template <>
-struct GpuDispatcherTraits<Properties::TTag::FlowGasWaterEnergyProblemGPU>
+struct GpuDispatcherTraits<Properties::TTag::FlowGasWaterEnergyProblemGPU, Co2StorePvtApproaches>
     : dispatcher_detail::GasWaterEnergyDispatcherTraits
 {
 };
 
 // Used by the Flow simulator binary when a CO2STORE deck with
 // WATER+GAS+THERMAL is loaded.
-template class GpuBlackoilIntensiveQuantitiesDispatcher<
-    Properties::TTag::FlowGasWaterEnergyProblem>;
+template std::unique_ptr<
+    GpuBlackoilIntensiveQuantitiesDispatcher<Properties::TTag::FlowGasWaterEnergyProblem>::Impl>
+GpuBlackoilIntensiveQuantitiesDispatcher<Properties::TTag::FlowGasWaterEnergyProblem>::
+    makeImpl<Co2StorePvtApproaches>(const Problem&);
 
 // Used by the flow_gpu binary, which runs both the assembly and the
 // intensive quantities on the GPU.
-template class GpuBlackoilIntensiveQuantitiesDispatcher<
-    Properties::TTag::FlowGasWaterEnergyProblemGPU>;
+template std::unique_ptr<
+    GpuBlackoilIntensiveQuantitiesDispatcher<Properties::TTag::FlowGasWaterEnergyProblemGPU>::Impl>
+GpuBlackoilIntensiveQuantitiesDispatcher<Properties::TTag::FlowGasWaterEnergyProblemGPU>::
+    makeImpl<Co2StorePvtApproaches>(const Problem&);
 
 } // namespace Opm::gpuistl

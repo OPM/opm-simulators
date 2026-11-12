@@ -16,8 +16,9 @@
 /*!
  * \file
  *
- * GPU intensive-quantities dispatcher for three-phase black-oil decks with
- * live oil and dry gas (e.g. SPE1), run by \c flow with \c FlowProblemNohyst.
+ * GPU intensive-quantities dispatcher configuration for three-phase black-oil
+ * decks with live oil and dry gas (e.g. SPE1), run by \c flow with
+ * \c FlowProblemNohyst.
  */
 #include <config.h>
 
@@ -34,9 +35,6 @@
 
 #include <opm/simulators/linalg/gpuistl/GpuBlackoilIntensiveQuantitiesDispatcher_impl.hpp>
 
-#include <opm/input/eclipse/Schedule/OilVaporizationProperties.hpp>
-
-#include <opm/material/fluidmatrixinteractions/EclMultiplexerMaterialParams.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/BlackOilPvtApproaches.hpp>
 
 #include <opm/simulators/flow/FlowProblemNohystTypeTag.hpp>
@@ -44,9 +42,8 @@
 
 namespace Opm::gpuistl {
 
-namespace dispatcher_detail {
-
-struct BlackoilNohystDispatcherTraits
+template <>
+struct GpuDispatcherTraits<Properties::TTag::FlowProblemNohyst, LiveOilDryGasPvtApproaches>
 {
     using CpuTag = Properties::TTag::FlowProblemNohyst;
     using GpuTag = Properties::TTag::FlowBlackoilNohystGPU;
@@ -54,113 +51,34 @@ struct BlackoilNohystDispatcherTraits
     using FluidSystemView = GetPropType<GpuTag, Properties::FluidSystem>;
     using GpuPrimaryVariables = GetPropType<GpuTag, Properties::PrimaryVariables>;
     using GpuIntensiveQuantities = BlackOilIntensiveQuantities<GpuTag>;
-    using GpuFlowProblemBuf = GpuFlowProblemBufferFor<GpuTag>;
+    using GpuFlowProblemBuf = dispatcher_detail::GpuFlowProblemBufferFor<GpuTag>;
+
+    using Approaches = typename FluidSystemView::PvtApproachesType;
+    static_assert(Approaches::oil == OilPvtApproach::LiveOil);
+    static_assert(Approaches::gas == GasPvtApproach::DryGas);
+    static_assert(Approaches::water == WaterPvtApproach::ConstantCompressibilityWater);
 
     static constexpr const char* name = "three-phase black-oil: live oil and dry gas";
 
     template <class Problem>
     static void validate(const Problem& problem)
     {
-        assertNoDiffusionOrDispersion<GpuTag>();
-
-        // The dispatcher assumes one entry per local grid DoF, and the overlap
-        // and ghost cells of a parallel run have not been verified.
-        if (problem.simulator().vanguard().grid().comm().size() > 1) {
-            OPM_THROW(std::logic_error,
-                      "GPU intensive quantities for three-phase black-oil are only "
-                      "supported on a single MPI process");
-        }
-
-        rejectGeoModifier(problem);
-        rejectUnsupportedFluidSystem();
-
-        const auto& materialLawManager = problem.materialLawManager();
-        if (materialLawManager.threePhaseApproach() != EclMultiplexerApproach::Default) {
-            OPM_THROW(std::logic_error,
-                      "GPU property evaluation requires the default three-phase relative "
-                      "permeability model; STONE1 and STONE2 are not supported");
-        }
-        rejectUnsupportedSaturationFunctions(materialLawManager);
-
-        rejectUnsupportedMixingControls(problem.simulator().vanguard().schedule());
-    }
-
-private:
-    static void rejectUnsupportedFluidSystem()
-    {
         using FluidSystem = GetPropType<CpuTag, Properties::FluidSystem>;
+        dispatcher_detail::assertNoDiffusionOrDispersion<GpuTag>();
+        dispatcher_detail::validateBlackoilNohyst<FluidSystem>(problem);
 
-        if (!FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)
-            || !FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
-            || !FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            OPM_THROW(std::logic_error,
-                      "GPU intensive quantities for black-oil require water, oil and gas "
-                      "to be active");
-        }
+        // PVDG with VAPOIL is a valid CPU combination, but no deck uses it.
         if (FluidSystem::enableVaporizedOil()) {
             OPM_THROW(std::logic_error,
-                      "VAPOIL (vaporized oil) is not supported on the GPU");
-        }
-        if (FluidSystem::enableDissolvedGasInWater()) {
-            OPM_THROW(std::logic_error,
-                      "DISGASW (gas dissolved in water) is not supported on the GPU");
-        }
-        if (FluidSystem::enableVaporizedWater()) {
-            OPM_THROW(std::logic_error,
-                      "VAPWAT (vaporized water) is not supported on the GPU");
-        }
-
-        // copy_to_gpu also checks the approaches, but only with the enum values.
-        using Approaches = typename FluidSystemView::PvtApproachesType;
-        static_assert(Approaches::oil == OilPvtApproach::LiveOil);
-        static_assert(Approaches::gas == GasPvtApproach::DryGas);
-        static_assert(Approaches::water == WaterPvtApproach::ConstantCompressibilityWater);
-        if (FluidSystem::oilPvt().approach() != Approaches::oil) {
-            OPM_THROW(std::logic_error,
-                      "GPU intensive quantities for black-oil require live oil (PVTO); "
-                      "other oil PVT models such as PVDO and PVCDO are not supported "
-                      "on the GPU");
-        }
-        if (FluidSystem::gasPvt().approach() != Approaches::gas) {
-            OPM_THROW(std::logic_error,
-                      "GPU intensive quantities for black-oil require dry gas (PVDG); "
-                      "other gas PVT models such as PVTG are not supported on the GPU");
-        }
-        if (FluidSystem::waterPvt().approach() != Approaches::water) {
-            OPM_THROW(std::logic_error,
-                      "GPU intensive quantities for black-oil require water PVT from PVTW; "
-                      "other water PVT models are not supported on the GPU");
+                      "VAPOIL (vaporized oil) with dry gas (PVDG) is not supported on the GPU");
         }
     }
-
-    /// Plain DRSDT is supported: the dispatcher refreshes the mixing limits on
-    /// every call. DRSDTCON needs the convective-mixing quantities, which the
-    /// GPU intensive quantities do not compute, and VAPPARS needs the maximum
-    /// oil saturation history in a form that has not been verified on the GPU.
-    static void rejectUnsupportedMixingControls(const Schedule& schedule)
-    {
-        for (std::size_t reportStep = 0; reportStep < schedule.size(); ++reportStep) {
-            const auto& oilVaporization = schedule[reportStep].oilvap();
-            if (oilVaporization.getType() == OilVaporizationProperties::OilVaporization::VAPPARS) {
-                OPM_THROW(std::logic_error, "VAPPARS is not supported on the GPU");
-            }
-            if (oilVaporization.drsdtConvective()) {
-                OPM_THROW(std::logic_error,
-                          "DRSDTCON (convective DRSDT) is not supported on the GPU");
-            }
-        }
-    }
-};
-
-} // namespace dispatcher_detail
-
-template <>
-struct GpuDispatcherTraits<Properties::TTag::FlowProblemNohyst>
-    : dispatcher_detail::BlackoilNohystDispatcherTraits
-{
 };
 
 // Used by flow for black-oil decks without HYSTER.
-template class GpuBlackoilIntensiveQuantitiesDispatcher<Properties::TTag::FlowProblemNohyst>;
+template std::unique_ptr<
+    GpuBlackoilIntensiveQuantitiesDispatcher<Properties::TTag::FlowProblemNohyst>::Impl>
+GpuBlackoilIntensiveQuantitiesDispatcher<Properties::TTag::FlowProblemNohyst>::
+    makeImpl<LiveOilDryGasPvtApproaches>(const Problem&);
 
 } // namespace Opm::gpuistl

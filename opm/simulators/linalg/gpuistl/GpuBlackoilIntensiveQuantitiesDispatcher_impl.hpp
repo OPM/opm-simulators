@@ -21,13 +21,13 @@
 /*!
  * \file
  *
- * Implementation of \c GpuBlackoilIntensiveQuantitiesDispatcher, shared by the
+ * The GPU side of \c GpuBlackoilIntensiveQuantitiesDispatcher, shared by the
  * per-configuration translation units
  * (\c GpuBlackoilIntensiveQuantitiesDispatcher<Configuration>.cu).
  *
  * Only to be included from \c .cu files. Each of them specializes
- * \c GpuDispatcherTraits for the CPU TypeTags it supports and explicitly
- * instantiates the dispatcher for them. Keeping one configuration per
+ * \c GpuDispatcherTraits for its (CPU TypeTag, PVT approaches) pairs and
+ * explicitly instantiates \c makeImpl for them. Keeping one configuration per
  * translation unit keeps the nvcc compile time and memory of each unit to a
  * single \c FlowProblemBlackoil instantiation.
  */
@@ -37,12 +37,13 @@
 #include <cuda_runtime.h>
 
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/utility/gpuDecorators.hpp>
 
 #include <opm/input/eclipse/Schedule/Events.hpp>
+#include <opm/input/eclipse/Schedule/OilVaporizationProperties.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 
+#include <opm/material/fluidmatrixinteractions/EclMultiplexerMaterialParams.hpp>
 #include <opm/material/fluidmatrixinteractions/GpuEclMaterialLawManager.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystemNonStatic.hpp>
@@ -62,7 +63,6 @@
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 
 #include <cstddef>
-#include <format>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -74,7 +74,8 @@ namespace Opm::gpuistl {
 
 /*!
  * \brief The GPU types and the deck validation of one configuration that the
- *        dispatcher supports, keyed on the CPU \c TypeTag of the simulator.
+ *        dispatcher supports, keyed on the CPU \c TypeTag of the simulator and
+ *        the PVT approaches of the GPU fluid system.
  *
  * A specialization provides:
  *  - \c CpuTag: the CPU TypeTag that the GPU intensive-quantities prototype is
@@ -87,13 +88,14 @@ namespace Opm::gpuistl {
  *  - \c GpuFlowProblemBuf: the owning (\c GpuBuffer) problem whose view is the
  *    \c Problem of \c GpuTag.
  *  - \c static void validate(const Problem&): rejects decks that the GPU
- *    types do not support, with an error that names the feature.
+ *    types do not support, with an error that names the feature. The facade
+ *    has already checked that the PVT approaches of the deck are \p PvtApproaches.
  *  - \c static constexpr const char* name: shown in the log at initialization.
  *
- * The specializations live in the \c .cu file that instantiates the
- * dispatcher for that configuration.
+ * The specializations live in the \c .cu file that instantiates \c makeImpl
+ * for that configuration.
  */
-template <class CpuTypeTag>
+template <class CpuTypeTag, class PvtApproaches>
 struct GpuDispatcherTraits;
 
 namespace dispatcher_detail {
@@ -183,6 +185,63 @@ void rejectUnsupportedSaturationFunctions(const MaterialLawManager& materialLawM
     }
 }
 
+/// Validation shared by the three-phase black-oil configurations of
+/// \c FlowProblemNohyst. The PVT approaches and VAPOIL are checked per
+/// configuration.
+template <class FluidSystem, class Problem>
+void validateBlackoilNohyst(const Problem& problem)
+{
+    // The dispatcher assumes one entry per local grid DoF, and the overlap
+    // and ghost cells of a parallel run have not been verified.
+    if (problem.simulator().vanguard().grid().comm().size() > 1) {
+        OPM_THROW(std::logic_error,
+                  "GPU intensive quantities for three-phase black-oil are only "
+                  "supported on a single MPI process");
+    }
+
+    rejectGeoModifier(problem);
+
+    if (!FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)
+        || !FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
+        || !FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+        OPM_THROW(std::logic_error,
+                  "GPU intensive quantities for black-oil require water, oil and gas "
+                  "to be active");
+    }
+    if (FluidSystem::enableDissolvedGasInWater()) {
+        OPM_THROW(std::logic_error,
+                  "DISGASW (gas dissolved in water) is not supported on the GPU");
+    }
+    if (FluidSystem::enableVaporizedWater()) {
+        OPM_THROW(std::logic_error,
+                  "VAPWAT (vaporized water) is not supported on the GPU");
+    }
+
+    const auto& materialLawManager = problem.materialLawManager();
+    if (materialLawManager.threePhaseApproach() != EclMultiplexerApproach::Default) {
+        OPM_THROW(std::logic_error,
+                  "GPU property evaluation requires the default three-phase relative "
+                  "permeability model; STONE1 and STONE2 are not supported");
+    }
+    rejectUnsupportedSaturationFunctions(materialLawManager);
+
+    // Plain DRSDT is supported: the dispatcher refreshes the mixing limits on
+    // every call. DRSDTCON needs the convective-mixing quantities, which the
+    // GPU intensive quantities do not compute, and VAPPARS needs the maximum
+    // oil saturation history in a form that has not been verified on the GPU.
+    const auto& schedule = problem.simulator().vanguard().schedule();
+    for (std::size_t reportStep = 0; reportStep < schedule.size(); ++reportStep) {
+        const auto& oilVaporization = schedule[reportStep].oilvap();
+        if (oilVaporization.getType() == OilVaporizationProperties::OilVaporization::VAPPARS) {
+            OPM_THROW(std::logic_error, "VAPPARS is not supported on the GPU");
+        }
+        if (oilVaporization.drsdtConvective()) {
+            OPM_THROW(std::logic_error,
+                      "DRSDTCON (convective DRSDT) is not supported on the GPU");
+        }
+    }
+}
+
 /// Whether the kernel also updates the energy quantities. A namespace-scope
 /// constant, because nvcc spells kernel template arguments out at global scope.
 template <class GpuTag>
@@ -197,33 +256,14 @@ constexpr void assertNoDiffusionOrDispersion()
     static_assert(!getPropValue<GpuTag, Properties::EnableDispersion>());
 }
 
-template <class ProblemT, class PrimaryVariablesT, class IntensiveQuantitiesT>
-void validateDispatcherInputs(const ProblemT& problem,
-                              const PrimaryVariablesT* const* primaryVariables,
-                              IntensiveQuantitiesT* const* intensiveQuantities,
-                              std::size_t numDof,
-                              unsigned timeIdx)
+/// The GPU problem data is indexed from zero over all grid DoFs. The checks
+/// that do not need the problem are done by the facade, before the setup.
+template <class ProblemT>
+void validateNumDof(const ProblemT& problem, std::size_t numDof)
 {
-    if (timeIdx != 0) {
-        OPM_THROW(std::invalid_argument,
-                  "GPU intensive-quantities dispatcher supports only timeIdx 0");
-    }
-
-    if (primaryVariables == nullptr || intensiveQuantities == nullptr) {
-        OPM_THROW(std::invalid_argument,
-                  "GPU intensive-quantities dispatcher received a null pointer array");
-    }
-
     if (numDof != static_cast<std::size_t>(problem.model().numGridDof())) {
         OPM_THROW(std::invalid_argument,
                   "GPU intensive-quantities dispatcher requires one entry per grid DoF");
-    }
-
-    for (std::size_t i = 0; i < numDof; ++i) {
-        if (primaryVariables[i] == nullptr || intensiveQuantities[i] == nullptr) {
-            OPM_THROW(std::invalid_argument,
-                      "GPU intensive-quantities dispatcher received a null DoF entry");
-        }
     }
 }
 
@@ -246,14 +286,18 @@ dispatcherUpdateAllCellsKernel(GpuProblem problem,
     }
 }
 
-} // namespace dispatcher_detail
+// =============================================================================
+// ImplFor: the GPU state and the kernel launch of one configuration
+// =============================================================================
+template <class CpuTypeTag, class PvtApproaches>
+struct ImplFor final : GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::Impl
+{
+    using Dispatcher = GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>;
+    using Problem = typename Dispatcher::Problem;
+    using PrimaryVariables = typename Dispatcher::PrimaryVariables;
+    using IntensiveQuantities = typename Dispatcher::IntensiveQuantities;
 
-// =============================================================================
-// Impl
-// =============================================================================
-template <class CpuTypeTag>
-struct GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::Impl {
-    using Traits = GpuDispatcherTraits<CpuTypeTag>;
+    using Traits = GpuDispatcherTraits<CpuTypeTag, PvtApproaches>;
     using CpuTag = typename Traits::CpuTag;
     using GpuTag = typename Traits::GpuTag;
     using FluidSystemView = typename Traits::FluidSystemView;
@@ -265,145 +309,132 @@ struct GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::Impl {
     static_assert(std::is_same_v<GpuFlowProblemView, GetPropType<GpuTag, Properties::Problem>>,
                   "the view of GpuFlowProblemBuf must be the Problem of the GPU TypeTag");
     static_assert(std::is_same_v<FluidSystemView, GetPropType<GpuTag, Properties::FluidSystem>>);
+    static_assert(std::is_same_v<typename FluidSystemView::PvtApproachesType, PvtApproaches>,
+                  "the GPU fluid system must have the PVT approaches of the configuration");
 
     using CpuFluidSystem = GetPropType<CpuTypeTag, Properties::FluidSystem>;
     using DynamicCpuFluidSystem
         = std::remove_reference_t<decltype(CpuFluidSystem::getNonStaticInstance())>;
     using FluidSystemBuffer
-        = decltype(::Opm::gpuistl::copy_to_gpu<typename FluidSystemView::PvtApproachesType>(
+        = decltype(::Opm::gpuistl::copy_to_gpu<PvtApproaches>(
             std::declval<DynamicCpuFluidSystem&>()));
     using ManagedFluidSystemView
         = std::unique_ptr<FluidSystemView, GpuManagedDeleter<FluidSystemView>>;
 
-    bool initialized = false;
     std::unique_ptr<GpuFlowProblemBuf> problemBuf;
     GpuFlowProblemView problemView{};
     std::unique_ptr<FluidSystemBuffer> fluidSystemBuffer;
     ManagedFluidSystemView managedFluidSystemView;
     std::optional<GpuIntensiveQuantities> prototype;
-};
+    // The constructor reads the mixing limits, so the first update() need not.
+    bool mixingLimitsCurrent = true;
 
-template <class CpuTypeTag>
-GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::GpuBlackoilIntensiveQuantitiesDispatcher()
-    : impl_(std::make_unique<Impl>())
-{
-}
-
-template <class CpuTypeTag>
-GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::~GpuBlackoilIntensiveQuantitiesDispatcher()
-    = default;
-
-template <class CpuTypeTag>
-void GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::update(
-    const Problem& cpuProblem,
-    const PrimaryVariables* const* cpuPriVars,
-    IntensiveQuantities* const* outIQ,
-    std::size_t numDof,
-    unsigned timeIdx)
-{
-    using ImplT = Impl;
-    // The kernel's template arguments are named through the public traits:
-    // nvcc spells them out at global scope, where Impl is not accessible.
-    using Traits = GpuDispatcherTraits<CpuTypeTag>;
-    using GpuPrimaryVariables = typename Traits::GpuPrimaryVariables;
-    using GpuIntensiveQuantities = typename Traits::GpuIntensiveQuantities;
-
-    if (numDof == 0u) {
-        return;
-    }
-
-    dispatcher_detail::validateDispatcherInputs(cpuProblem, cpuPriVars, outIQ, numDof, timeIdx);
-
-    if (!impl_->initialized) {
-        // The first call comes from the initial solution, so an unsupported
-        // deck is rejected before the first time step.
-        Traits::validate(cpuProblem);
-
+    explicit ImplFor(const Problem& cpuProblem)
+    {
         // Build the GPU FlowProblem from the CPU FlowProblem (one-time setup).
-        impl_->problemBuf = std::make_unique<typename ImplT::GpuFlowProblemBuf>(cpuProblem);
-        impl_->problemView = ::Opm::gpuistl::make_view(*impl_->problemBuf);
+        problemBuf = std::make_unique<GpuFlowProblemBuf>(cpuProblem);
+        problemView = ::Opm::gpuistl::make_view(*problemBuf);
 
         // Place the FluidSystemView in unified memory so its device pointer
         // dereferences are valid both on host and device (mirrors the test).
-        auto& dynamicCpuFluidSystem = ImplT::CpuFluidSystem::getNonStaticInstance();
+        auto& dynamicCpuFluidSystem = CpuFluidSystem::getNonStaticInstance();
         // Keep the owning buffer with this dispatcher. A process-wide static
         // would retain the first deck's PVT tables across later simulations.
-        impl_->fluidSystemBuffer
-            = std::make_unique<typename ImplT::FluidSystemBuffer>(
-                ::Opm::gpuistl::copy_to_gpu<typename ImplT::FluidSystemView::PvtApproachesType>(
-                    dynamicCpuFluidSystem));
-        auto fsView = ::Opm::gpuistl::make_view(*impl_->fluidSystemBuffer);
+        fluidSystemBuffer = std::make_unique<FluidSystemBuffer>(
+            ::Opm::gpuistl::copy_to_gpu<PvtApproaches>(dynamicCpuFluidSystem));
+        auto fsView = ::Opm::gpuistl::make_view(*fluidSystemBuffer);
 
-        impl_->managedFluidSystemView
-            = make_gpu_managed_unique_ptr<typename ImplT::FluidSystemView>(fsView);
+        managedFluidSystemView = make_gpu_managed_unique_ptr<FluidSystemView>(fsView);
 
         // Build a default IntensiveQuantities prototype for the GPU side.
-        BlackOilIntensiveQuantities<typename ImplT::CpuTag> cpuPrototype;
-        impl_->prototype = cpuPrototype.template withOtherFluidSystem<typename ImplT::GpuTag>(
-            *impl_->managedFluidSystemView);
-
-        impl_->initialized = true;
-        OpmLog::info(std::format(
-            "[GpuBlackoilIntensiveQuantitiesDispatcher] initialized for {} cells ({})",
-            cpuProblem.model().numGridDof(), Traits::name));
-    }
-    else {
-        // The mixing limits (DRSDT, DRVDT, VAPPARS) change between calls:
-        // at the start of a time step, on a chopped time step and on restart.
-        // Re-reading them on every call cannot miss any of these.
-        impl_->problemBuf->refreshMixingLimits(cpuProblem, timeIdx);
+        BlackOilIntensiveQuantities<CpuTag> cpuPrototype;
+        prototype = cpuPrototype.template withOtherFluidSystem<GpuTag>(*managedFluidSystemView);
     }
 
-    // -------------------------------------------------------------------
-    // 1. Convert CPU primary variables to the dispatcher's GPU primary
-    //    variables (host-side).
-    // -------------------------------------------------------------------
-    std::vector<GpuPrimaryVariables> hostPriVars;
-    hostPriVars.reserve(numDof);
-    for (std::size_t i = 0; i < numDof; ++i) {
-        // The BlackOilPrimaryVariables converting copy ctor handles the
-        // TypeTag/storage difference.
-        hostPriVars.emplace_back(*cpuPriVars[i]);
+    const char* name() const override
+    {
+        return Traits::name;
     }
-    std::vector<GpuIntensiveQuantities> hostIQ(numDof, *impl_->prototype);
 
-    // -------------------------------------------------------------------
-    // 2. Upload host buffers to the device (host-to-device copies are
-    //    embedded in the GpuBuffer ctors).
-    // -------------------------------------------------------------------
-    GpuBuffer<GpuPrimaryVariables> primaryVariablesBuffer(hostPriVars);
-    GpuBuffer<GpuIntensiveQuantities> intensiveQuantitiesBuffer(hostIQ);
+    void update(const Problem& cpuProblem,
+                const PrimaryVariables* const* cpuPriVars,
+                IntensiveQuantities* const* outIQ,
+                std::size_t numDof,
+                unsigned timeIdx) override
+    {
+        validateNumDof(cpuProblem, numDof);
 
-    // -------------------------------------------------------------------
-    // 3. Launch the per-cell update kernel.
-    // -------------------------------------------------------------------
-    const unsigned blockSize = 64u;
-    const unsigned gridSize = static_cast<unsigned>((numDof + blockSize - 1u) / blockSize);
+        if (!mixingLimitsCurrent) {
+            // The mixing limits (DRSDT, DRVDT, VAPPARS) change between calls:
+            // at the start of a time step, on a chopped time step and on restart.
+            // Re-reading them on every call cannot miss any of these.
+            problemBuf->refreshMixingLimits(cpuProblem, timeIdx);
+        }
+        mixingLimitsCurrent = false;
 
-    dispatcher_detail::dispatcherUpdateAllCellsKernel<
-        dispatcher_detail::updateEnergyQuantities<typename Traits::GpuTag>>
-        <<<gridSize, blockSize>>>(
-            impl_->problemView,
-            GpuView<const GpuPrimaryVariables>(
-                primaryVariablesBuffer.data(), primaryVariablesBuffer.size()),
-            GpuView<GpuIntensiveQuantities>(
-                intensiveQuantitiesBuffer.data(), intensiveQuantitiesBuffer.size()),
-            numDof);
-    OPM_GPU_SAFE_CALL(cudaGetLastError());
+        // -------------------------------------------------------------------
+        // 1. Convert CPU primary variables to the dispatcher's GPU primary
+        //    variables (host-side).
+        // -------------------------------------------------------------------
+        std::vector<GpuPrimaryVariables> hostPriVars;
+        hostPriVars.reserve(numDof);
+        for (std::size_t i = 0; i < numDof; ++i) {
+            // The BlackOilPrimaryVariables converting copy ctor handles the
+            // TypeTag/storage difference.
+            hostPriVars.emplace_back(*cpuPriVars[i]);
+        }
+        std::vector<GpuIntensiveQuantities> hostIQ(numDof, *prototype);
 
-    // -------------------------------------------------------------------
-    // 4. Read the GPU IntensiveQuantities back to host memory.
-    // -------------------------------------------------------------------
-    intensiveQuantitiesBuffer.copyToHost(hostIQ.data(), numDof);
+        // -------------------------------------------------------------------
+        // 2. Upload host buffers to the device (host-to-device copies are
+        //    embedded in the GpuBuffer ctors).
+        // -------------------------------------------------------------------
+        GpuBuffer<GpuPrimaryVariables> primaryVariablesBuffer(hostPriVars);
+        GpuBuffer<GpuIntensiveQuantities> intensiveQuantitiesBuffer(hostIQ);
 
-    // -------------------------------------------------------------------
-    // 5. Field-by-field materialization onto the caller's CPU
-    //    IntensiveQuantities. The supported GPU TypeTags have no diffusion
-    //    or dispersion state, so the overlay covers the complete supported IQ.
-    // -------------------------------------------------------------------
-    for (std::size_t i = 0; i < numDof; ++i) {
-        outIQ[i]->overlayBlackOilFieldsFrom(hostIQ[i]);
+        // -------------------------------------------------------------------
+        // 3. Launch the per-cell update kernel.
+        // -------------------------------------------------------------------
+        const unsigned blockSize = 64u;
+        const unsigned gridSize = static_cast<unsigned>((numDof + blockSize - 1u) / blockSize);
+
+        dispatcherUpdateAllCellsKernel<updateEnergyQuantities<GpuTag>>
+            <<<gridSize, blockSize>>>(
+                problemView,
+                GpuView<const GpuPrimaryVariables>(
+                    primaryVariablesBuffer.data(), primaryVariablesBuffer.size()),
+                GpuView<GpuIntensiveQuantities>(
+                    intensiveQuantitiesBuffer.data(), intensiveQuantitiesBuffer.size()),
+                numDof);
+        OPM_GPU_SAFE_CALL(cudaGetLastError());
+
+        // -------------------------------------------------------------------
+        // 4. Read the GPU IntensiveQuantities back to host memory.
+        // -------------------------------------------------------------------
+        intensiveQuantitiesBuffer.copyToHost(hostIQ.data(), numDof);
+
+        // -------------------------------------------------------------------
+        // 5. Field-by-field materialization onto the caller's CPU
+        //    IntensiveQuantities. The supported GPU TypeTags have no diffusion
+        //    or dispersion state, so the overlay covers the complete supported IQ.
+        // -------------------------------------------------------------------
+        for (std::size_t i = 0; i < numDof; ++i) {
+            outIQ[i]->overlayBlackOilFieldsFrom(hostIQ[i]);
+        }
     }
+};
+
+} // namespace dispatcher_detail
+
+template <class CpuTypeTag>
+template <class PvtApproaches>
+std::unique_ptr<typename GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::Impl>
+GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::makeImpl(const Problem& cpuProblem)
+{
+    // The first call comes from the initial solution, so an unsupported
+    // deck is rejected before the first time step.
+    GpuDispatcherTraits<CpuTypeTag, PvtApproaches>::validate(cpuProblem);
+    return std::make_unique<dispatcher_detail::ImplFor<CpuTypeTag, PvtApproaches>>(cpuProblem);
 }
 
 } // namespace Opm::gpuistl
