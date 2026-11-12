@@ -1371,6 +1371,7 @@ reportConnectionFactors(const std::size_t well_index,
         connection.trans_factor = perf_data.connection_transmissibility_factor[i];
         connection.d_factor = perf_data.connection_d_factor[i];
         connection.compact_mult = perf_data.connection_compaction_tmult[i];
+        connection.inj_mult = perf_data.inj_mult[i];
     }
 }
 
