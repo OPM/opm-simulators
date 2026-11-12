@@ -125,18 +125,6 @@ public:
             const Well& well,
             const SummaryState& summary_state) const;
 
-  //! \brief Find limits using brute-force solver.
-  static bool bruteForceBracketCommonTHP(const std::function<Scalar(const Scalar)>& eq,
-                                const std::array<Scalar, 2>& range,
-                                Scalar& low, Scalar& high,
-                                std::optional<Scalar>& approximate_solution,
-                                const Scalar& limit,
-                                DeferredLogger& deferred_logger);
-
-  //! \brief Find limits using brute-force solver.
-  static bool bruteForceBracketCommonTHP(const std::function<Scalar(const Scalar)>& eq,
-                                Scalar& min_thp, Scalar& max_thp);
-
 private:
     //! \brief Compute BHP from THP limit for an injector - implementation.
     template<class ErrorPolicy>
