@@ -228,6 +228,8 @@ endfunction()
 # Details:
 #   - This test class compares the output from a restarted simulation
 #     to that of a non-restarted simulation.
+#   - RESTART_FROM names another deck whose restart file the restarted
+#     simulation starts from.
 function(add_test_compare_restarted_simulation)
   set(oneValueArgs
     CASENAME
@@ -239,6 +241,7 @@ function(add_test_compare_restarted_simulation)
     REL_TOL
     DIR
     RESTART_STEP
+    RESTART_FROM
   )
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
@@ -254,6 +257,11 @@ function(add_test_compare_restarted_simulation)
     set(TEST_NAME compareRestartedSim_${PARAM_SIMULATOR}+${PARAM_FILENAME})
   endif()
 
+  set(RESTART_FROM_ARGS "")
+  if(PARAM_RESTART_FROM)
+    set(RESTART_FROM_ARGS -b ${PARAM_RESTART_FROM})
+  endif()
+
   set(RESULT_PATH ${BASE_RESULT_PATH}/restart/${PARAM_SIMULATOR}+${PARAM_CASENAME})
   opm_add_test(${TEST_NAME}
     EXE_TARGET
@@ -267,6 +275,7 @@ function(add_test_compare_restarted_simulation)
       -c $<TARGET_FILE:compareECL>
       -d $<TARGET_FILE:rst_deck>
       -s ${PARAM_RESTART_STEP}
+      ${RESTART_FROM_ARGS}
     TEST_ARGS
       ${PARAM_TEST_ARGS}
   )
