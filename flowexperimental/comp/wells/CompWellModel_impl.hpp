@@ -36,7 +36,6 @@
 #include <opm/models/utils/parametersystem.hpp>
 
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
-#include <opm/simulators/flow/FlowProblemComp.hpp>
 
 namespace Opm {
 
@@ -58,6 +57,20 @@ CompWellModel<TypeTag>::CompWellModel(Simulator& simulator, const NewtonIteratio
     , damp_section_densities_(Parameters::Get<Parameters::CompWellDampSectionDensities>())
 {
     local_num_cells_ = simulator.gridView().size(0);
+}
+
+template <typename TypeTag>
+void
+CompWellModel<TypeTag>::
+registerParameters()
+{
+    Parameters::Register<Parameters::CompWellDampSectionDensities>(
+        "Damp the wellbore density of each section between two well "
+        "connections from one time step to the next, so that each section "
+        "follows a change of its own flow. When disabled (the default), the "
+        "hydrostatic pressure offset of each connection from the reference "
+        "depth is damped, and a deeper connection follows a change more "
+        "slowly than the ones above it.");
 }
 
 template <typename TypeTag>

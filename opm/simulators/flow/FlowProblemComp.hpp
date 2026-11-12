@@ -70,11 +70,6 @@ namespace Opm::Parameters {
 // flash and rescale SWAT accordingly. By default, keep the input SWAT.
 struct NormalizeExplicitSwat { static constexpr bool value = false; };
 
-// Damp the density of each wellbore section between two connections from one
-// time step to the next. By default, the hydrostatic offset of each connection
-// is damped instead.
-struct CompWellDampSectionDensities { static constexpr bool value = false; };
-
 } // namespace Opm::Parameters
 
 namespace Opm {
@@ -152,13 +147,7 @@ public:
             "the vapour or liquid equation-of-state root, and water and the "
             "flashed phases are then rescaled to fill the pore volume. When "
             "disabled (the default), the input SWAT is retained.");
-        Parameters::Register<Parameters::CompWellDampSectionDensities>(
-            "Damp the wellbore density of each section between two well "
-            "connections from one time step to the next, so that each section "
-            "follows a change of its own flow. When disabled (the default), the "
-            "hydrostatic pressure offset of each connection from the reference "
-            "depth is damped, and a deeper connection follows a change more "
-            "slowly than the ones above it.");
+        GetPropType<TypeTag, Properties::WellModel>::registerParameters();
     }
 
     Opm::CompositionalConfig::EOSType getEosType() const
