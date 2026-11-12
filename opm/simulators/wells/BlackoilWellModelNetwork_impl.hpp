@@ -72,16 +72,42 @@ doPreStepRebalance(DeferredLogger& deferred_logger)
         well_model_.getWellConvergence(well_model_.B_avg(), true).converged() &&
         !changed_well_group;
 
+    bool well_failed = false;
     OPM_BEGIN_PARALLEL_TRY_CATCH();
     for (auto& well : this->well_model_) {
-        well->solveEqAndUpdateWellState(well_model_.simulator(),
-                                        well_model_.groupStateHelper(),
-                                        well_state);
+        // The state is kept to be able to restore it if the well fails.
+        const auto ws_before_step = well_state.well(well->indexOfWell());
+        try {
+            well->solveEqAndUpdateWellState(well_model_.simulator(),
+                                            well_model_.groupStateHelper(),
+                                            well_state);
+        } catch (const NumericalProblem& e) {
+            // A well that fails numerically should not make the whole time step fail.
+            // Stop it and solve it with zero rate, as is done for wells that can not be
+            // solved in the inner well iterations. The well is solved again, and can
+            // be reopened, in the Newton iterations of the time step.
+            well_failed = true;
+            deferred_logger.warning("PRESTEP_NETWORK_REBALANCE_WELL_FAILED",
+                                    fmt::format("Well {} failed during the initial (pre-step) network balance ({}). "
+                                                "The well is stopped and solved with zero rate.",
+                                                well->name(), e.what()));
+            well_state.well(well->indexOfWell()) = ws_before_step;
+            try {
+                well->updatePrimaryVariables(well_model_.groupStateHelper());
+            } catch (const NumericalProblem&) {
+                // The recovery must not fail the time step. The solve with zero rate below
+                // handles a state that is not finite.
+            }
+            well->stopWellAndSolveWithZeroRate(well_model_.simulator(),
+                                               dt,
+                                               well_model_.groupStateHelper(),
+                                               well_state);
+        }
     }
     OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModelNetwork::doPreStepRebalance() failed: ",
                                 well_model_.simulator().vanguard().grid().comm());
 
-    if (!converged) {
+    if (!converged || well_failed) {
         deferred_logger.warning("Initial (pre-step) network balance did not converge.");
     }
 }

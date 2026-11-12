@@ -99,6 +99,20 @@ public:
 
     bool operator==(const SingleWellState&) const;
 
+    //! \brief Whether the rates, pressures and primary variables of the well are all finite.
+    bool isFinite() const;
+
+    //! \brief Roll the state back to a snapshot if an inner well solve failed badly.
+    //!
+    //! The state is replaced by the snapshot if the solve threw, or if the state
+    //! is not finite (whether or not the solve reported convergence). A state that
+    //! is finite, such as the result of a solve that did not converge, is kept as it is.
+    //!
+    //! \param snapshot The state from before the solve
+    //! \param solve_threw Whether the solve threw an exception
+    //! \return Whether the state was restored from the snapshot
+    bool restoreIfDiverged(const SingleWellState& snapshot, const bool solve_threw);
+
     std::string name;
     std::reference_wrapper<const ParallelWellInfo<Scalar>> parallel_info;
 
