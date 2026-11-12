@@ -81,11 +81,13 @@ struct RunDeckFixture
  * returns its summary with all vectors loaded. A failed run ends the test case.
  *
  * \tparam TypeTag The type tag of the simulator to run
+ * \param extra_args Further command-line parameters of the run
  */
 template <class TypeTag>
 EclIO::ESmry runDeck(const std::filesystem::path& dir,
                      const std::string& name,
-                     const std::string& deck_text)
+                     const std::string& deck_text,
+                     const std::vector<std::string>& extra_args = {})
 {
     const auto deck_file = dir / (name + ".DATA");
     std::ofstream(deck_file) << deck_text;
@@ -93,6 +95,7 @@ EclIO::ESmry runDeck(const std::filesystem::path& dir,
     std::vector<std::string> args = {boost::unit_test::framework::master_test_suite().argv[0],
                                      deck_file.string(),
                                      "--output-dir=" + dir.string()};
+    args.insert(args.end(), extra_args.begin(), extra_args.end());
     std::vector<char*> argv;
     std::ranges::transform(args, std::back_inserter(argv),
                            [](std::string& arg) { return arg.data(); });

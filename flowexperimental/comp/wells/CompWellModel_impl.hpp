@@ -54,8 +54,23 @@ CompWellModel<TypeTag>::CompWellModel(Simulator& simulator, const NewtonIteratio
     , last_valid_comp_well_states_(comp_config_)
     , dwell_fraction_max_(wellNewtonLimit_<Parameters::DwellFractionMax<Scalar>>())
     , dbhp_max_rel_(wellNewtonLimit_<Parameters::DbhpMaxRel<Scalar>>())
+    , damp_section_densities_(Parameters::Get<Parameters::CompWellDampSectionDensities>())
 {
     local_num_cells_ = simulator.gridView().size(0);
+}
+
+template <typename TypeTag>
+void
+CompWellModel<TypeTag>::
+registerParameters()
+{
+    Parameters::Register<Parameters::CompWellDampSectionDensities>(
+        "Damp the wellbore density of each section between two well "
+        "connections from one time step to the next, so that each section "
+        "follows a change of its own flow. When disabled (the default), the "
+        "hydrostatic pressure offset of each connection from the reference "
+        "depth is damped, and a deeper connection follows a change more "
+        "slowly than the ones above it.");
 }
 
 template <typename TypeTag>
@@ -165,7 +180,8 @@ createWellContainer()
             = simulator_.problem().pvtRegionIndex(well_connection_data_[w].front().cell_index);
         well_container_.emplace_back(std::make_shared<CompWell<TypeTag>>(wells_ecl_[w], w, well_connection_data_[w],
                                                                           dwell_fraction_max_, dbhp_max_rel_,
-                                                                          pvt_region_idx));
+                                                                          pvt_region_idx,
+                                                                          damp_section_densities_));
     }
 }
 

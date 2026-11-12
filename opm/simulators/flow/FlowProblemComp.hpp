@@ -152,6 +152,7 @@ public:
             "the vapour or liquid equation-of-state root, and water and the "
             "flashed phases are then rescaled to fill the pore volume. When "
             "disabled (the default), the input SWAT is retained.");
+        GetPropType<TypeTag, Properties::WellModel>::registerParameters();
     }
 
     Opm::CompositionalConfig::EOSType getEosType() const

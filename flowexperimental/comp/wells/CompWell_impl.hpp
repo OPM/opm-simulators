@@ -34,6 +34,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <stdexcept>
 #include <string>
 
@@ -46,11 +47,13 @@ CompWell(const Well& well,
          const std::vector<CompConnectionData>& well_connection_data,
          const Scalar dwell_fraction_max,
          const Scalar dbhp_max_rel,
-         const unsigned pvt_region_idx)
+         const unsigned pvt_region_idx,
+         const bool damp_section_densities)
   : CompWellInterface<TypeTag>(well, index_of_well, well_connection_data)
   , dwell_fraction_max_(dwell_fraction_max)
   , dbhp_max_rel_(dbhp_max_rel)
   , pvt_region_idx_(pvt_region_idx)
+  , damp_section_densities_(damp_section_densities)
 {
 }
 
@@ -113,13 +116,143 @@ calculateExplicitQuantities(const Simulator& simulator,
         this->prev_water_mass_ = contents.water_mass;
 
         // Keep each connection's hydrostatic pressure offset fixed for the
-        // time step, using the density of the single wellbore node.
-        const Scalar gravity = simulator.problem().gravity()[2];
-        for (int con_idx = 0; con_idx < this->number_of_connection_; ++con_idx) {
-            this->connection_pressure_diffs_[con_idx] = contents.density * gravity
-                * (this->connection_depths_[con_idx] - this->reference_depth_);
+        // time step.
+        updateConnectionPressureDiffs_(simulator, contents.density,
+                                       fluid_state_scalar.temperature(0),
+                                       well_state);
+    }
+}
+
+template <typename TypeTag>
+void
+CompWell<TypeTag>::
+updateConnectionPressureDiffs_(const Simulator& simulator,
+                               const Scalar wellbore_density,
+                               const Scalar temperature,
+                               const SingleWellState& well_state)
+{
+    // The connections are ordered from the top of the well. The wellbore between
+    // a connection and the one above it carries the flow of that connection and
+    // all below it. Those flows, and the pressures they are flashed at, are taken
+    // at the start of the time step, with offsets from the density of the single
+    // wellbore node.
+    const Scalar gravity = simulator.problem().gravity()[2];
+    const int num_conn = this->number_of_connection_;
+    for (int con_idx = 0; con_idx < num_conn; ++con_idx) {
+        this->connection_pressure_diffs_[con_idx] = wellbore_density * gravity
+            * (this->connection_depths_[con_idx] - this->reference_depth_);
+    }
+
+    updateSecondaryQuantities(simulator);
+    const bool allow_crossflow = this->well_ecl_.getAllowCrossFlow()
+        || allDrawDownWrongDirection_(simulator);
+    constexpr int num_rates = PrimaryVariables::numWellConservationEq;
+    std::vector<std::array<Scalar, num_rates>> flow_up(num_conn);
+    std::array<Scalar, num_rates> flow_below{};
+    std::vector<EvalWell> connection_rates(num_rates);
+    for (int con_idx = num_conn - 1; con_idx >= 0; --con_idx) {
+        std::ranges::fill(connection_rates, EvalWell{0.0});
+        calculateSingleConnectionRate(simulator, con_idx, allow_crossflow, connection_rates);
+        for (int i = 0; i < num_rates; ++i) {
+            flow_below[i] += getValue(connection_rates[i]);
+        }
+        flow_up[con_idx] = flow_below;
+    }
+
+    // Without flow, the wellbore holds the fluid above it, and at the top that
+    // of the wellbore node. Either the density of each section between two
+    // connections is damped on its own, so that a deep connection does not lag
+    // behind the ones above it, or the offset of each connection is damped
+    // towards the new offset of the one above it plus the new density of the
+    // section between them. The last densities and offsets count only while the
+    // well has the connections they were taken at, in the same cells and at the
+    // same depths, and the offsets only for the same reference depth.
+    const auto& last_densities = well_state.connection_densities;
+    const auto& last_diffs = well_state.connection_pressure_diffs;
+    const bool same_connections = well_state.connection_density_cells == this->well_cells_
+        && well_state.connection_density_depths == this->connection_depths_;
+    assert(!same_connections || (std::ssize(last_densities) == num_conn
+                                 && std::ssize(last_diffs) == num_conn));
+    const bool damp_sections = same_connections && this->damp_section_densities_;
+    const bool damp_offsets = same_connections && !this->damp_section_densities_
+        && well_state.connection_reference_depth == this->reference_depth_;
+    constexpr Scalar weight = connection_density_weight_;
+    this->connection_densities_.resize(num_conn);
+    const Scalar bhp = getValue(this->primary_variables_.getBhp());
+    Scalar density = wellbore_density;
+    Scalar depth_above = this->reference_depth_;
+    Scalar diff_above = 0.;
+    for (int con_idx = 0; con_idx < num_conn; ++con_idx) {
+        const Scalar pressure = bhp + this->connection_pressure_diffs_[con_idx];
+        density = streamDensity_(flow_up[con_idx], pressure, temperature).value_or(density);
+        const Scalar section_density = damp_sections
+            ? weight * density + (1. - weight) * last_densities[con_idx]
+            : density;
+        const Scalar depth = this->connection_depths_[con_idx];
+        diff_above += section_density * gravity * (depth - depth_above);
+        if (damp_offsets) {
+            diff_above = weight * diff_above + (1. - weight) * last_diffs[con_idx];
+        }
+        depth_above = depth;
+        this->connection_densities_[con_idx] = section_density;
+        this->connection_pressure_diffs_[con_idx] = diff_above;
+    }
+}
+
+template <typename TypeTag>
+std::optional<typename CompWell<TypeTag>::Scalar>
+CompWell<TypeTag>::
+streamDensity_(const std::array<Scalar, PrimaryVariables::numWellConservationEq>& mass_rates,
+               const Scalar pressure,
+               const Scalar temperature)
+{
+    // The rates are the net flow of each component past the connection, negative
+    // up the wellbore. A component fills the wellbore whichever way it flows, so
+    // its magnitude counts.
+    Scalar hydrocarbon_mass = 0.;
+    Scalar molar_rate = 0.;
+    std::array<Scalar, num_comp> molar_rates{};
+    for (unsigned comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
+        hydrocarbon_mass += std::abs(mass_rates[comp_idx]);
+        molar_rates[comp_idx] = std::abs(mass_rates[comp_idx]) / FluidSystem::molarMass(comp_idx);
+        molar_rate += molar_rates[comp_idx];
+    }
+    Scalar water_mass = 0.;
+    if constexpr (waterEnabled) {
+        water_mass = std::abs(mass_rates[water_comp_idx]);
+    }
+    if (hydrocarbon_mass + water_mass == 0.) {
+        return std::nullopt;
+    }
+
+    Scalar volume = 0.;
+    if (molar_rate > 0.) {
+        // the floor the mole fractions of the wellbore fluid have as well
+        constexpr Scalar min_mole_fraction = 1.e-10;
+        FluidState<Scalar> fluid_state;
+        for (unsigned comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
+            const Scalar mole_fraction = molar_rates[comp_idx] / molar_rate;
+            fluid_state.setMoleFraction(comp_idx, std::max(mole_fraction, min_mole_fraction));
+        }
+        fluid_state.setPressure(FluidSystem::oilPhaseIdx, pressure);
+        fluid_state.setPressure(FluidSystem::gasPhaseIdx, pressure);
+        fluid_state.setTemperature(temperature);
+        for (unsigned comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
+            fluid_state.setKvalue(comp_idx, fluid_state.wilsonK_(comp_idx));
+        }
+        fluid_state.setLvalue(-1.);
+        flashFluidState_(fluid_state);
+        const Scalar so = fluid_state.saturation(FluidSystem::oilPhaseIdx);
+        const Scalar sg = fluid_state.saturation(FluidSystem::gasPhaseIdx);
+        volume += hydrocarbon_mass / (so * fluid_state.density(FluidSystem::oilPhaseIdx)
+                                      + sg * fluid_state.density(FluidSystem::gasPhaseIdx));
+    }
+    if constexpr (waterEnabled) {
+        if (water_mass > 0.) {
+            volume += water_mass / waterDensity_(pressure, temperature);
         }
     }
+    return (hydrocarbon_mass + water_mass) / volume;
 }
 
 template <typename TypeTag>
@@ -788,6 +921,11 @@ updateConnectionQuantities(const Simulator& simulator,
         // Report the connection pressure used in the flow calculation.
         conn_data.pressure[con] = well_state.bhp + this->connection_pressure_diffs_[con];
     }
+    well_state.connection_densities = this->connection_densities_;
+    well_state.connection_pressure_diffs = this->connection_pressure_diffs_;
+    well_state.connection_density_cells = this->well_cells_;
+    well_state.connection_density_depths = this->connection_depths_;
+    well_state.connection_reference_depth = this->reference_depth_;
 }
 
 template <typename TypeTag>

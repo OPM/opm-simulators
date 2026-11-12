@@ -45,6 +45,15 @@
 #include <string>
 #include <vector>
 
+namespace Opm::Parameters {
+
+// Damp the density of each wellbore section between two connections from one
+// time step to the next. By default, the hydrostatic offset of each connection
+// is damped instead.
+struct CompWellDampSectionDensities { static constexpr bool value = false; };
+
+} // namespace Opm::Parameters
+
 namespace Opm {
 
 class RegionVariableCollection;
@@ -79,6 +88,8 @@ public:
     // TODO: Scalar will probably to be TypeTag later
     using CompWellPtr = std::shared_ptr<CompWell<TypeTag> >;
     CompWellModel(Simulator& /*simulator*/, const NewtonIterationContext& /*iter_ctx*/);
+
+    static void registerParameters();
 
     // No extra dofs are inserted for wells. (we use a Schur complement.)
     [[nodiscard]] unsigned numDofs() const override
@@ -222,6 +233,9 @@ private:
      // limits of a Newton update of the wells, as for the black-oil wells
      Scalar dwell_fraction_max_;
      Scalar dbhp_max_rel_;
+     // damp the density of each wellbore section rather than the hydrostatic
+     // offset of each connection
+     bool damp_section_densities_;
 
      // this is needed for parallel running, not all the wells will be in the same process
      std::vector<Well> wells_ecl_;

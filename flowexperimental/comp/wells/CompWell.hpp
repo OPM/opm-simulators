@@ -108,7 +108,8 @@ public:
              const std::vector<CompConnectionData>& well_connection_data,
              Scalar dwell_fraction_max,
              Scalar dbhp_max_rel,
-             unsigned pvt_region_idx);
+             unsigned pvt_region_idx,
+             bool damp_section_densities);
 
     void init() override;
 
@@ -162,6 +163,9 @@ private:
     const Scalar dbhp_max_rel_;
     // PVT region of the connection cell, which gives the water properties
     const unsigned pvt_region_idx_;
+    // damp the density of each wellbore section rather than the hydrostatic
+    // offset of each connection
+    const bool damp_section_densities_;
 
     // primary variables
     PrimaryVariables primary_variables_;
@@ -176,8 +180,16 @@ private:
     // hydrocarbon volume fraction below which the wellbore counts as holding water alone
     static constexpr Scalar min_hydrocarbon_fraction_ {1.e-8};
     // Hydrostatic pressure offset of each connection from BHP, calculated
-    // from the wellbore density at the start of the time step.
+    // from the flow past each connection at the start of the time step.
     std::vector<Scalar> connection_pressure_diffs_;
+    // density of the wellbore fluid between each connection and the one above
+    // it that gives these offsets
+    std::vector<Scalar> connection_densities_;
+    // Weight of the new density of each wellbore section between two connections,
+    // or of the new offset of each connection, against the one of the last time
+    // step. The densities are explicit, and the damping keeps them from swinging
+    // with the flow they lead to.
+    static constexpr Scalar connection_density_weight_ {1. / 3.};
 
     std::array<EvalWell, num_comp> mass_fractions_{0.};
     EvalWell fluid_density_{0.};
@@ -258,6 +270,22 @@ private:
     // system's water PVT of the well's PVT region
     template <typename T>
     T waterDensity_(const T& pressure, const Scalar temperature) const;
+
+    // hydrostatic pressure offset of each connection from the reference depth,
+    // from the density of the fluid flowing past it in the wellbore, damped
+    // by the densities or offsets in the well state when they are for the same
+    // connections
+    void updateConnectionPressureDiffs_(const Simulator& simulator,
+                                        const Scalar wellbore_density,
+                                        const Scalar temperature,
+                                        const SingleWellState& well_state);
+
+    // density of a stream of the given component mass rates at the given
+    // pressure and temperature; none for a stream without flow
+    std::optional<Scalar>
+    streamDensity_(const std::array<Scalar, PrimaryVariables::numWellConservationEq>& mass_rates,
+                   const Scalar pressure,
+                   const Scalar temperature);
 
     template <typename T>
     void
