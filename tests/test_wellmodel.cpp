@@ -358,7 +358,7 @@ END
     const auto schedule = std::make_unique<const Opm::Schedule>
         (deck, *eclipse_state, std::make_shared<Opm::Python>());
     auto summary_state = Opm::SummaryState
-        (Opm::TimeService::from_time_t(schedule->getStartTime()),
+        (schedule->getStartTime(),
          eclipse_state->runspec().udqParams().undefinedValue());
     summary_state.update_well_var("INJ01", "WUFRAC1", 350.0);
 
