@@ -31,6 +31,9 @@
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
+#include <opm/models/utils/parametersystem.hpp>
+
+#include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/wells/MultisegmentWellGeneric.hpp>
 #include <opm/simulators/wells/RateConverter.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
@@ -53,6 +56,21 @@ resize(const int numSegments)
 }
 
 template<class FluidSystem, class Indices>
+typename FluidSystem::Scalar
+MultisegmentWellPrimaryVariables<FluidSystem,Indices>::varScale(const int eqIdx)
+{
+    if (eqIdx == WQTotal) {
+        static const Scalar s = Parameters::Get<Parameters::WellRateScaling<Scalar>>();
+        return s;
+    }
+    if (eqIdx == SPres) {
+        static const Scalar s = Parameters::Get<Parameters::WellBhpScaling<Scalar>>();
+        return s;
+    }
+    return Scalar{1}; // fractions and temperature stay unscaled
+}
+
+template<class FluidSystem, class Indices>
 void MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 setEvaluationsFromValues()
 {
@@ -60,7 +78,10 @@ setEvaluationsFromValues()
         for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
             evaluation_[seg][eq_idx] = 0.0;
             evaluation_[seg][eq_idx].setValue(value_[seg][eq_idx]);
-            evaluation_[seg][eq_idx].setDerivative(eq_idx + Indices::numEq, 1.0);
+            // The value stays physical; the derivative d(x)/d(x/s) = s makes
+            // this the Jacobian column of the scaled variable. Newton
+            // increments arrive scaled and are converted in updateNewton().
+            evaluation_[seg][eq_idx].setDerivative(eq_idx + Indices::numEq, varScale(eq_idx));
         }
     }
 }
@@ -196,8 +217,9 @@ updateNewton(const BVectorWell& dwells,
 
         // update the segment pressure
         {
-            const int sign = dwells[seg][SPres] > 0.? 1 : -1;
-            const Scalar dx_limited = sign * std::min(std::abs(dwells[seg][SPres]) * relaxation_factor, max_pressure_change);
+            const Scalar dspres = this->physicalIncrement(dwells, seg, SPres);
+            const int sign = dspres > 0.? 1 : -1;
+            const Scalar dx_limited = sign * std::min(std::abs(dspres) * relaxation_factor, max_pressure_change);
             // some cases might have defaulted bhp constraint of 1 bar, we use a slightly smaller value as the bhp lower limit for Newton update
             // so that bhp constaint can be an active control when needed.
             const Scalar lower_limit = (seg == 0) ? bhp_lower_limit : seg_pres_lower_limit;
@@ -206,7 +228,8 @@ updateNewton(const BVectorWell& dwells,
 
         // update the total rate // TODO: should we have a limitation of the total rate change?
         {
-            value_[seg][WQTotal] = old_primary_variables[seg][WQTotal] - relaxation_factor * dwells[seg][WQTotal];
+            value_[seg][WQTotal] = old_primary_variables[seg][WQTotal]
+                - relaxation_factor * this->physicalIncrement(dwells, seg, WQTotal);
 
             // make sure that no injector produce and no producer inject
             if (seg == 0) {
