@@ -620,6 +620,7 @@ if(CUDA_FOUND OR hip_FOUND)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpu_linear_two_phase_material.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpuPvt.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpuConstantCompressibilityWaterPvt.cu)
+  ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpuDryGasPvt.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpuLiveOilPvt.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpuTabulatedFunctions.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpu_smart_pointers.cu)
@@ -654,6 +655,7 @@ if(CUDA_FOUND OR hip_FOUND)
       tests/gpuistl/test_gpu_linear_two_phase_material.cu
       tests/gpuistl/test_gpuPvt.cu
       tests/gpuistl/test_gpuConstantCompressibilityWaterPvt.cu
+      tests/gpuistl/test_gpuDryGasPvt.cu
       tests/gpuistl/test_gpuLiveOilPvt.cu
       tests/gpuistl/test_gpuTabulatedFunctions.cu
       tests/gpuistl/test_gpuBlackOilFluidSystem.cu
