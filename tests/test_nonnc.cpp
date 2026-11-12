@@ -108,8 +108,11 @@ BOOST_AUTO_TEST_CASE(NoNNC)
                                                360*10./
                                             DZ
                                                360*1./
+                                            BOX
+                                               1 8 1 15 1 1 /
                                             TOPS
-                                               360*100./
+                                               120*100./
+                                            ENDBOX
 
                                             PORO
                                                0. 0.25 0. 357*0.25/
