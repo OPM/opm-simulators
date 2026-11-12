@@ -737,6 +737,41 @@ wellUnderGroupControl(const SingleWellState<Scalar, IndexTraits>& ws) const
 }
 
 template<typename Scalar, typename IndexTraits>
+std::array<bool, 3>
+WellInterfaceGeneric<Scalar, IndexTraits>::
+rateControlledPhases(const SingleWellState<Scalar, IndexTraits>& ws) const
+{
+    std::array<bool, 3> phases{false, false, false};
+    if (!this->isProducer()) {
+        return phases;
+    }
+
+    using PCMode = Group::ProductionCMode;
+    auto cmode = PCMode::NONE;
+    switch (ws.production_cmode) {
+    case Well::ProducerCMode::ORAT: cmode = PCMode::ORAT; break;
+    case Well::ProducerCMode::WRAT: cmode = PCMode::WRAT; break;
+    case Well::ProducerCMode::GRAT: cmode = PCMode::GRAT; break;
+    case Well::ProducerCMode::LRAT: cmode = PCMode::LRAT; break;
+    case Well::ProducerCMode::GRUP: {
+        const auto& target = ws.use_group_target_fallback ? ws.group_target_fallback
+                                                          : ws.group_target;
+        if (target.has_value()) {
+            cmode = target->production_cmode;
+        }
+        break;
+    }
+    default:
+        break;
+    }
+
+    phases[IndexTraits::oilPhaseIdx] = (cmode == PCMode::ORAT || cmode == PCMode::LRAT);
+    phases[IndexTraits::waterPhaseIdx] = (cmode == PCMode::WRAT || cmode == PCMode::LRAT);
+    phases[IndexTraits::gasPhaseIdx] = (cmode == PCMode::GRAT);
+    return phases;
+}
+
+template<typename Scalar, typename IndexTraits>
 void WellInterfaceGeneric<Scalar, IndexTraits>::resetWellOperability()
 {
     this->operability_status_.resetOperability();
