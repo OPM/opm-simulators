@@ -282,11 +282,16 @@ writeInit()
 {
     if (collectOnIORank_.isIORank()) {
         std::map<std::string, std::vector<int>> integerVectors;
-        // globalRanks() is empty when the I/O-rank cell collection is not set up
-        // (parallel runs with LGRs). Passing it on would write a zero-length
-        // MPI_RANK, which the per-LGR INIT sections then index by father cell.
         if (collectOnIORank_.isParallel() && !collectOnIORank_.globalRanks().empty()) {
-            integerVectors.emplace("MPI_RANK", collectOnIORank_.globalRanks());
+            auto ranks = collectOnIORank_.globalRanks();
+            if constexpr (std::is_same_v<EquilGrid, Dune::CpGrid>) {
+                // MPI_RANK holds one value per level-0 cell, globalRanks() one
+                // per leaf cell.
+                if (this->equilGrid_->maxLevel() > 0) {
+                    ranks = levelZeroRanks(*this->equilGrid_, ranks);
+                }
+            }
+            integerVectors.emplace("MPI_RANK", std::move(ranks));
         }
 
         if (const auto& lgrs = this->eclState_.getLgrs(); lgrs.size() > 0) {
