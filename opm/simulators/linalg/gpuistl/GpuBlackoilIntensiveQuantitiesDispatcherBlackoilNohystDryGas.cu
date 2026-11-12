@@ -44,35 +44,9 @@ namespace Opm::gpuistl {
 
 template <>
 struct GpuDispatcherTraits<Properties::TTag::FlowProblemNohyst, LiveOilDryGasPvtApproaches>
+    : dispatcher_detail::BlackoilNohystDispatcherTraits<Properties::TTag::FlowBlackoilNohystGPU>
 {
-    using CpuTag = Properties::TTag::FlowProblemNohyst;
-    using GpuTag = Properties::TTag::FlowBlackoilNohystGPU;
-
-    using FluidSystemView = GetPropType<GpuTag, Properties::FluidSystem>;
-    using GpuPrimaryVariables = GetPropType<GpuTag, Properties::PrimaryVariables>;
-    using GpuIntensiveQuantities = BlackOilIntensiveQuantities<GpuTag>;
-    using GpuFlowProblemBuf = dispatcher_detail::GpuFlowProblemBufferFor<GpuTag>;
-
-    using Approaches = typename FluidSystemView::PvtApproachesType;
-    static_assert(Approaches::oil == OilPvtApproach::LiveOil);
-    static_assert(Approaches::gas == GasPvtApproach::DryGas);
-    static_assert(Approaches::water == WaterPvtApproach::ConstantCompressibilityWater);
-
     static constexpr const char* name = "three-phase black-oil: live oil and dry gas";
-
-    template <class Problem>
-    static void validate(const Problem& problem)
-    {
-        using FluidSystem = GetPropType<CpuTag, Properties::FluidSystem>;
-        dispatcher_detail::assertNoDiffusionOrDispersion<GpuTag>();
-        dispatcher_detail::validateBlackoilNohyst<FluidSystem>(problem);
-
-        // PVDG with VAPOIL is a valid CPU combination, but no deck uses it.
-        if (FluidSystem::enableVaporizedOil()) {
-            OPM_THROW(std::logic_error,
-                      "VAPOIL (vaporized oil) with dry gas (PVDG) is not supported on the GPU");
-        }
-    }
 };
 
 // Used by flow for black-oil decks without HYSTER.

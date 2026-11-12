@@ -47,6 +47,7 @@
 #include <opm/material/fluidmatrixinteractions/GpuEclMaterialLawManager.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystemNonStatic.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/BlackOilPvtApproaches.hpp>
 #include <opm/material/thermal/GpuEclThermalLawManager.hpp>
 
 #include <opm/models/blackoil/blackoilintensivequantities.hh>
@@ -66,6 +67,7 @@
 #include <memory>
 #include <optional>
 #include <stdexcept>
+#include <string>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -186,8 +188,8 @@ void rejectUnsupportedSaturationFunctions(const MaterialLawManager& materialLawM
 }
 
 /// Validation shared by the three-phase black-oil configurations of
-/// \c FlowProblemNohyst. The PVT approaches and VAPOIL are checked per
-/// configuration.
+/// \c FlowProblemNohyst. The PVT approaches are checked by the facade, and
+/// VAPOIL by \c BlackoilNohystDispatcherTraits.
 template <class FluidSystem, class Problem>
 void validateBlackoilNohyst(const Problem& problem)
 {
@@ -255,6 +257,49 @@ constexpr void assertNoDiffusionOrDispersion()
     static_assert(!getPropValue<GpuTag, Properties::EnableDiffusion>());
     static_assert(!getPropValue<GpuTag, Properties::EnableDispersion>());
 }
+
+/// The \c GpuDispatcherTraits of the three-phase black-oil configurations of
+/// \c FlowProblemNohyst, except \c name. They differ only in the GPU TypeTag,
+/// whose fluid system fixes the PVT approaches: wet gas requires VAPOIL, dry gas
+/// rejects it.
+///
+/// \c CpuTagT is a template parameter so that its properties are looked up only
+/// on instantiation: this header is also included where \c FlowProblemNohyst is
+/// only declared.
+template <class GpuTagT, class CpuTagT = Properties::TTag::FlowProblemNohyst>
+struct BlackoilNohystDispatcherTraits
+{
+    using CpuTag = CpuTagT;
+    using GpuTag = GpuTagT;
+
+    using FluidSystemView = GetPropType<GpuTag, Properties::FluidSystem>;
+    using GpuPrimaryVariables = GetPropType<GpuTag, Properties::PrimaryVariables>;
+    using GpuIntensiveQuantities = BlackOilIntensiveQuantities<GpuTag>;
+    using GpuFlowProblemBuf = GpuFlowProblemBufferFor<GpuTag>;
+
+    static constexpr bool wetGas
+        = FluidSystemView::PvtApproachesType::gas == GasPvtApproach::WetGas;
+
+    template <class Problem>
+    static void validate(const Problem& problem)
+    {
+        using FluidSystem = GetPropType<CpuTag, Properties::FluidSystem>;
+        assertNoDiffusionOrDispersion<GpuTag>();
+        validateBlackoilNohyst<FluidSystem>(problem);
+
+        // PVDG with VAPOIL is a valid CPU combination, but no deck uses it.
+        // PVTG without VAPOIL is probably handled (Rv = 0 in every branch), but
+        // no deck or test has verified it. Lift either check together with such
+        // a test.
+        if (FluidSystem::enableVaporizedOil() != wetGas) {
+            const std::string message = wetGas
+                ? "Wet gas (PVTG) without VAPOIL is not supported on the GPU"
+                : "VAPOIL (vaporized oil) with dry gas (PVDG) is not supported on the GPU; "
+                  "VAPOIL is supported with wet gas (PVTG)";
+            OPM_THROW(std::logic_error, message);
+        }
+    }
+};
 
 /// The GPU problem data is indexed from zero over all grid DoFs. The checks
 /// that do not need the problem are done by the facade, before the setup.

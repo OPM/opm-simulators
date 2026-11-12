@@ -29,8 +29,9 @@
  * GpuFlowBlackoilNohystTypeTag.hpp, and every cell is compared, values and
  * derivatives.
  *
- * Also checks that the production dispatcher for this TypeTag rejects a deck
- * with endpoint scaling, which the GPU material law manager does not apply.
+ * Also checks which configuration the production dispatcher for this TypeTag
+ * chooses, and that it rejects decks outside them, among them a deck with
+ * endpoint scaling, which the GPU material law manager does not apply.
  */
 #include <config.h>
 
@@ -350,8 +351,9 @@ std::unique_ptr<Simulator> makeSimulator(const std::string& deck)
 }
 
 /// Run the production GPU intensive-quantities dispatcher once on the initial
-/// solution of \p sim, as flow does for the first linearization.
-void runDispatcher(const Simulator& sim)
+/// solution of \p sim, as flow does for the first linearization, and return
+/// the name of the configuration it chose.
+std::string runDispatcher(const Simulator& sim)
 {
     using Dispatcher = Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>;
     using PrimaryVariables = typename Dispatcher::PrimaryVariables;
@@ -375,6 +377,8 @@ void runDispatcher(const Simulator& sim)
                       intensiveQuantitiesPtrs.data(),
                       numCells,
                       /*timeIdx=*/0u);
+    BOOST_REQUIRE(dispatcher.configurationName() != nullptr);
+    return dispatcher.configurationName();
 }
 
 /// Replace the text from \p begin up to, but not including, \p end.
@@ -432,6 +436,35 @@ std::string deckWithWetGas(bool vaporizedOil)
         replaceOnce(deck, " 2030 200 2045 0 2015 0 1 1 0 /", " 2030 200 2045 0 2018 0 1 1 0 /");
     }
     return deck;
+}
+
+/// The test deck with VAPOIL but dry gas (PVDG).
+std::string deckWithVaporizedOilAndDryGas()
+{
+    std::string deck = deckString;
+    addVaporizedOil(deck);
+    return deck;
+}
+
+/// The test deck with dead oil (PVDO) instead of live oil.
+std::string deckWithDeadOil()
+{
+    std::string deck = deckString;
+    replaceOnce(deck, "DISGAS\n", "");
+    replaceSection(deck, "PVTO\n", "REGIONS\n",
+                   "PVDO\n"
+                   "  50.0 1.10 1.20\n"
+                   " 150.0 1.08 1.25\n"
+                   " 350.0 1.05 1.35 /\n");
+    replaceSection(deck, "RSVD\n", "SCHEDULE\n", "");
+    replaceOnce(deck, " 2030 200 2045 0 2015 0 1 0 0 /", " 2030 200 2045 0 2015 0 0 0 0 /");
+    replaceOnce(deck, "DRSDT\n 0 /\n", "");
+    return deck;
+}
+
+bool contains(std::string_view text, std::string_view part)
+{
+    return text.find(part) != std::string_view::npos;
 }
 
 /// The test deck with endpoint scaling: ENDSCALE in RUNSPEC and a SWL array,
@@ -655,9 +688,35 @@ BOOST_AUTO_TEST_CASE(DispatcherRejectsEndpointScaling)
     BOOST_CHECK_EXCEPTION(runDispatcher(*sim),
                           std::logic_error,
                           [](const std::logic_error& e) {
-                              return std::string_view(e.what()).find("endpoint scaling")
-                                  != std::string_view::npos;
+                              return contains(e.what(), "endpoint scaling");
                           });
+}
+
+BOOST_AUTO_TEST_CASE(DispatcherChoosesConfigurationFromPvt)
+{
+    // Each case starts from its own deck: the CPU fluid system is static.
+    BOOST_CHECK(contains(runDispatcher(*makeSimulator(deckString)), "dry gas"));
+    BOOST_CHECK(contains(runDispatcher(*makeSimulator(deckWithWetGas(true))), "wet gas"));
+    BOOST_CHECK(contains(runDispatcher(*makeSimulator(deckString)), "dry gas"));
+}
+
+BOOST_AUTO_TEST_CASE(DispatcherRejectsUnsupportedPvt)
+{
+    const auto throwsWith = [](const std::string& deck, std::string_view part) {
+        const auto sim = makeSimulator(deck);
+        BOOST_CHECK_EXCEPTION(runDispatcher(*sim),
+                              std::logic_error,
+                              [part](const std::logic_error& e) {
+                                  BOOST_TEST_MESSAGE(e.what());
+                                  return contains(e.what(), part);
+                              });
+    };
+    // Dry gas configuration, which rejects VAPOIL.
+    throwsWith(deckWithVaporizedOilAndDryGas(), "VAPOIL");
+    // Wet gas configuration, which requires VAPOIL.
+    throwsWith(deckWithWetGas(false), "without VAPOIL");
+    // No configuration has dead oil.
+    throwsWith(deckWithDeadOil(), "PVDO");
 }
 
 BOOST_AUTO_TEST_CASE(ThreePhaseLiveOilDryGasGpuVsCpu)

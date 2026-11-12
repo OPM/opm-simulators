@@ -60,7 +60,7 @@ struct GpuDispatcherConfigurations;
 template <>
 struct GpuDispatcherConfigurations<Properties::TTag::FlowProblemNohyst>
 {
-    using type = std::tuple<LiveOilDryGasPvtApproaches>;
+    using type = std::tuple<LiveOilDryGasPvtApproaches, LiveOilWetGasPvtApproaches>;
 };
 
 template <>

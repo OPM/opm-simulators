@@ -33,8 +33,8 @@ namespace Opm::Parameters {
 // Experimental: route the per-element BlackOilIntensiveQuantities update through the
 // GPU dispatcher instead of computing it on the CPU. Supported are the CO2STORE
 // gas-water energy configuration and three-phase black-oil with live oil and dry
-// gas; the configuration is chosen from the deck and validated against it at
-// initialization.
+// or wet gas; the configuration is chosen from the deck and validated against it
+// at initialization.
 struct ExperimentalComputePropertiesOnGpu { static constexpr bool value = false; };
 
 } // namespace Opm::Parameters
@@ -80,7 +80,7 @@ struct GpuBlackoilIntensiveQuantitiesDispatcherSupport<
 
 /// Enable the dispatcher for the TypeTag that \c flow uses for black-oil decks
 /// without hysteresis. Only three-phase decks with live oil (PVTO), dry gas
-/// (PVDG) and PVTW water are accepted at run time.
+/// (PVDG) or wet gas (PVTG with VAPOIL), and PVTW water are accepted at run time.
 template <>
 struct GpuBlackoilIntensiveQuantitiesDispatcherSupport<
     Opm::Properties::TTag::FlowProblemNohyst> {

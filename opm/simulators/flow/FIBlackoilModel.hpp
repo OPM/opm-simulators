@@ -132,8 +132,9 @@ public:
         Parameters::Register<Parameters::ExperimentalComputePropertiesOnGpu>
             ("Experimental: compute the intensive quantities on the GPU. Supported "
              "for CO2STORE (gas-water with energy) and for three-phase black-oil "
-             "with live oil (PVTO), dry gas (PVDG) and PVTW water on one MPI "
-             "process; other decks are rejected at initialization.");
+             "with live oil (PVTO), dry gas (PVDG) or wet gas (PVTG with VAPOIL), "
+             "and PVTW water on one MPI process; other decks are rejected at "
+             "initialization.");
 #endif
     }
 
