@@ -37,12 +37,9 @@ int ThreadManager::numThreads_ = 1;
 void ThreadManager::registerParameters()
 {
     Parameters::Register<Parameters::ThreadsPerProcess>
-        ("The maximum number of threads to be instantiated per process "
-         "If the parameter is not set then the default value 2 is used."
-         "If the parameter '-1' then the number of threads "
-         "will be determined by OpenMP, i. e, it will either be the "
-         "environment variable OMP_NUM_THREADS or all all available "
-         "processors");
+        ("The maximum number of threads to be instantiated per process. "
+         "'-1' lets OpenMP decide, i.e. the value of OMP_NUM_THREADS if set "
+         "and the number of logical CPUs otherwise");
 }
 
 void ThreadManager::init(bool queryCommandLineParameter)
