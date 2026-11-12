@@ -39,8 +39,10 @@
 #include <HYPRE.h>
 #include <HYPRE_krylov.h>
 #include <HYPRE_parcsr_ls.h>
+#include <_hypre_parcsr_ls.h>
 #include <_hypre_utilities.h>
 
+#include <algorithm>
 #include <numeric>
 #include <vector>
 
@@ -223,9 +225,18 @@ public:
     {
         OPM_TIMEBLOCK(prec_update);
 
-        // Update matrix values using pre-allocated helper arrays
-        HypreInterface::updateMatrixValues(A_, A_hypre_, sparsity_pattern_,
-                                           host_arrays_, device_arrays_, use_gpu_backend_);
+        // Update matrix values: after the first update, a direct gather into the ParCSR arrays
+        if (!direct_slots_.empty()) {
+            OPM_TIMEBLOCK(prec_update_copy);
+            copyValuesDirect_();
+        } else {
+            HypreInterface::updateMatrixValues(A_, A_hypre_, sparsity_pattern_,
+                                               host_arrays_, device_arrays_, use_gpu_backend_);
+            if (!use_gpu_backend_) {
+                buildDirectSlots_();
+            }
+        }
+
 
         // Get the underlying ParCSR matrix for setup
         HYPRE_ParCSRMatrix parcsr_A;
@@ -327,6 +338,70 @@ public:
     }
 
 private:
+    // Where each Dune value (as passed to HYPRE_IJMatrixSetValues2) lives in the assembled
+    // ParCSR matrix: diag slot h, or offd slot nnz(diag) + h.
+    void buildDirectSlots_()
+    {
+        HYPRE_ParCSRMatrix parcsr_A;
+        HYPRE_SAFE_CALL(HYPRE_IJMatrixGetObject(A_hypre_, reinterpret_cast<void**>(&parcsr_A)));
+        auto* A = reinterpret_cast<hypre_ParCSRMatrix*>(parcsr_A);
+        hypre_CSRMatrix* Ad = hypre_ParCSRMatrixDiag(A);
+        hypre_CSRMatrix* Ao = hypre_ParCSRMatrixOffd(A);
+        const HYPRE_Int nnzD = hypre_CSRMatrixNumNonzeros(Ad);
+        const HYPRE_BigInt firstRow = hypre_ParCSRMatrixFirstRowIndex(A);
+        const HYPRE_BigInt firstCol = hypre_ParCSRMatrixFirstColDiag(A);
+        const HYPRE_Int nLocCols = hypre_CSRMatrixNumCols(Ad);
+        const HYPRE_BigInt* cmap = hypre_ParCSRMatrixColMapOffd(A);
+        const HYPRE_Int nOffCols = hypre_CSRMatrixNumCols(Ao);
+        const auto& sp = sparsity_pattern_;
+        std::vector<HYPRE_Int> src, dst;
+        for (std::size_t i = 0; i < sp.rows.size(); ++i) {
+            const HYPRE_Int r = static_cast<HYPRE_Int>(sp.rows[i] - firstRow);
+            // values and columns share the offsets given to HYPRE_IJMatrixSetValues2
+            const HYPRE_Int start = host_arrays_.row_indexes[i];
+            for (HYPRE_Int t = 0; t < sp.ncols[i]; ++t) {
+                const HYPRE_BigInt c = sp.cols[start + t];
+                HYPRE_Int slot = -1;
+                if (c >= firstCol && c < firstCol + nLocCols) {
+                    const HYPRE_Int lc = static_cast<HYPRE_Int>(c - firstCol);
+                    for (HYPRE_Int h = hypre_CSRMatrixI(Ad)[r]; h < hypre_CSRMatrixI(Ad)[r + 1]; ++h) {
+                        if (hypre_CSRMatrixJ(Ad)[h] == lc) { slot = h; break; }
+                    }
+                } else if (nOffCols > 0) {
+                    const HYPRE_BigInt* it = std::lower_bound(cmap, cmap + nOffCols, c);
+                    if (it != cmap + nOffCols && *it == c) {
+                        const HYPRE_Int oc = static_cast<HYPRE_Int>(it - cmap);
+                        for (HYPRE_Int h = hypre_CSRMatrixI(Ao)[r]; h < hypre_CSRMatrixI(Ao)[r + 1]; ++h) {
+                            if (hypre_CSRMatrixJ(Ao)[h] == oc) { slot = nnzD + h; break; }
+                        }
+                    }
+                }
+                if (slot < 0) {
+                    return; // not found: keep using HYPRE_IJMatrixSetValues2
+                }
+                src.push_back(start + t);
+                dst.push_back(slot);
+            }
+        }
+        direct_src_ = std::move(src);
+        direct_slots_ = std::move(dst);
+        direct_nnz_diag_ = nnzD;
+    }
+
+    void copyValuesDirect_()
+    {
+        HYPRE_ParCSRMatrix parcsr_A;
+        HYPRE_SAFE_CALL(HYPRE_IJMatrixGetObject(A_hypre_, reinterpret_cast<void**>(&parcsr_A)));
+        auto* A = reinterpret_cast<hypre_ParCSRMatrix*>(parcsr_A);
+        HYPRE_Real* d = hypre_CSRMatrixData(hypre_ParCSRMatrixDiag(A));
+        HYPRE_Real* o = hypre_CSRMatrixData(hypre_ParCSRMatrixOffd(A));
+        const auto* values = &(A_[0][0][0][0]);
+        for (std::size_t t = 0; t < direct_slots_.size(); ++t) {
+            const HYPRE_Int h = direct_slots_[t];
+            (h < direct_nnz_diag_ ? d[h] : o[h - direct_nnz_diag_]) = values[direct_src_[t]];
+        }
+    }
+
     // Reference to the input matrix
     const M& A_;
     const Comm& comm_; //!< The communication object for parallel operations.
@@ -345,6 +420,9 @@ private:
 
     // Backend configuration
     bool use_gpu_backend_ = false;
+
+    std::vector<HYPRE_Int> direct_src_, direct_slots_;
+    HYPRE_Int direct_nnz_diag_ = 0;
 };
 
 } // namespace Hypre
