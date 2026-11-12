@@ -21,16 +21,17 @@
 /*!
  * \file
  *
- * GPU TypeTag for the three-phase black-oil configuration with live oil and
- * dry gas (e.g. SPE1), derived from the \c FlowProblemNohyst TypeTag that
- * \c flow uses for such decks.
+ * GPU TypeTags for the three-phase black-oil configurations with live oil and
+ * dry gas (e.g. SPE1) or wet gas (e.g. Norne), derived from the
+ * \c FlowProblemNohyst TypeTag that \c flow uses for such decks.
  *
  * Only the properties that must differ on the GPU are overridden: the storage
  * of the primary variables, the fluid system, the material law, the problem
  * and the element context. Everything else, in particular the module switches
  * that determine the layout of \c BlackOilIntensiveQuantities, is inherited
  * from \c FlowProblemNohyst. The CPU TypeTag can therefore be the source of
- * the cross-TypeTag converting constructors directly.
+ * the cross-TypeTag converting constructors directly. The wet gas TypeTag only
+ * differs in the PVT approaches of the fluid system.
  */
 #ifndef OPM_GPU_FLOW_BLACKOIL_NOHYST_TYPETAG_HPP
 #define OPM_GPU_FLOW_BLACKOIL_NOHYST_TYPETAG_HPP
@@ -66,6 +67,11 @@ namespace TTag {
 /// GPU-compatible primary variables, fluid system, material law and problem.
 struct FlowBlackoilNohystGPU {
     using InheritsFrom = std::tuple<FlowProblemNohyst>;
+};
+
+/// \c FlowBlackoilNohystGPU with live oil and wet gas (PVTO, PVTG and PVTW).
+struct FlowBlackoilNohystWetGasGPU {
+    using InheritsFrom = std::tuple<FlowBlackoilNohystGPU>;
 };
 
 } // namespace TTag
@@ -115,6 +121,16 @@ struct FluidSystem<TypeTag, TTag::FlowBlackoilNohystGPU>
         ::Opm::LiveOilDryGasPvtApproaches>;
 };
 
+template <class TypeTag>
+struct FluidSystem<TypeTag, TTag::FlowBlackoilNohystWetGasGPU>
+{
+    using type = ::Opm::BlackOilFluidSystemNonStatic<
+        GetPropType<TypeTag, Properties::Scalar>,
+        ::Opm::BlackOilDefaultFluidSystemIndices,
+        ::Opm::gpuistl::GpuView,
+        ::Opm::LiveOilWetGasPvtApproaches>;
+};
+
 // -----------------------------------------------------------------------
 // Problem: GpuFlowProblem (GpuView-backed) without thermal laws.
 // -----------------------------------------------------------------------
@@ -146,11 +162,11 @@ struct ElementContext<TypeTag, TTag::FlowBlackoilNohystGPU>
 
 namespace Opm::detail {
 
-// Consistency checks between the CPU TypeTag and the GPU TypeTag.
+// Consistency checks between the CPU TypeTag and a GPU TypeTag.
+template <class GpuTag>
 struct CheckFlowBlackoilNohystGpuTypeTags
 {
     using CpuTag = Properties::TTag::FlowProblemNohyst;
-    using GpuTag = Properties::TTag::FlowBlackoilNohystGPU;
 
     using GpuMaterialLaw = GetPropType<GpuTag, Properties::MaterialLaw>;
     using CpuMaterialLaw = GetPropType<CpuTag, Properties::MaterialLaw>;
@@ -177,6 +193,10 @@ struct CheckFlowBlackoilNohystGpuTypeTags
                   typename BlackOilIntensiveQuantities<GpuTag>::FluidState>,
                   "the fluid state is copied byte-wise to and from the device");
 };
+
+// sizeof instantiates the class, and with it the checks.
+static_assert(sizeof(CheckFlowBlackoilNohystGpuTypeTags<Properties::TTag::FlowBlackoilNohystGPU>) > 0);
+static_assert(sizeof(CheckFlowBlackoilNohystGpuTypeTags<Properties::TTag::FlowBlackoilNohystWetGasGPU>) > 0);
 
 } // namespace Opm::detail
 
