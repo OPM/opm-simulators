@@ -45,6 +45,12 @@ namespace Opm::Parameters {
 template<class Scalar>
 struct NewtonMaxRelax { static constexpr Scalar value = 0.5; };
 
+template<class Scalar>
+struct NewtonRelaxIncrement { static constexpr Scalar value = 0.1; };
+
+template<class Scalar>
+struct NewtonRelaxRelTol { static constexpr Scalar value = 0.2; };
+
 struct NewtonRelaxationType { static constexpr auto value = "dampen"; };
 
 } // namespace Opm::Parameters
