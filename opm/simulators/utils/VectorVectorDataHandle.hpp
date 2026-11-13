@@ -27,6 +27,8 @@
  * \brief A datahandle sending data located in multiple vectors
  * \author Markus Blatt, OPM-OP AS
  */
+#ifndef OPM_VECTOR_VECTOR_DATA_HANDLE_HPP
+#define OPM_VECTOR_VECTOR_DATA_HANDLE_HPP
 
 #include <dune/grid/common/datahandleif.hh>
 
@@ -102,3 +104,5 @@ private:
 };
 
 } // end namespace Opm
+
+#endif // OPM_VECTOR_VECTOR_DATA_HANDLE_HPP
