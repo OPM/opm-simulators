@@ -57,8 +57,11 @@ private:
         const std::filesystem::path &data_file,
         const std::string &slave_name,
         std::string &log_filename) const;
+    ReservoirCoupling::Logger& logger() { return this->logger_; }
+    ReservoirCoupling::Logger& logger() const { return this->logger_; }
     void receiveActivationDateFromSlaves_();
     void receiveSimulationStartDateFromSlaves_();
+
     /// @brief Receive initialization status from each slave process.
     /// @details After spawning, each slave sends a status code (0 = OK, non-zero = failed).
     ///   If any slave reports failure, disconnects all slave communicators and throws
@@ -67,11 +70,10 @@ private:
     ///   between readDeck() and SimulatorFullyImplicitBlackoil::init() (where the slave
     ///   sends its OK status) are not yet caught.
     void receiveSlaveStatus_();
+
     void sendMasterGroupNamesToSlaves_();
     void sendSlaveNamesToSlaves_();
     void spawnSlaveProcesses_();
-    ReservoirCoupling::Logger& logger() { return this->logger_; }
-    ReservoirCoupling::Logger& logger() const { return this->logger_; }
 
     ReservoirCouplingMaster<Scalar> &master_;
     const ReservoirCoupling::CouplingInfo &rescoup_;

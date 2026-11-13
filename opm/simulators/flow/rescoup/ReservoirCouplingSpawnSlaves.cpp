@@ -121,6 +121,7 @@ createMasterGroupNameOrder_()
         this->master_.updateMasterGroupNameOrderMap(slave_name, master_group_map);
     }
 }
+
 template <class Scalar>
 void
 ReservoirCouplingSpawnSlaves<Scalar>::
@@ -153,6 +154,36 @@ createSlaveNameToMasterGroupsMap_()
     }
     // Also build an index-based vector as an O(1) performance optimization
     this->master_.rebuildSlaveIdxToMasterGroupsVector();
+}
+
+template <class Scalar>
+std::pair<std::vector<char>, std::size_t>
+ReservoirCouplingSpawnSlaves<Scalar>::
+getMasterGroupNamesForSlave_(std::size_t slave_idx) const
+{
+    // For the given slave name, get all pairs of master group names and slave group names
+    // Serialize the data such that it can be sent over MPI in one chunk
+    // NOTE: The order of the names in the vector is important, as the slaves will
+    //       use this order to establish an index mapping. Later, when sending group targets,
+    //       the master will send indices instead of group names for efficiency. See:
+    //       - ReservoirCouplingSpawnSlaves::createSlaveNameToMasterGroupsMap_() which creates
+    //          the index-based mapping
+    //       - ReservoirCouplingSlave::saveMasterGroupNamesAsMap_() which establishes the same mapping
+    //          on the slave side
+    //       - RescoupConstraintsCalculator::calculateMasterGroupConstraintsAndSendToSlaves() which uses
+    //          the index-based mapping to send the group constraints to the slaves
+    auto master_groups = this->rescoup_.masterGroups();
+    std::vector<std::string> data;
+    const auto& master_group_names = this->master_.getMasterGroupNamesForSlave(slave_idx);
+    for (std::size_t group_idx = 0; group_idx < master_group_names.size(); ++group_idx) {
+        const auto& group_name = master_group_names[group_idx];
+        data.push_back(group_name);
+        const auto& slave_group_name = master_groups[group_name].slaveGroupName();
+        data.push_back(slave_group_name);
+    }
+    // NOTE: data.size() can be 0 for history mode (no GRUPMAST, hence no master groups)
+    assert(data.size() % 2 == 0);
+    return ReservoirCoupling::serializeStrings(data);
 }
 
 template <class Scalar>
@@ -196,36 +227,6 @@ getSlaveArgv_(
 }
 
 template <class Scalar>
-std::pair<std::vector<char>, std::size_t>
-ReservoirCouplingSpawnSlaves<Scalar>::
-getMasterGroupNamesForSlave_(std::size_t slave_idx) const
-{
-    // For the given slave name, get all pairs of master group names and slave group names
-    // Serialize the data such that it can be sent over MPI in one chunk
-    // NOTE: The order of the names in the vector is important, as the slaves will
-    //       use this order to establish an index mapping. Later, when sending group targets,
-    //       the master will send indices instead of group names for efficiency. See:
-    //       - ReservoirCouplingSpawnSlaves::createSlaveNameToMasterGroupsMap_() which creates
-    //          the index-based mapping
-    //       - ReservoirCouplingSlave::saveMasterGroupNamesAsMap_() which establishes the same mapping
-    //          on the slave side
-    //       - RescoupConstraintsCalculator::calculateMasterGroupConstraintsAndSendToSlaves() which uses
-    //          the index-based mapping to send the group constraints to the slaves
-    auto master_groups = this->rescoup_.masterGroups();
-    std::vector<std::string> data;
-    const auto& master_group_names = this->master_.getMasterGroupNamesForSlave(slave_idx);
-    for (std::size_t group_idx = 0; group_idx < master_group_names.size(); ++group_idx) {
-        const auto& group_name = master_group_names[group_idx];
-        data.push_back(group_name);
-        const auto& slave_group_name = master_groups[group_name].slaveGroupName();
-        data.push_back(slave_group_name);
-    }
-    // NOTE: data.size() can be 0 for history mode (no GRUPMAST, hence no master groups)
-    assert(data.size() % 2 == 0);
-    return ReservoirCoupling::serializeStrings(data);
-}
-
-template <class Scalar>
 void
 ReservoirCouplingSpawnSlaves<Scalar>::
 receiveActivationDateFromSlaves_()
@@ -265,6 +266,42 @@ receiveActivationDateFromSlaves_()
     const double* data = this->master_.getSlaveActivationDates();
     this->comm_.broadcast(const_cast<double *>(data), /*count=*/num_slaves, /*emitter_rank=*/0);
     this->logger_.debug("Broadcasted slave activation dates to all ranks");
+}
+
+template <class Scalar>
+void
+ReservoirCouplingSpawnSlaves<Scalar>::
+receiveSimulationStartDateFromSlaves_()
+{
+    auto num_slaves = this->master_.numSlavesStarted();
+    if (this->comm_.rank() == 0) {
+        for (unsigned int i = 0; i < num_slaves; i++) {
+            double slave_start_date;
+            // NOTE: See comment about error handling at the top of this file.
+            MPI_Recv(
+                &slave_start_date,
+                /*count=*/1,
+                /*datatype=*/MPI_DOUBLE,
+                /*source_rank=*/0,
+                /*tag=*/static_cast<int>(MessageTag::SlaveSimulationStartDate),
+                this->master_.getSlaveComm(i),
+                MPI_STATUS_IGNORE
+            );
+            this->master_.addSlaveStartDate(slave_start_date);
+            this->logger_.debug(fmt::format(
+                "Received start date from {}: {}",
+                this->master_.getSlaveName(i),
+                ReservoirCoupling::formatDays(slave_start_date)
+            ));
+        }
+    }
+    if (this->comm_.rank() != 0) {
+        // Ensure that all ranks have the same number of slave start dates
+        this->master_.resizeSlaveStartDates(num_slaves);
+    }
+    const double* data = this->master_.getSlaveStartDates();
+    this->comm_.broadcast(const_cast<double *>(data), /*count=*/num_slaves, /*emitter_rank=*/0);
+    this->logger_.debug("Broadcasted slave start dates to all ranks");
 }
 
 template <class Scalar>
@@ -348,42 +385,6 @@ receiveSlaveStatus_()
             );
         }
     }
-}
-
-template <class Scalar>
-void
-ReservoirCouplingSpawnSlaves<Scalar>::
-receiveSimulationStartDateFromSlaves_()
-{
-    auto num_slaves = this->master_.numSlavesStarted();
-    if (this->comm_.rank() == 0) {
-        for (unsigned int i = 0; i < num_slaves; i++) {
-            double slave_start_date;
-            // NOTE: See comment about error handling at the top of this file.
-            MPI_Recv(
-                &slave_start_date,
-                /*count=*/1,
-                /*datatype=*/MPI_DOUBLE,
-                /*source_rank=*/0,
-                /*tag=*/static_cast<int>(MessageTag::SlaveSimulationStartDate),
-                this->master_.getSlaveComm(i),
-                MPI_STATUS_IGNORE
-            );
-            this->master_.addSlaveStartDate(slave_start_date);
-            this->logger_.debug(fmt::format(
-                "Received start date from {}: {}",
-                this->master_.getSlaveName(i),
-                ReservoirCoupling::formatDays(slave_start_date)
-            ));
-        }
-    }
-    if (this->comm_.rank() != 0) {
-        // Ensure that all ranks have the same number of slave start dates
-        this->master_.resizeSlaveStartDates(num_slaves);
-    }
-    const double* data = this->master_.getSlaveStartDates();
-    this->comm_.broadcast(const_cast<double *>(data), /*count=*/num_slaves, /*emitter_rank=*/0);
-    this->logger_.debug("Broadcasted slave start dates to all ranks");
 }
 
 template <class Scalar>
