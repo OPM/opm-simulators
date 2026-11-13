@@ -284,36 +284,59 @@ assembleAccelerationPressureLoss(const int seg,
     auto& segments = well_state.well(baseif_.indexOfWell()).segments;
     const auto& segment_set = this->segmentSet();
 
+    const Scalar coefficient = segments_.accelerationCoefficient(seg);
+
     // Add segment head
     const Scalar seg_area = segment_set[seg].crossArea();
-    const EvalWell signed_velocity_head = segments_.accelerationPressureLossContribution(seg, seg_area);
-    segments.pressure_drop_accel[seg] = signed_velocity_head.value();
+    const EvalWell velocity_head = coefficient * segments_.accelerationPressureLossContribution(seg, seg_area);
+    segments.pressure_drop_accel[seg] = velocity_head.value();
 
     const int seg_upwind = segments_.upwinding_segment(seg);
     // acceleration term is *subtracted* from pressure equation
     MultisegmentWellAssemble(baseif_).
-        assembleAccelerationTerm(seg, seg, seg_upwind, signed_velocity_head, linSys_);
+        assembleAccelerationTerm(seg, seg, seg_upwind, velocity_head, linSys_);
     if (seg != seg_upwind) {// special treatment for reverse flow
         // extra derivatives are *added* to Jacobian (hence minus)
-        const EvalWell extra_derivatives = -segments_.accelerationPressureLossContribution(seg, seg_area, /*extra_derivatives*/ true);
+        const EvalWell extra_derivatives = -coefficient * segments_.accelerationPressureLossContribution(seg, seg_area, /*extra_derivatives*/ true);
         MultisegmentWellAssemble(baseif_).
             assemblePressureEqExtraDerivatives(seg, seg_upwind, extra_derivatives, linSys_);
     }
 
-    // Subtract inlet head(s), opposite signs from above
-    for (const int inlet : segments_.inlets(seg)) {
+    const auto inlet_area = [&](const int inlet) {
         // area used in formula is max of areas
-        const Scalar inlet_area = std::max(seg_area,
-                                           static_cast<Scalar>(segment_set[inlet].crossArea()));
-        const EvalWell signed_velocity_head_inlet = segments_.accelerationPressureLossContribution(inlet, inlet_area);
-        segments.pressure_drop_accel[seg] -= signed_velocity_head_inlet.value();
+        return std::max(seg_area, static_cast<Scalar>(segment_set[inlet].crossArea()));
+    };
+
+    // With flow dividing over several inlets, use their flow-weighted mean head.
+    const auto weights = segments_.dividingInletWeights(seg);
+    const auto& inlets = segments_.inlets(seg);
+    Scalar mean_head = 0.0;
+    Scalar inlet_rate = 0.0;
+    for (std::size_t i = 0; i < weights.size(); ++i) {
+        mean_head += weights[i] * segments_.accelerationPressureLossContribution(inlets[i], inlet_area(inlets[i])).value();
+        inlet_rate += segments_.massRate(inlets[i]).value();
+    }
+
+    // Subtract inlet head(s)
+    for (std::size_t i = 0; i < inlets.size(); ++i) {
+        const int inlet = inlets[i];
+        const Scalar weight = weights.empty() ? 1.0 : weights[i];
+        EvalWell inlet_head = segments_.accelerationPressureLossContribution(inlet, inlet_area(inlet));
+        if (!weights.empty()) {
+            // The massRate term is the derivative of the weights with respect to this inlet's rate.
+            const Scalar head = inlet_head.value();
+            inlet_head = weight * inlet_head + (head - mean_head) / inlet_rate * segments_.massRate(inlet);
+            inlet_head.setValue(weight * head);
+        }
+        const EvalWell velocity_head_inlet = coefficient * inlet_head;
+        segments.pressure_drop_accel[seg] -= velocity_head_inlet.value();
 
         const int inlet_upwind = segments_.upwinding_segment(inlet);
         MultisegmentWellAssemble(baseif_).
-            assembleAccelerationTerm(seg, inlet, inlet_upwind, -signed_velocity_head_inlet, linSys_);
+            assembleAccelerationTerm(seg, inlet, inlet_upwind, -velocity_head_inlet, linSys_);
         if (inlet != inlet_upwind) {// special treatment for reverse flow
             // extra derivatives are *added* to Jacobian (hence minus minus)
-            const EvalWell extra_derivatives_inlet = segments_.accelerationPressureLossContribution(inlet, inlet_area, /*extra_derivatives*/ true);
+            const EvalWell extra_derivatives_inlet = coefficient * weight * segments_.accelerationPressureLossContribution(inlet, inlet_area(inlet), /*extra_derivatives*/ true);
             // in this case inlet_upwind = seg
             MultisegmentWellAssemble(baseif_).
                 assemblePressureEqExtraDerivatives(seg, inlet_upwind, extra_derivatives_inlet, linSys_);
