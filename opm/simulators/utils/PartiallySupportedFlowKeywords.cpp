@@ -368,6 +368,15 @@ partiallySupported()
 {
    static const KeywordValidation::SupportedKeywordItems<int>partially_supported_keywords_int = {
          {
+            "CVCRIT",
+            {
+               {4,{false, allow_values<int> {}, "CVCRIT(MAX_LINEAR_ITERATIONS): not supported and ignored"}},
+               {6,{false, allow_values<int> {}, "CVCRIT(MIN_LINEAR_ITERATIONS): not supported and ignored"}},
+               {23,{false, allow_values<int> {}, "CVCRIT(MSW_MAX_ITERATIONS): not supported and ignored"}},
+               {34,{false, allow_values<int> {}, "CVCRIT(SAMG_IFIRST): not supported and ignored"}},
+            },
+         },
+         {
             "EDITNNC",
             {
                {8,{true, allow_values<int> {0}, "EDITNNC(ISATNUM1): only default value of 0 supported"}}, // SAT_TABLE12
@@ -586,6 +595,36 @@ partiallySupported()
             {
                {11,{false, allow_values<double> {}, "CECON(MIN_OIL): minimum oil rate limit is not supported and should be defaulted (1*) – value ignored"}}, // MIN_OIL
                {12,{false, allow_values<double> {}, "CECON(MIN_GAS): minimum gas rate limit is not supported and should be defaulted (1*) – value ignored"}}, // MIN_GAS
+            },
+         },
+         {
+            "CVCRIT",
+            {
+               {1,{false, allow_values<double> {}, "CVCRIT(PRESSURE_CHANGE_TOLERANCE): not supported and ignored"}},
+               {3,{false, allow_values<double> {}, "CVCRIT(LINEAR_RESIDUAL_REDUCTION): not supported and ignored"}},
+               {5,{false, allow_values<double> {}, "CVCRIT(FUGACITY_ERROR_TOLERANCE): not supported and ignored"}},
+               {7,{false, allow_values<double> {}, "CVCRIT(SPECIFIC_VOLUME_CHANGE_TOLERANCE): not supported and ignored"}},
+               {8,{false, allow_values<double> {}, "CVCRIT(TEMPERATURE_CHANGE_TOLERANCE): not supported and ignored"}},
+               {10,{false, allow_values<double> {}, "CVCRIT(LINEAR_RESIDUAL_TOLERANCE): not supported and ignored"}},
+               {11,{false, allow_values<double> {}, "CVCRIT(RESIDUAL_MAX_NORM_TOLERANCE): not supported and ignored"}},
+               {12,{false, allow_values<double> {}, "CVCRIT(RESIDUAL_SUM_TOLERANCE): not supported and ignored"}},
+               {13,{false, allow_values<double> {}, "CVCRIT(MAX_MOLAR_DENSITY_CHANGE): not supported and ignored"}},
+               {14,{false, allow_values<double> {}, "CVCRIT(MAX_TEMPERATURE_CHANGE): not supported and ignored"}},
+               {15,{false, allow_values<double> {}, "CVCRIT(MAX_PRESSURE_CHANGE): not supported and ignored"}},
+               {22,{false, allow_values<double> {}, "CVCRIT(LINEAR_L2_RESIDUAL_TOLERANCE): not supported and ignored"}},
+               {24,{false, allow_values<double> {}, "CVCRIT(MSW_MOLAR_DENSITY_TOLERANCE): not supported and ignored"}},
+               {25,{false, allow_values<double> {}, "CVCRIT(MSW_MOLAR_RATE_TOLERANCE): not supported and ignored"}},
+               {26,{false, allow_values<double> {}, "CVCRIT(MSW_ENERGY_DENSITY_TOLERANCE): not supported and ignored"}},
+               {27,{false, allow_values<double> {}, "CVCRIT(MSW_VELOCITY_TOLERANCE): not supported and ignored"}},
+               {31,{false, allow_values<double> {}, "CVCRIT(MSW_MOLAR_RESIDUAL_TOLERANCE): not supported and ignored"}},
+               {32,{false, allow_values<double> {}, "CVCRIT(MSW_ENERGY_RESIDUAL_TOLERANCE): not supported and ignored"}},
+               {33,{false, allow_values<double> {}, "CVCRIT(SAMG_CHKTOL): not supported and ignored"}},
+               {37,{false, allow_values<double> {}, "CVCRIT(MSW_MAX_PRESSURE_CHANGE): not supported and ignored"}},
+               {38,{false, allow_values<double> {}, "CVCRIT(MSW_MAX_SPECIFIC_VOLUME_CHANGE): not supported and ignored"}},
+               {39,{false, allow_values<double> {}, "CVCRIT(MSW_MAX_TEMPERATURE_CHANGE): not supported and ignored"}},
+               {40,{false, allow_values<double> {}, "CVCRIT(MAX_APPLEYARD_CHOP_FRACTION): not supported and ignored"}},
+               {41,{false, allow_values<double> {}, "CVCRIT(ADDITIONAL_RESIDUAL_MAX_NORM_TOLERANCE): not supported and ignored"}},
+               {42,{false, allow_values<double> {}, "CVCRIT(ADDITIONAL_RESIDUAL_SUM_TOLERANCE): not supported and ignored"}},
             },
          },
          {
