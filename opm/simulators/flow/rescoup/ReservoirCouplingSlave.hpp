@@ -53,14 +53,22 @@ public:
     );
     bool activated() const { return activated_; }
     void clearDeferredLogger() { logger_.clearDeferredLogger(); }
+
+    /// @brief Whether this slave is connected to the master's cross-rescoup
+    ///   network this sync step.
+    /// @details Delegates to ReservoirCouplingSlaveReportStep.
+    bool connectedToMasterCoupledNetwork() const;
+
     /// @brief The surface injection rate target in force for each slave group
     ///   and phase this sync step (SI): the master's target combined with the
     ///   deck's own limit as the GRUPSLAV flag says.  Rebuilt every sync step
     ///   by the well model; reported to the summary output as GGIRT/GWIRT.
     const std::map<std::string, std::map<Phase, Scalar>>& effectiveInjectionTargets() const
     { return effective_injection_targets_; }
+
     std::map<std::string, std::map<Phase, Scalar>>& effectiveInjectionTargets()
     { return effective_injection_targets_; }
+
     /// @brief The production rate limit in force for each slave group and rate
     ///   type (ORAT, WRAT, GRAT, LRAT) this sync step (SI): the master's limit
     ///   combined with the deck's own as the GRUPSLAV flag says.  Rebuilt every
@@ -68,14 +76,15 @@ public:
     ///   GWPRT, GGPRT and GLPRT.
     const std::map<std::string, std::map<Group::ProductionCMode, Scalar>>& effectiveProductionTargets() const
     { return effective_production_targets_; }
+
     std::map<std::string, std::map<Group::ProductionCMode, Scalar>>& effectiveProductionTargets()
     { return effective_production_targets_; }
-
     const Parallel::Communication& getComm() const { return comm_; }
     MPI_Comm getMasterComm() const { return slave_master_comm_; }
     const std::string& getSlaveName() const { return slave_name_; }
     const std::map<std::string, std::string>& getSlaveToMasterGroupNameMap() const {
         return slave_to_master_group_map_; }
+
     /// @brief Check if a master-computed network-leaf node pressure exists for a master group
     /// @details Delegates to ReservoirCouplingSlaveReportStep
     bool hasMasterGroupNodePressure(const std::string& gname) const;
@@ -91,8 +100,10 @@ public:
     /// @brief Check if a master-imposed production target exists for a group
     /// @details Delegates to ReservoirCouplingSlaveReportStep
     bool hasMasterProductionTarget(const std::string& gname) const;
+
     void initTimeStepping();
     bool isFirstSubstepOfSyncTimestep() const;
+
     /// @brief Check if this is the last substep within a "sync" timestep.
     /// @details This flag is used to control reservoir coupling synchronization of
     ///          summary data sent from the slave to the master process.
@@ -101,6 +112,7 @@ public:
     ///          of the first substep of the sync step.
     /// @return true if this is the last substep of a "sync" timestep, false if not
     bool isLastSubstepOfSyncTimestep() const;
+
     bool isSlaveGroup(const std::string& group_name) const;
 
     /// @brief Whether the most recent master-group-node-pressures receive
@@ -108,16 +120,17 @@ public:
     /// @details Delegates to ReservoirCouplingSlaveReportStep.
     bool lastReceivedMasterGroupNodePressuresIsFinal() const;
 
-    /// @brief Whether this slave is connected to the master's cross-rescoup
-    ///   network this sync step.
-    /// @details Delegates to ReservoirCouplingSlaveReportStep.
-    bool connectedToMasterCoupledNetwork() const;
-
     ReservoirCoupling::Logger& logger() { return this->logger_; }
     ReservoirCoupling::Logger& logger() const { return this->logger_; }
+
+    /// @brief Mark slave groups in the Schedule as production/injection groups.
+    /// @details Delegates to ReservoirCouplingSlaveReportStep.
+    void markSlaveGroupsInSchedule(Schedule& schedule, int report_step_idx);
+
     /// @brief Gas lift limits the master imposes on a slave group, or nullptr if none
     /// @details Delegates to ReservoirCouplingSlaveReportStep
     const ReservoirCoupling::GasLiftGroupLimits<Scalar>* masterGasLiftLimits(const std::string& gname) const;
+
     /// @brief Get the master-computed network-leaf node pressure for a master group
     /// @details Delegates to ReservoirCouplingSlaveReportStep
     Scalar masterGroupNodePressure(const std::string& gname) const;
@@ -138,61 +151,8 @@ public:
     /// @brief Get the master-imposed production target and control mode for a group
     /// @details Delegates to ReservoirCouplingSlaveReportStep
     std::pair<Scalar, Group::ProductionCMode> masterProductionTarget(const std::string& gname) const;
+
     void maybeActivate(int report_step);
-    std::size_t numSlaveGroups() const { return this->slave_group_order_.size(); }
-    /// @brief Receive the master's single-bool flag for the current sync
-    ///   timestep and mirror it into the slave's local is_final state.
-    /// @details Delegates to ReservoirCouplingSlaveReportStep.  Side effect:
-    ///   updates last_received_master_group_node_pressures_is_final_; query
-    ///   it via lastReceivedMasterGroupNodePressuresIsFinal().
-    void receiveCoupledNetworkActiveStatusFromMaster();
-    double receiveNextTimeStepFromMaster();
-    std::tuple<std::size_t, std::size_t, std::size_t> receiveNumGroupConstraintsFromMaster() const;
-    /// @brief Receive the gas lift limits for the slave groups from master and store them
-    /// @details Delegates to ReservoirCouplingSlaveReportStep
-    void receiveGasLiftGroupLimitsFromMaster(std::size_t num_limits);
-    /// @brief Receive injection group targets from master and store them locally
-    /// @details Delegates to ReservoirCouplingSlaveReportStep
-    void receiveInjectionGroupTargetsFromMaster(std::size_t num_targets);
-
-    /// @brief Receive master-computed network-leaf node pressures from master
-    /// @details Delegates to ReservoirCouplingSlaveReportStep
-    void receiveMasterGroupNodePressuresFromMaster(std::size_t num_pressures);
-
-    /// @brief Receive the master-group-node-pressures header from master.
-    /// @details Delegates to ReservoirCouplingSlaveReportStep.  Returns
-    ///   (num_pressures, is_final).
-    std::pair<std::size_t, bool> receiveNumMasterGroupNodePressuresFromMaster();
-
-    /// @brief Receive production group constraints from master and store them locally
-    /// @details Delegates to ReservoirCouplingSlaveReportStep
-    void receiveProductionGroupConstraintsFromMaster(std::size_t num_targets);
-
-    void sendAndReceiveInitialData();
-    void sendInjectionDataToMaster(const std::vector<SlaveGroupInjectionData> &injection_data) const;
-    void sendNextReportDateToMasterProcess() const;
-    void sendProductionDataToMaster(const std::vector<SlaveGroupProductionData> &production_data) const;
-    void setDeferredLogger(DeferredLogger *deferred_logger) {
-        this->logger_.setDeferredLogger(deferred_logger);
-    }
-    void setFirstSubstepOfSyncTimestep(bool value);
-    /// @brief Set whether this is the last substep within a "sync" timestep.
-    /// @details See isLastSubstepOfSyncTimestep() for details.
-    /// @param value true if this is the last substep of a "sync" timestep, false if not
-    void setLastSubstepOfSyncTimestep(bool value);
-
-    /// @brief Mark slave groups in the Schedule as production/injection groups.
-    /// @details Delegates to ReservoirCouplingSlaveReportStep.
-    void markSlaveGroupsInSchedule(Schedule& schedule, int report_step_idx);
-
-    /// @brief Record whether the initial well solve for this sync step has run
-    /// @details Delegates to ReservoirCouplingSlaveReportStep
-    void setWellsSolvedThisSyncStep(bool value);
-
-    const std::string& slaveGroupIdxToGroupName(std::size_t group_idx) const {
-        return this->slave_group_order_.at(group_idx);
-    }
-    bool terminated() const { return this->terminated_; }
 
     /// @brief Blocking receive for terminate/continue signal from master.
     ///
@@ -224,6 +184,62 @@ public:
     /// @see ReservoirCouplingTimeStepper::receiveNextReportDateFromSlaves() and
     ///   ReservoirCouplingMaster::markSlaveEndedAndDisconnect() for the master's half.
     void notifyEndOfRunAndDisconnect();
+
+    std::size_t numSlaveGroups() const { return this->slave_group_order_.size(); }
+
+    /// @brief Receive the master's single-bool flag for the current sync
+    ///   timestep and mirror it into the slave's local is_final state.
+    /// @details Delegates to ReservoirCouplingSlaveReportStep.  Side effect:
+    ///   updates last_received_master_group_node_pressures_is_final_; query
+    ///   it via lastReceivedMasterGroupNodePressuresIsFinal().
+    void receiveCoupledNetworkActiveStatusFromMaster();
+
+    /// @brief Receive the gas lift limits for the slave groups from master and store them
+    /// @details Delegates to ReservoirCouplingSlaveReportStep
+    void receiveGasLiftGroupLimitsFromMaster(std::size_t num_limits);
+
+    /// @brief Receive injection group targets from master and store them locally
+    /// @details Delegates to ReservoirCouplingSlaveReportStep
+    void receiveInjectionGroupTargetsFromMaster(std::size_t num_targets);
+
+    /// @brief Receive master-computed network-leaf node pressures from master
+    /// @details Delegates to ReservoirCouplingSlaveReportStep
+    void receiveMasterGroupNodePressuresFromMaster(std::size_t num_pressures);
+
+    double receiveNextTimeStepFromMaster();
+    std::tuple<std::size_t, std::size_t, std::size_t> receiveNumGroupConstraintsFromMaster() const;
+
+    /// @brief Receive the master-group-node-pressures header from master.
+    /// @details Delegates to ReservoirCouplingSlaveReportStep.  Returns
+    ///   (num_pressures, is_final).
+    std::pair<std::size_t, bool> receiveNumMasterGroupNodePressuresFromMaster();
+
+    /// @brief Receive production group constraints from master and store them locally
+    /// @details Delegates to ReservoirCouplingSlaveReportStep
+    void receiveProductionGroupConstraintsFromMaster(std::size_t num_targets);
+
+    void sendAndReceiveInitialData();
+    void sendInjectionDataToMaster(const std::vector<SlaveGroupInjectionData> &injection_data) const;
+    void sendNextReportDateToMasterProcess() const;
+    void sendProductionDataToMaster(const std::vector<SlaveGroupProductionData> &production_data) const;
+    void setDeferredLogger(DeferredLogger *deferred_logger) {
+        this->logger_.setDeferredLogger(deferred_logger);
+    }
+    void setFirstSubstepOfSyncTimestep(bool value);
+
+    /// @brief Set whether this is the last substep within a "sync" timestep.
+    /// @details See isLastSubstepOfSyncTimestep() for details.
+    /// @param value true if this is the last substep of a "sync" timestep, false if not
+    void setLastSubstepOfSyncTimestep(bool value);
+
+    /// @brief Record whether the initial well solve for this sync step has run
+    /// @details Delegates to ReservoirCouplingSlaveReportStep
+    void setWellsSolvedThisSyncStep(bool value);
+
+    const std::string& slaveGroupIdxToGroupName(std::size_t group_idx) const {
+        return this->slave_group_order_.at(group_idx);
+    }
+    bool terminated() const { return this->terminated_; }
 
     /// @brief True once the initial well solve for this sync step has run
     /// @details Delegates to ReservoirCouplingSlaveReportStep

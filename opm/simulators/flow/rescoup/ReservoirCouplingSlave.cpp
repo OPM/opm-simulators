@@ -67,6 +67,15 @@ ReservoirCouplingSlave(
 template <class Scalar>
 bool
 ReservoirCouplingSlave<Scalar>::
+connectedToMasterCoupledNetwork() const
+{
+    assert(this->report_step_data_);
+    return this->report_step_data_->connectedToMasterCoupledNetwork();
+}
+
+template <class Scalar>
+bool
+ReservoirCouplingSlave<Scalar>::
 hasMasterGroupNodePressure(const std::string& gname) const
 {
     assert(this->report_step_data_);
@@ -121,24 +130,6 @@ isFirstSubstepOfSyncTimestep() const
 template <class Scalar>
 bool
 ReservoirCouplingSlave<Scalar>::
-lastReceivedMasterGroupNodePressuresIsFinal() const
-{
-    assert(this->report_step_data_);
-    return this->report_step_data_->lastReceivedMasterGroupNodePressuresIsFinal();
-}
-
-template <class Scalar>
-bool
-ReservoirCouplingSlave<Scalar>::
-connectedToMasterCoupledNetwork() const
-{
-    assert(this->report_step_data_);
-    return this->report_step_data_->connectedToMasterCoupledNetwork();
-}
-
-template <class Scalar>
-bool
-ReservoirCouplingSlave<Scalar>::
 isLastSubstepOfSyncTimestep() const
 {
     assert(this->report_step_data_);
@@ -150,6 +141,24 @@ bool
 ReservoirCouplingSlave<Scalar>::
 isSlaveGroup(const std::string& group_name) const {
     return this->slave_to_master_group_map_.find(group_name) != this->slave_to_master_group_map_.end();
+}
+
+template <class Scalar>
+bool
+ReservoirCouplingSlave<Scalar>::
+lastReceivedMasterGroupNodePressuresIsFinal() const
+{
+    assert(this->report_step_data_);
+    return this->report_step_data_->lastReceivedMasterGroupNodePressuresIsFinal();
+}
+
+template <class Scalar>
+void
+ReservoirCouplingSlave<Scalar>::
+markSlaveGroupsInSchedule(Schedule& schedule, const int report_step_idx)
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->markSlaveGroupsInSchedule(schedule, report_step_idx);
 }
 
 template <class Scalar>
@@ -333,6 +342,15 @@ notifyEndOfRunAndDisconnect()
 template <class Scalar>
 void
 ReservoirCouplingSlave<Scalar>::
+receiveCoupledNetworkActiveStatusFromMaster()
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->receiveCoupledNetworkActiveStatusFromMaster();
+}
+
+template <class Scalar>
+void
+ReservoirCouplingSlave<Scalar>::
 receiveGasLiftGroupLimitsFromMaster(std::size_t num_limits)
 {
     assert(this->report_step_data_);
@@ -382,15 +400,6 @@ receiveNextTimeStepFromMaster() {
     this->comm_.broadcast(&timestep, /*count=*/1, /*emitter_rank=*/0);
     this->logger_.debug("Broadcasted slave next time step to all ranks");
     return timestep;
-}
-
-template <class Scalar>
-void
-ReservoirCouplingSlave<Scalar>::
-receiveCoupledNetworkActiveStatusFromMaster()
-{
-    assert(this->report_step_data_);
-    this->report_step_data_->receiveCoupledNetworkActiveStatusFromMaster();
 }
 
 template <class Scalar>
@@ -510,15 +519,6 @@ setLastSubstepOfSyncTimestep(bool value)
 template <class Scalar>
 void
 ReservoirCouplingSlave<Scalar>::
-markSlaveGroupsInSchedule(Schedule& schedule, const int report_step_idx)
-{
-    assert(this->report_step_data_);
-    this->report_step_data_->markSlaveGroupsInSchedule(schedule, report_step_idx);
-}
-
-template <class Scalar>
-void
-ReservoirCouplingSlave<Scalar>::
 setWellsSolvedThisSyncStep(bool value)
 {
     assert(this->report_step_data_);
@@ -595,6 +595,37 @@ getGrupSlavActivationDateAndCheckHistoryMatchingMode_() const
     RCOUP_LOG_THROW(std::runtime_error, "Reservoir coupling: Failed to find slave activation time: "
               "No GRUPSLAV keyword found in schedule");
     return {0.0, false};  // Should never happen
+}
+
+template <class Scalar>
+void
+ReservoirCouplingSlave<Scalar>::
+receiveInitStatusFromMasterProcess_() {
+    // Receive the master's go-ahead after we reported our OK status: 0 = proceed,
+    // non-zero = abort (another slave failed). On rank 0 we receive from the
+    // master and broadcast to all slave ranks so that the collective
+    // MPI_Comm_disconnect below is matched on every rank.
+    int proceed = 1;  // default to abort if nothing is received
+    if (this->comm_.rank() == 0) {
+        MPI_Recv(
+            &proceed,
+            /*count=*/1,
+            /*datatype=*/MPI_INT,
+            /*source_rank=*/0,
+            /*tag=*/static_cast<int>(MessageTag::MasterInitStatus),
+            this->slave_master_comm_,
+            MPI_STATUS_IGNORE
+        );
+    }
+    this->comm_.broadcast(&proceed, /*count=*/1, /*emitter_rank=*/0);
+    if (proceed != 0) {
+        this->logger_.info(
+            "Master signaled initialization abort (another slave failed to initialize)");
+        MPI_Comm_disconnect(&this->slave_master_comm_);
+        this->slave_master_comm_ = MPI_COMM_NULL;
+        RCOUP_LOG_THROW(std::runtime_error,
+            "Reservoir coupling initialization aborted by master");
+    }
 }
 
 template <class Scalar>
@@ -789,37 +820,6 @@ sendStatusToMasterProcess_(bool ok) {
             this->slave_master_comm_
         );
         this->logger_.debug(fmt::format("Sent status {} to master", ok ? "OK" : "FAILED"));
-    }
-}
-
-template <class Scalar>
-void
-ReservoirCouplingSlave<Scalar>::
-receiveInitStatusFromMasterProcess_() {
-    // Receive the master's go-ahead after we reported our OK status: 0 = proceed,
-    // non-zero = abort (another slave failed). On rank 0 we receive from the
-    // master and broadcast to all slave ranks so that the collective
-    // MPI_Comm_disconnect below is matched on every rank.
-    int proceed = 1;  // default to abort if nothing is received
-    if (this->comm_.rank() == 0) {
-        MPI_Recv(
-            &proceed,
-            /*count=*/1,
-            /*datatype=*/MPI_INT,
-            /*source_rank=*/0,
-            /*tag=*/static_cast<int>(MessageTag::MasterInitStatus),
-            this->slave_master_comm_,
-            MPI_STATUS_IGNORE
-        );
-    }
-    this->comm_.broadcast(&proceed, /*count=*/1, /*emitter_rank=*/0);
-    if (proceed != 0) {
-        this->logger_.info(
-            "Master signaled initialization abort (another slave failed to initialize)");
-        MPI_Comm_disconnect(&this->slave_master_comm_);
-        this->slave_master_comm_ = MPI_COMM_NULL;
-        RCOUP_LOG_THROW(std::runtime_error,
-            "Reservoir coupling initialization aborted by master");
     }
 }
 
