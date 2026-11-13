@@ -59,11 +59,20 @@ maybeChopSubStep(double suggested_timestep_original, double elapsed_time) const
 {
     // Check if the suggested timestep needs to be adjusted based on the slave processes'
     // next report step, or if the slave process has not started yet: the start of a slave process.
-    // NOTE: TimeService::to_time_t() returns the start time as an integer number of seconds. It
-    //     should be possible to represent reasonable epoch values within a double. See comment for
-    //     getMasterActivationDate_() for more information.
-    double start_date = TimeService::to_time_t(this->schedule().getStartTime());
-    double step_start_date{start_date + elapsed_time};
+    //
+    // The decisions below compare epoch dates (seconds since 1970), so that dates closer than about
+    // one microsecond count as equal (see ReservoirCoupling::Seconds). The length of a chopped step
+    // is however computed from elapsed times. An epoch date of about 1.5e9 seconds is resolved only
+    // to about 2.4e-7 seconds, so a step length taken as a difference of two such dates is off by up
+    // to that much. The master then ends its sync step a fraction of a microsecond away from the
+    // slave's report date, the next chop gives a step of zero, and the master and slave loops in
+    // AdaptiveTimeStepping never reach the end of the report step. Computed from elapsed times, the
+    // step ends where the summed sync steps of the master loop expect it, to within roundoff.
+    // NOTE: TimeService::to_time_t() returns the start time as an integer number of seconds, and the
+    //     start and activation dates of the slaves are whole seconds too. So the differences between
+    //     these dates are exact. See comment for getMasterActivationDate_() for more information.
+    const double start_date = TimeService::to_time_t(this->schedule().getStartTime());
+    const double step_start_date{start_date + elapsed_time};
     double step_end_date{step_start_date + suggested_timestep_original};
     double suggested_timestep{suggested_timestep_original};
     auto num_slaves = this->numSlaves();
@@ -76,9 +85,9 @@ maybeChopSubStep(double suggested_timestep_original, double elapsed_time) const
             // with. Its last reported date is stale and must not chop the master's timestep.
             continue;
         }
-        double slave_start_date = this->slaveStartDate(i);
-        double slave_activation_date = this->slaveActivationDate(i);
-        double slave_next_report_date{this->slave_next_report_time_offsets_[i] + slave_start_date};
+        const double slave_start_date = this->slaveStartDate(i);
+        const double slave_activation_date = this->slaveActivationDate(i);
+        const double slave_next_report_date{this->slave_next_report_time_offsets_[i] + slave_start_date};
         if (Seconds::compare_gt_or_eq(slave_activation_date, step_end_date)) {
             // The slave process has not activated yet, and will not activate during this timestep
             continue;
@@ -86,18 +95,21 @@ maybeChopSubStep(double suggested_timestep_original, double elapsed_time) const
         double slave_elapsed_time;
         if (Seconds::compare_lt_or_eq(slave_activation_date,step_start_date)) {
             // The slave process has already activated, and will continue during this timestep
-            if (Seconds::compare_gt(slave_next_report_date, step_end_date)) {
-                // The slave process will not report during this timestep
+            if (Seconds::compare_gt_or_eq(slave_next_report_date, step_end_date)) {
+                // The slave process will not report during this timestep, or it reports at its end
                 continue;
             }
-            // The slave process will report during this timestep
-            slave_elapsed_time = slave_next_report_date - step_start_date;
+            // The slave process will report during this timestep. Its next report date as elapsed
+            // time of the master: the offset is relative to the slave's own start date.
+            const double slave_next_report_time =
+                this->slave_next_report_time_offsets_[i] + (slave_start_date - start_date);
+            slave_elapsed_time = slave_next_report_time - elapsed_time;
         }
         else {
             // The slave process will activate during the timestep, but not at the beginning
             // Ensure that we synchronize the slave activation report date with the
             //   start of a master timestep by chopping the current master timestep.
-            slave_elapsed_time = slave_activation_date - step_start_date;
+            slave_elapsed_time = (slave_activation_date - start_date) - elapsed_time;
         }
         suggested_timestep = slave_elapsed_time;
         step_end_date = step_start_date + suggested_timestep;

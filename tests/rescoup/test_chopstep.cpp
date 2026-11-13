@@ -56,6 +56,7 @@
 #include <boost/test/tools/floating_point_comparison.hpp>
 #endif
 
+#include <ctime>
 #include <tuple>
 
 namespace Opm::Properties::TTag {
@@ -190,6 +191,15 @@ struct SimulatorFixture
     double getStartDate() const { return start_date_; }
     double runChopSubStep(double report_time_step_size) const {
         return rc_master_.maybeChopSubStep(report_time_step_size, /*elapsed_time=*/0.0);
+    }
+
+    double runChopSubStep(double suggested_time_step, double elapsed_time) const {
+        return rc_master_.maybeChopSubStep(suggested_time_step, elapsed_time);
+    }
+
+    void setSlaveStartDate(int slave_number, double start_date)
+    {
+        rc_master_.setSlaveStartDate(slave_number, static_cast<std::time_t>(start_date));
     }
 
     void updateSlaveData(int slave_number, double activation_date, double report_time_step_size)
@@ -337,6 +347,65 @@ BOOST_AUTO_TEST_CASE(Chop)
         auto new_suggested_time_step = runChopSubStep(master_suggested_time_step);
         BOOST_CHECK(!Opm::ReservoirCoupling::Seconds::compare_gt_or_eq(
             new_suggested_time_step, master_suggested_time_step));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(ChopAtNonIntegerElapsedTime)
+{
+    // After sync steps that are not whole seconds, the master's elapsed time has a fractional part
+    // that an epoch date (about 1.5e9 seconds) cannot resolve. The chopped step must still end at the
+    // slave's report date, as the master's substep loop sees it: that loop sums the elapsed time and
+    // ends the report step only when the sum reaches the report step end within the tolerance of
+    // Seconds. A step that falls short by a fraction of a microsecond is chopped to zero next time,
+    // and the loop never ends.
+    auto master_start_date = getStartDate();
+    double day = 60*60*24;
+    double slave_report_time = 31*day;
+    double elapsed_time = 29.5*day + 0.9;
+    updateSlaveData(/*slave_number=*/0, /*activation_date=*/master_start_date, slave_report_time);
+    updateSlaveData(/*slave_number=*/1, /*activation_date=*/master_start_date, slave_report_time + day);
+    {
+        // A suggested step beyond the slave's report date is chopped to end at that date
+        auto new_suggested_time_step = runChopSubStep(2*day, elapsed_time);
+        BOOST_CHECK(new_suggested_time_step < 2*day);
+        BOOST_CHECK(Opm::ReservoirCoupling::Seconds::compare_eq(
+            elapsed_time + new_suggested_time_step, slave_report_time));
+    }
+    {
+        // A suggested step that ends at the slave's report date is not changed
+        double remaining = slave_report_time - elapsed_time;
+        auto new_suggested_time_step = runChopSubStep(remaining, elapsed_time);
+        checkEq(new_suggested_time_step, remaining);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(ChopAtNonIntegerElapsedTimeLaterSlaveStart)
+{
+    // As ChopAtNonIntegerElapsedTime, but the slave starts later than the master. Its next report
+    // time is an offset from its own start date, so the chopped step must also account for the
+    // difference between the two start dates.
+    auto master_start_date = getStartDate();
+    double day = 60*60*24;
+    double slave_start_offset = 92*day;  // the slave starts 92 days after the master
+    double slave_start_date = master_start_date + slave_start_offset;
+    double slave_report_offset = 59*day;  // relative to the slave's start date
+    double slave_report_time = slave_start_offset + slave_report_offset;  // master elapsed time
+    double elapsed_time = 149.5*day + 0.9;
+    setSlaveStartDate(/*slave_number=*/0, slave_start_date);
+    updateSlaveData(/*slave_number=*/0, /*activation_date=*/slave_start_date, slave_report_offset);
+    updateSlaveData(/*slave_number=*/1, /*activation_date=*/master_start_date, slave_report_time + day);
+    {
+        // A suggested step beyond the slave's report date is chopped to end at that date
+        auto new_suggested_time_step = runChopSubStep(2*day, elapsed_time);
+        BOOST_CHECK(new_suggested_time_step < 2*day);
+        BOOST_CHECK(Opm::ReservoirCoupling::Seconds::compare_eq(
+            elapsed_time + new_suggested_time_step, slave_report_time));
+    }
+    {
+        // A suggested step that ends at the slave's report date is not changed
+        double remaining = slave_report_time - elapsed_time;
+        auto new_suggested_time_step = runChopSubStep(remaining, elapsed_time);
+        checkEq(new_suggested_time_step, remaining);
     }
 }
 
