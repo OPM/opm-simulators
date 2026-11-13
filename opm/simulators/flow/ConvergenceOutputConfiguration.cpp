@@ -38,7 +38,7 @@ namespace {
         const auto split = std::regex { R"(\s*,\s*)" };
         return {
             std::cregex_token_iterator {
-                options.begin(), options.end(), split, -1
+                options.data(), options.data() + options.size(), split, -1
             },
             std::cregex_token_iterator {}
         };
