@@ -124,6 +124,11 @@ void shortenStep(std::array<Scalar, numComponents>& z,
  * maxAmountChange. If restoring an input state to these bounds requires a
  * larger change, restoring the bounds takes priority.
  *
+ * The step of z also lowers no mole fraction above the floor by more than
+ * maxRelativeDecrease of its value. A small component is then approached over a few
+ * iterations instead of being driven to the floor and back, as it would be where a
+ * phase is about to vanish.
+ *
  * \param z Overall mole fractions, summing to one, updated in place; zeros are allowed.
  * \param sw Water saturation, updated in place; zero without water.
  * \param dz Newton step of the mole fractions, summing to zero.
@@ -131,9 +136,10 @@ void shortenStep(std::array<Scalar, numComponents>& z,
  * \param compositionFloor Lower bound of every mole fraction.
  * \param hydrocarbonFloor Lower bound of h.
  * \param maxAmountChange Largest change of h and of every amount.
+ * \param maxRelativeDecrease Largest decrease of a mole fraction, relative to its value.
  *
  * \pre Inputs are finite, 0 <= numComponents * compositionFloor < 1,
- *      0 < hydrocarbonFloor <= 1, and maxAmountChange > 0.
+ *      0 < hydrocarbonFloor <= 1, maxAmountChange > 0, and maxRelativeDecrease > 0.
  */
 template <class Scalar, std::size_t numComponents>
 void applyFlashCompositionStep(std::array<Scalar, numComponents>& z,
@@ -142,7 +148,8 @@ void applyFlashCompositionStep(std::array<Scalar, numComponents>& z,
                                const Scalar dSw,
                                const Scalar compositionFloor,
                                const Scalar hydrocarbonFloor,
-                               const Scalar maxAmountChange)
+                               const Scalar maxAmountChange,
+                               const Scalar maxRelativeDecrease)
 {
     const Scalar hydrocarbonShare = std::max(1 - sw, hydrocarbonFloor);
     const Scalar dHydrocarbonShare = -dSw;
@@ -163,8 +170,14 @@ void applyFlashCompositionStep(std::array<Scalar, numComponents>& z,
     // the damped step. A vanished hydrocarbon keeps its composition: the equations see z
     // only through the floor of h then, so the step would mostly carry linear-solver error.
     const bool vanished = newHydrocarbonShare <= hydrocarbonFloor;
-    const Scalar zStepScale = vanished ? Scalar{0}
-                                       : alpha * hydrocarbonShare / newHydrocarbonShare;
+    Scalar zStepScale = vanished ? Scalar{0}
+                                 : alpha * hydrocarbonShare / newHydrocarbonShare;
+    // Each mole fraction above the floor keeps 1 - maxRelativeDecrease of its value.
+    for (std::size_t compIdx = 0; compIdx < numComponents; ++compIdx) {
+        if (dz[compIdx] < 0 && z[compIdx] > compositionFloor) {
+            zStepScale = std::min(maxRelativeDecrease * z[compIdx] / -dz[compIdx], zStepScale);
+        }
+    }
     std::array<Scalar, numComponents> newZ{};
     for (std::size_t compIdx = 0; compIdx < numComponents; ++compIdx) {
         newZ[compIdx] = z[compIdx] + zStepScale * dz[compIdx];
