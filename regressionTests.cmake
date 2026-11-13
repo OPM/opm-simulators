@@ -544,6 +544,23 @@ add_test_compareECLFiles(
     swatinit
 )
 
+add_test_compareECLFiles(
+  CASENAME
+    swatinit_pc_at_connate
+  FILENAME
+    SWATINIT_PC_AT_CONNATE
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_oilwater
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    swatinit
+)
+
 set(_spe1_tests_energy
   SPE1CASE2_THERMAL
   SPE1CASE2_THERMAL_WATVISC
