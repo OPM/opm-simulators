@@ -1,0 +1,156 @@
+-- Threshold pressure defaults computed from the initial solution, with the
+-- options of --threshold-pressure-default-phases.
+--
+-- Five independent vertical two-cell columns (I = 1, 3, 5, 7, 9; the columns
+-- in between are inactive), each forming its own pair of equilibration
+-- regions.  Explicit initial conditions, incompressible oil and water, and
+-- zero capillary pressure give:
+--
+--   oil:   potential difference  5000 Pa, upstream bottom cell
+--   water: potential difference 14613.3 Pa, upstream top cell
+--
+-- Water is immobile in all cells, oil is mobile in all cells, and there is
+-- no gas.
+--
+--   I=1: water above connate in upstream cell
+--   I=3: water exactly at connate in upstream cell
+--   I=5: upstream SATNUM 1 above connate, downstream SATNUM 2 at connate
+--   I=7: upstream SATNUM 2 at connate, downstream SATNUM 1 above connate
+--   I=9: upstream water at the cell's scaled SWL, above the unscaled connate
+
+RUNSPEC
+
+DIMENS
+ 9 1 2 /
+
+OIL
+WATER
+GAS
+METRIC
+
+ENDSCALE
+/
+
+EQLOPTS
+ THPRES /
+
+EQLDIMS
+ 10 /
+
+TABDIMS
+ 2 /
+
+START
+ 1 'JAN' 2020 /
+
+GRID
+
+DX
+ 18*100 /
+DY
+ 18*100 /
+DZ
+ 18*10 /
+BOX
+ 1 9 1 1 1 1 /
+TOPS
+ 9*2000 /
+ENDBOX
+
+ACTNUM
+ 1 0 1 0 1 0 1 0 1
+ 1 0 1 0 1 0 1 0 1 /
+
+PORO
+ 18*0.25 /
+PERMX
+ 18*100 /
+PERMY
+ 18*100 /
+PERMZ
+ 18*100 /
+
+PROPS
+
+DENSITY
+ 800 1000 1.0 /
+
+-- Incompressible oil and water: densities 800 and 1000 kg/m3.
+PVCDO
+ 200 1.0 0.0 1.0 0.0 /
+
+PVTW
+ 200 1.0 0.0 0.5 0.0 /
+
+PVDG
+ 100 0.010 0.02
+ 300 0.004 0.03 /
+
+ROCK
+ 200 0.0 /
+
+-- Connate water saturation 0.2 (table 1) and 0.4 (table 2).  Water is
+-- immobile below 0.35 (table 1) and 0.5 (table 2).
+SWOF
+ 0.20 0.0 1.0 0
+ 0.35 0.0 0.8 0
+ 0.60 0.3 0.2 0
+ 0.80 0.6 0.0 0
+ 1.00 1.0 0.0 0 /
+ 0.40 0.0 1.0 0
+ 0.50 0.0 0.8 0
+ 0.70 0.3 0.2 0
+ 0.90 0.6 0.0 0
+ 1.00 1.0 0.0 0 /
+
+-- Scaled connate water saturation equal to the table values, except in the
+-- top cell of I=9.
+SWL
+ 0.2 0.2 0.2 0.2 0.2 0.2 0.4 0.2 0.25
+ 0.2 0.2 0.2 0.2 0.4 0.2 0.2 0.2 0.2 /
+
+SGOF
+ 0.0 0.0 1.0 0
+ 0.8 1.0 0.0 0 /
+ 0.0 0.0 1.0 0
+ 0.6 1.0 0.0 0 /
+
+REGIONS
+
+SATNUM
+ 1 1 1 1 1 1 2 1 1
+ 1 1 1 1 2 1 1 1 1 /
+
+EQLNUM
+ 1 1 3 1 5 1 7 1 9
+ 2 1 4 1 6 1 8 1 10 /
+
+SOLUTION
+
+-- Top cells 200 bar, bottom cells 200 + 0.784532 (oil gradient over 10 m)
+-- + 0.05 bar.
+PRESSURE
+ 9*200.0
+ 9*200.834532 /
+
+SWAT
+ 0.25 0.2 0.2 0.2 0.3 0.2 0.4 0.2 0.25
+ 0.25 0.2 0.2 0.2 0.4 0.2 0.3 0.2 0.25 /
+
+SGAS
+ 18*0.0 /
+
+THPRES
+ 1 2 /
+ 3 4 /
+ 5 6 /
+ 7 8 /
+ 9 10 /
+/
+
+SCHEDULE
+
+TSTEP
+ 1 /
+
+END
