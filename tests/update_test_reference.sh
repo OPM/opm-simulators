@@ -86,6 +86,9 @@ compareResultFileContents () {
 #   ${testProperty["ref_sim"]}   is the simulator whose reference solutions the test uses.
 #   ${testProperty["file_names"]} is the ';'-separated base names of all result files
 #                                of a reservoir coupling test (empty for other tests).
+#   ${testProperty["ref_subdir"]} is the sub-directory of the reference directory of a
+#                                reservoir coupling test that holds its reference files
+#                                (empty when there is none, and for other tests).
 extractTestProperties () {
     local failed_test
 
@@ -114,6 +117,10 @@ extractTestProperties () {
 
     testProperty["file_names"]=$(awk -v test="${failed_test}" \
                                      -v prop="FILENAMES" -f "${dir}/getprop.awk" \
+                                     "${BUILD_DIR}/CTestTestfile.cmake")
+
+    testProperty["ref_subdir"]=$(awk -v test="${failed_test}" \
+                                     -v prop="REFERENCE_SUBDIR" -f "${dir}/getprop.awk" \
                                      "${BUILD_DIR}/CTestTestfile.cmake")
 }
 
@@ -259,7 +266,9 @@ updateFullSimulationResults () {
 # A coupled run writes the results of the master and of every slave into
 # one result directory, and all of them are kept in the one reference
 # directory of the case.  The test's FILENAMES property lists their base
-# names.
+# names.  When several masters in one case directory spawn the same slave
+# decks, each test keeps its files in its own sub-directory of the reference
+# directory, given by the test's REFERENCE_SUBDIR property.
 #
 # Uses properties of failing test being processed (${testProperty}).
 updateRescoupSimulationResults () {
@@ -268,6 +277,7 @@ updateRescoupSimulationResults () {
     local test_name=${testProperty["test_name"]}
     local ref_sim=${testProperty["ref_sim"]}
     local file_names=${testProperty["file_names"]}
+    local ref_subdir=${testProperty["ref_subdir"]}
     local file_name
     local changed=1
 
@@ -275,7 +285,7 @@ updateRescoupSimulationResults () {
     do
         if copyToReferenceDir \
                "${BUILD_DIR}/tests/results/${binary}+${test_name}" \
-               "${OPM_TESTS_ROOT}/${dir_name}/opm-simulation-reference/${ref_sim}" \
+               "${OPM_TESTS_ROOT}/${dir_name}/opm-simulation-reference/${ref_sim}${ref_subdir:+/${ref_subdir}}" \
                "${file_name}" \
                EGRID INIT RFT SMSPEC UNRST UNSMRY
         then
