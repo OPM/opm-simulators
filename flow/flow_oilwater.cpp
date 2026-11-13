@@ -52,6 +52,15 @@ template<class TypeTag>
 struct EnableDiffusion<TypeTag, TTag::FlowOilWaterProblem>
 { static constexpr bool value = false; };
 
+template<class TypeTag>
+struct AvoidElementContext<TypeTag, TTag::FlowOilWaterProblem>
+{ static constexpr bool value = true; };
+
+// Convective mixing needs dissolved gas, which oil-water cannot have.
+template<class TypeTag>
+struct EnableConvectiveMixing<TypeTag, TTag::FlowOilWaterProblem>
+{ static constexpr bool value = false; };
+
 //! The indices required by the model
 template<class TypeTag>
 struct Indices<TypeTag, TTag::FlowOilWaterProblem>
