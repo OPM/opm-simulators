@@ -93,11 +93,17 @@ public:
                 const bool stop_or_zero_rate_target);
 
     //! \brief Update values from newton update vector.
+    //! \param controlled_phases Phases (canonical index) targeted by the current rate
+    //!        control. The fraction updates of all segments are damped such that the
+    //!        sum of fractions of these phases in the top segment is reduced by at most
+    //!        a factor 1/2, avoiding (singular) states with zero fraction of the
+    //!        controlled phase(s) in the control equation.
     void updateNewton(const BVectorWell& dwells,
                       const Scalar relaxation_factor,
                       const Scalar DFLimit,
                       const bool stop_or_zero_rate_target,
-                      const Scalar max_pressure_change);
+                      const Scalar max_pressure_change,
+                      const std::array<bool, 3>& controlled_phases);
 
     //! \brief Copy values to well state.
     void copyToWellState(const  MultisegmentWellGeneric<Scalar, IndexTraits>& mswell,
@@ -165,6 +171,13 @@ private:
 
     //! \brief Handle non-reasonable fractions due to numerical overshoot.
     void processFractions(const int seg);
+
+    //! \brief Sum of the fractions of the given phases for given fraction variable values.
+    //! \details Linear in (wfrac, gfrac). Unused values are ignored if the corresponding
+    //!          fraction variable is not present.
+    static Scalar controlledFraction(const std::array<bool, 3>& controlled_phases,
+                                     const Scalar wfrac,
+                                     const Scalar gfrac);
 
     //! \brief Returns volume fraction for component in a segment.
     EvalWell volumeFraction(const int seg,
