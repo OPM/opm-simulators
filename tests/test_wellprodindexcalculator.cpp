@@ -104,6 +104,8 @@ namespace {
                          const std::string& compdat)
     {
         const auto deck = Opm::Parser{}.parseString(R"(RUNSPEC
+OIL
+WATER
 DIMENS
   10 10 3 /
 START
