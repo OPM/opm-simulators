@@ -58,13 +58,18 @@ public:
     );
 
     bool activated() { return this->activated_; }
+    void addSlaveActivationDate(double date) { this->slave_activation_dates_.push_back(date); }
     void addSlaveCommunicator(MPI_Comm comm) {
          this->master_slave_comm_.push_back(comm);
     }
     void addSlaveName(const std::string &name) { this->slave_names_.push_back(name); }
-    void addSlaveActivationDate(double date) { this->slave_activation_dates_.push_back(date); }
     void addSlaveStartDate(std::time_t date) { this->slave_start_dates_.push_back(date); }
     void clearDeferredLogger() { logger_.clearDeferredLogger(); }
+
+    /// @brief Collect production/injection rates for all master groups.
+    /// @details Returns a ReservoirCouplingGroupRates struct that can be
+    ///   passed through DynamicSimulatorState to Summary::eval().
+    data::ReservoirCouplingGroupRates collectGroupRatesForSummary() const;
 
     /// @brief Effective group-controlled-wells (GCW) count for a master group,
     ///   used by guide-rate distribution independently of the group's production
@@ -82,9 +87,6 @@ public:
         const auto it = this->effective_gcw_.find(group_name);
         return (it == this->effective_gcw_.end()) ? 1 : it->second;
     }
-    void setEffectiveGCW(const std::string& group_name, int value) {
-        this->effective_gcw_[group_name] = value;
-    }
 
     /// @brief Effective group-controlled-wells (GCW) count for a master group in
     ///   the injection guide-rate distribution of one phase.
@@ -100,23 +102,40 @@ public:
         const auto it = this->effective_injection_gcw_.find({group_name, phase});
         return (it == this->effective_injection_gcw_.end()) ? 1 : it->second;
     }
-    void setEffectiveInjectionGCW(const std::string& group_name, Phase phase, int value) {
-        this->effective_injection_gcw_[{group_name, phase}] = value;
+
+    /// @brief The master group that sets flowChangeTimeStepLimit(): name, fractional flow change
+    ///   and limiting fraction
+    std::tuple<std::string, double, double> flowChangeLimitingGroup() const {
+        return this->report_step_data_->flowChangeLimitingGroup();
     }
 
-    /// @brief Clear all effective-GCW entries, production and injection.  Call at
-    ///   the start of each master-group constraint calculation before any entries
-    ///   are set, so stale exclusions from a previous sync step do not leak in.
-    void resetEffectiveGCW() {
-        this->effective_gcw_.clear();
-        this->effective_injection_gcw_.clear();
-    }
+    /// @brief Upper limit (in seconds) for the next sync step from GRUPMAST item 4, infinity if none
+    double flowChangeTimeStepLimit() const { return this->report_step_data_->flowChangeTimeStepLimit(); }
 
     double getActivationDate() const { return this->activation_date_; }
     int getArgc() const { return this->argc_; }
     char *getArgv(int index) const { return this->argv_[index]; }
     char **getArgv() const { return this->argv_; }
     const Parallel::Communication &getComm() const { return this->comm_; }
+
+    /// @brief Get the canonical index of the master group for a given slave name and master group name.
+    /// The index is used to map slave group data sent from the slaves, like potentials to the corresponding
+    /// master group.
+    /// @param slave_name The name of the slave reservoir.
+    /// @param master_group_name The name of the master group.
+    /// @return The canonical index of the master group for the given slave name and master group name.
+    std::size_t getMasterGroupCanonicalIdx(
+        const std::string &slave_name, const std::string &master_group_name) const;
+
+    /// @brief How much more lift gas the slave group of a master group can take
+    Scalar getMasterGroupGasLiftHeadroom(const std::string &group_name) const {
+        return this->report_step_data_->getMasterGroupGasLiftHeadroom(group_name);
+    }
+
+    /// @brief Lift gas rate of the slave group of a master group, as last received from the slave
+    Scalar getMasterGroupGasLiftRate(const std::string &group_name, bool network) const {
+        return this->report_step_data_->getMasterGroupGasLiftRate(group_name, network);
+    }
 
     /// @brief Get the master group names associated with a slave reservoir by index.
     ///
@@ -132,29 +151,8 @@ public:
     /// @see RescoupConstraintsCalculator::calculateAndSendTargets() for primary usage context
     const std::vector<std::string>& getMasterGroupNamesForSlave(std::size_t slave_idx) const;
 
-    /// @brief Get the canonical index of the master group for a given slave name and master group name.
-    /// The index is used to map slave group data sent from the slaves, like potentials to the corresponding
-    /// master group.
-    /// @param slave_name The name of the slave reservoir.
-    /// @param master_group_name The name of the master group.
-    /// @return The canonical index of the master group for the given slave name and master group name.
-    std::size_t getMasterGroupCanonicalIdx(
-        const std::string &slave_name, const std::string &master_group_name) const;
-
     Scalar getMasterGroupRate(
         const std::string &group_name, ReservoirCoupling::Phase phase, ReservoirCoupling::RateKind kind) const;
-    /// @brief Whether the slave of a master group has sent production data
-    bool hasSlaveGroupProductionData(const std::string &group_name) const {
-        return this->report_step_data_->hasSlaveGroupProductionData(group_name);
-    }
-    /// @brief Lift gas rate of the slave group of a master group, as last received from the slave
-    Scalar getMasterGroupGasLiftRate(const std::string &group_name, bool network) const {
-        return this->report_step_data_->getMasterGroupGasLiftRate(group_name, network);
-    }
-    /// @brief How much more lift gas the slave group of a master group can take
-    Scalar getMasterGroupGasLiftHeadroom(const std::string &group_name) const {
-        return this->report_step_data_->getMasterGroupGasLiftHeadroom(group_name);
-    }
     std::map<std::string, std::string>& getMasterGroupToSlaveNameMap() {
          return this->master_group_slave_names_;
     }
@@ -163,21 +161,43 @@ public:
     double getSlaveActivationDate(int index) const { return this->slave_activation_dates_[index]; }
     const double *getSlaveActivationDates() const { return this->slave_activation_dates_.data(); }
     MPI_Comm getSlaveComm(int index) const { return this->master_slave_comm_[index]; }
-    std::map<std::string, std::vector<std::string>> &getSlaveNameToMasterGroupsMap() {
-        return this->slave_name_to_master_groups_map_;
-    }
     int getSlaveGroupNumGroupControlledInjectors(const std::string &master_group_name,
                                                  ReservoirCoupling::Phase phase) const;
     int getSlaveGroupNumGroupControlledProducers(const std::string &master_group_name) const;
     const Potentials& getSlaveGroupPotentials(const std::string &master_group_name) const;
     int getSlaveIdx(const std::string &slave_name) const;
     const std::string &getSlaveName(int index) const { return this->slave_names_[index]; }
+    std::map<std::string, std::vector<std::string>> &getSlaveNameToMasterGroupsMap() {
+        return this->slave_name_to_master_groups_map_;
+    }
     double getSlaveStartDate(int index) const { return this->slave_start_dates_[index]; }
     const double *getSlaveStartDates() { return this->slave_start_dates_.data(); }
+
+    /// @brief Whether the slave of a master group has sent production data
+    bool hasSlaveGroupProductionData(const std::string &group_name) const {
+        return this->report_step_data_->hasSlaveGroupProductionData(group_name);
+    }
+
     void initStartOfReportStep(int report_step_idx);
     void initTimeStepping();
     bool isFirstSubstepOfSyncTimestep() const;
     bool isMasterGroup(const std::string &group_name) const;
+    ReservoirCoupling::Logger& logger() { return this->logger_; }
+    ReservoirCoupling::Logger& logger() const { return this->logger_; }
+
+    /// @brief Record that a slave has ended, and close its intercommunicator.
+    /// @details Must be called on **every** master rank, because MPI_Comm_disconnect() is
+    ///   collective over the whole intercommunicator.  Rank 0 additionally sends the
+    ///   acknowledging terminate signal the slave is waiting for.  After this call
+    ///   slaveIsCoupled() returns false for the slave and no further message may be sent to
+    ///   it or received from it.
+    /// @param index Index of the slave process that has ended.
+    void markSlaveEndedAndDisconnect(int index);
+
+    void maybeActivate(int report_step);
+    double maybeChopSubStep(double suggested_timestep, double current_time) const;
+    void maybeReceiveActivationHandshakeFromSlaves(double current_time);
+    void maybeSpawnSlaveProcesses(int report_step);
 
     /// @brief Check if the master needs to receive production data from the slaves.
     /// @details This flag is used to control reservoir coupling synchronization of
@@ -187,54 +207,36 @@ public:
     /// @return true if the master needs to receive production data from the slaves, false if not
     bool needsSlaveDataReceive() const;
 
-    /// @brief Set whether the master needs to receive production data from the slaves.
-    /// @details See needsSlaveDataReceive() for details.
-    /// @param value true if the master needs to receive production data from the slaves, false if not
-    void setNeedsSlaveDataReceive(bool value);
-
-    ReservoirCoupling::Logger& logger() { return this->logger_; }
-    ReservoirCoupling::Logger& logger() const { return this->logger_; }
-    void maybeActivate(int report_step);
-    void maybeReceiveActivationHandshakeFromSlaves(double current_time);
-    double maybeChopSubStep(double suggested_timestep, double current_time) const;
-    void maybeSpawnSlaveProcesses(int report_step);
-    std::size_t numSlaveGroups(unsigned int index);
-    std::size_t numSlaves() const { return this->numSlavesStarted(); }
-    std::size_t numSlavesStarted() const;
-
     /// @brief Number of slaves that currently take part in the coupling.
     /// @details Counts the slaves for which slaveIsCoupled() holds, i.e. activated and not
     ///   yet ended.
     std::size_t numCoupledSlaves() const;
+
+    std::size_t numSlaveGroups(unsigned int index);
+    std::size_t numSlaves() const { return this->numSlavesStarted(); }
+    std::size_t numSlavesStarted() const;
     void rebuildSlaveIdxToMasterGroupsVector();
+    void receiveInjectionDataFromSlaves();
     void receiveNextReportDateFromSlaves();
     void receiveProductionDataFromSlaves();
-    void receiveInjectionDataFromSlaves();
+
+    /// @brief Clear all effective-GCW entries, production and injection.  Call at
+    ///   the start of each master-group constraint calculation before any entries
+    ///   are set, so stale exclusions from a previous sync step do not leak in.
+    void resetEffectiveGCW() {
+        this->effective_gcw_.clear();
+        this->effective_injection_gcw_.clear();
+    }
+
     void resizeNextReportDates(int size);
     void resizeSlaveActivationDates(int size) { this->slave_activation_dates_.resize(size); }
     void resizeSlaveStartDates(int size) { this->slave_start_dates_.resize(size); }
-    const Schedule& schedule() const { return this->schedule_; }
-    void sendNextTimeStepToSlaves(double next_time_step) {
-        this->report_step_data_->setSyncStepLength(next_time_step);
-        this->time_stepper_->sendNextTimeStepToSlaves(next_time_step);
-    }
 
     /// @brief Save the master group flow rates at the start of the sync step
     /// @details See ReservoirCouplingMasterReportStep::saveGroupFlowsAtStartOfSyncStep().
     void saveGroupFlowsAtStartOfSyncStep() { this->report_step_data_->saveGroupFlowsAtStartOfSyncStep(); }
 
-    /// @brief Update the flow-change time step limit (GRUPMAST item 4) from the flows
-    ///   received at the end of the sync step
-    void updateFlowChangeTimeStepLimit() { this->report_step_data_->updateFlowChangeTimeStepLimit(); }
-
-    /// @brief Upper limit (in seconds) for the next sync step from GRUPMAST item 4, infinity if none
-    double flowChangeTimeStepLimit() const { return this->report_step_data_->flowChangeTimeStepLimit(); }
-
-    /// @brief The master group that sets flowChangeTimeStepLimit(): name, fractional flow change
-    ///   and limiting fraction
-    std::tuple<std::string, double, double> flowChangeLimitingGroup() const {
-        return this->report_step_data_->flowChangeLimitingGroup();
-    }
+    const Schedule& schedule() const { return this->schedule_; }
 
     /// @brief Send a single boolean to a slave telling it whether the master
     ///   will iterate the cross-rescoup network exchange this sync timestep.
@@ -242,6 +244,21 @@ public:
         std::size_t slave_idx,
         bool active
     ) const;
+
+    /// @brief Send "don't terminate" signal (value=0) to all active slaves.
+    ///
+    /// This method is called at the start of each iteration in the master's substep loop,
+    /// before receiving the next report date from slaves. The slave waits for this signal
+    /// at the start of each iteration - if it receives 0, it continues; if it receives 1
+    /// (from sendTerminateAndDisconnect()), it terminates.
+    void sendDontTerminateSignalToSlaves();
+
+    void sendGasLiftGroupLimitsToSlave(
+        std::size_t slave_idx,
+        const std::vector<ReservoirCoupling::GasLiftGroupLimits<Scalar>>& gas_lift_limits
+    ) const {
+        this->report_step_data_->sendGasLiftGroupLimitsToSlave(slave_idx, gas_lift_limits);
+    }
     void sendInjectionTargetsToSlave(
         std::size_t slave_idx,
         const std::vector<InjectionGroupTarget>& injection_targets
@@ -252,18 +269,17 @@ public:
         std::size_t slave_idx,
         const std::vector<MasterGroupNodePressure>& pressures
     ) const;
+
+    void sendNextTimeStepToSlaves(double next_time_step) {
+        this->report_step_data_->setSyncStepLength(next_time_step);
+        this->time_stepper_->sendNextTimeStepToSlaves(next_time_step);
+    }
     void sendNumGroupConstraintsToSlave(
         std::size_t slave_idx,
         std::size_t num_injection_targets,
         std::size_t num_production_constraints,
         std::size_t num_gas_lift_limits
     ) const;
-    void sendGasLiftGroupLimitsToSlave(
-        std::size_t slave_idx,
-        const std::vector<ReservoirCoupling::GasLiftGroupLimits<Scalar>>& gas_lift_limits
-    ) const {
-        this->report_step_data_->sendGasLiftGroupLimitsToSlave(slave_idx, gas_lift_limits);
-    }
 
     /// @brief Send the count of master-computed network-leaf node pressures
     ///   plus the master's `is_final` flag for this sync-step iteration.
@@ -272,19 +288,39 @@ public:
         std::size_t num_pressures,
         bool is_final
     ) const;
+
     void sendProductionConstraintsToSlave(
         std::size_t slave_idx,
         const std::vector<ProductionGroupConstraints>& production_constraints
     ) const;
+
+    /// @brief Send terminate signal to all active slaves and disconnect intercommunicators.
+    ///
+    /// This method must be called at the end of the simulation to cleanly shut down
+    /// the MPI intercommunicators created by MPI_Comm_spawn(). It performs two steps:
+    /// 1. Sends a terminate signal to all active slaves (only from rank 0)
+    /// 2. Disconnects the intercommunicators (collective operation)
+    ///
+    /// Both master and slaves must call their respective disconnect methods for
+    /// MPI_Comm_disconnect() to complete - it is a collective operation.
+    void sendTerminateAndDisconnect();
+
     void setDeferredLogger(DeferredLogger *deferred_logger) {
          this->logger_.setDeferredLogger(deferred_logger);
     }
+    void setEffectiveGCW(const std::string& group_name, int value) {
+        this->effective_gcw_[group_name] = value;
+    }
+    void setEffectiveInjectionGCW(const std::string& group_name, Phase phase, int value) {
+        this->effective_injection_gcw_[{group_name, phase}] = value;
+    }
     void setFirstSubstepOfSyncTimestep(bool value);
 
-    /// @brief Collect production/injection rates for all master groups.
-    /// @details Returns a ReservoirCouplingGroupRates struct that can be
-    ///   passed through DynamicSimulatorState to Summary::eval().
-    data::ReservoirCouplingGroupRates collectGroupRatesForSummary() const;
+    /// @brief Set whether the master needs to receive production data from the slaves.
+    /// @details See needsSlaveDataReceive() for details.
+    /// @param value true if the master needs to receive production data from the slaves, false if not
+    void setNeedsSlaveDataReceive(bool value);
+
     // These are currently only used for unit testing
     void setSlaveActivated(int index)
     {
@@ -293,6 +329,7 @@ public:
         }
         this->slave_activation_status_[index] = 1;
     }
+
     void setSlaveActivationDate(int index, double date) { this->slave_activation_dates_[index] = date; }
     void setSlaveGroupInjectionData(const std::string& slave_name,
                                     std::vector<SlaveGroupInjectionData> injection_data)
@@ -306,11 +343,6 @@ public:
     }
     void setSlaveNextReportTimeOffset(int index, double offset);
     void setSlaveStartDate(int index, std::time_t date) { this->slave_start_dates_[index] = date; }
-    /// @brief Whether the slave has completed its activation handshake with the master.
-    /// @details Monotonic: once true it never becomes false again, not even when the slave
-    ///   later reaches the end of its own schedule.  Callers that ask "does this slave take
-    ///   part in the coupling right now?" want slaveIsCoupled() instead.
-    bool slaveIsActivated(int index) const { return this->slave_activation_status_[index] != 0; }
 
     /// @brief Whether the slave has reached the end of its own schedule and left the coupling.
     /// @details A slave whose deck runs out of report steps before the master's does notifies
@@ -325,6 +357,12 @@ public:
             && (this->slave_ended_[index] != 0);
     }
 
+    /// @brief Whether the slave has completed its activation handshake with the master.
+    /// @details Monotonic: once true it never becomes false again, not even when the slave
+    ///   later reaches the end of its own schedule.  Callers that ask "does this slave take
+    ///   part in the coupling right now?" want slaveIsCoupled() instead.
+    bool slaveIsActivated(int index) const { return this->slave_activation_status_[index] != 0; }
+
     /// @brief Whether the slave currently takes part in the coupling.
     /// @details True only for a slave that has activated and has not ended.  This is the
     ///   predicate to use before any master-slave message exchange, and before letting a
@@ -335,41 +373,18 @@ public:
         return this->slaveIsActivated(index) && !this->slaveHasEnded(index);
     }
 
-    /// @brief Record that a slave has ended, and close its intercommunicator.
-    /// @details Must be called on **every** master rank, because MPI_Comm_disconnect() is
-    ///   collective over the whole intercommunicator.  Rank 0 additionally sends the
-    ///   acknowledging terminate signal the slave is waiting for.  After this call
-    ///   slaveIsCoupled() returns false for the slave and no further message may be sent to
-    ///   it or received from it.
-    /// @param index Index of the slave process that has ended.
-    void markSlaveEndedAndDisconnect(int index);
-
     /// @brief Whether the master syncs with slaves at slave report-step boundaries
     ///        (true) or at every master actual time step (false, default CLI flag value).
     /// @details Set from the --rescoup-sync-at-report-steps CLI flag in the
     ///          constructor.  See `Parameters::RescoupSyncAtReportSteps`.
     bool syncAtReportSteps() const { return this->sync_at_report_steps_; }
+
+    /// @brief Update the flow-change time step limit (GRUPMAST item 4) from the flows
+    ///   received at the end of the sync step
+    void updateFlowChangeTimeStepLimit() { this->report_step_data_->updateFlowChangeTimeStepLimit(); }
+
     void updateMasterGroupNameOrderMap(
         const std::string& slave_name, const std::map<std::string, std::size_t>& master_group_map);
-
-    /// @brief Send "don't terminate" signal (value=0) to all active slaves.
-    ///
-    /// This method is called at the start of each iteration in the master's substep loop,
-    /// before receiving the next report date from slaves. The slave waits for this signal
-    /// at the start of each iteration - if it receives 0, it continues; if it receives 1
-    /// (from sendTerminateAndDisconnect()), it terminates.
-    void sendDontTerminateSignalToSlaves();
-
-    /// @brief Send terminate signal to all active slaves and disconnect intercommunicators.
-    ///
-    /// This method must be called at the end of the simulation to cleanly shut down
-    /// the MPI intercommunicators created by MPI_Comm_spawn(). It performs two steps:
-    /// 1. Sends a terminate signal to all active slaves (only from rank 0)
-    /// 2. Disconnects the intercommunicators (collective operation)
-    ///
-    /// Both master and slaves must call their respective disconnect methods for
-    /// MPI_Comm_disconnect() to complete - it is a collective operation.
-    void sendTerminateAndDisconnect();
 
 private:
     double getMasterActivationDate_() const;

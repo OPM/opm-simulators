@@ -84,15 +84,31 @@ public:
     /// @note Must be called at appropriate synchronization points in the simulation
     void sendSlaveGroupDataToMaster();
 private:
-    /// @brief Collect production potentials for a specific slave group
+    /// @brief The active phase index of a phase, or -1 if the phase is not active
+    int activePhaseIdx_(ReservoirCoupling::Phase phase) const;
+
+    /// @brief Collect the lift gas rate (ALQ) of a specific slave group
     /// @param group_idx Index of the slave group
-    /// @return Potentials data structure containing oil, gas, and water potentials
-    Potentials collectSlaveGroupPotentials_(std::size_t group_idx) const;
+    /// @param network If true, use network efficiency factors (GEFAC/WEFAC item 3)
+    /// @return Lift gas rate, summed over all ranks
+    Scalar collectSlaveGroupGasLiftRate_(std::size_t group_idx, bool network) const;
 
     /// @brief Collect complete injection data for a specific slave group
     /// @param group_idx Index of the slave group
     /// @return SlaveGroupInjectionData structure containing all injection rates
     SlaveGroupInjectionData collectSlaveGroupInjectionData_(std::size_t group_idx) const;
+
+    /// @brief Collect network surface production rates for a specific slave group
+    /// @param group_idx Index of the slave group
+    /// @return ProductionRates structure containing oil, gas, and water surface rates for network
+    /// @note These rates are computed with network=true, meaning efficiency factors are 1.0
+    ///       for groups/wells with GEFAC/WEFAC item 3 = "NO"
+    ProductionRates collectSlaveGroupNetworkSurfaceProductionRates_(std::size_t group_idx) const;
+
+    /// @brief Collect production potentials for a specific slave group
+    /// @param group_idx Index of the slave group
+    /// @return Potentials data structure containing oil, gas, and water potentials
+    Potentials collectSlaveGroupPotentials_(std::size_t group_idx) const;
 
     /// @brief Collect complete production data for a specific slave group
     /// @param group_idx Index of the slave group
@@ -104,26 +120,6 @@ private:
     /// @return Gas reinjection rate
     Scalar collectSlaveGroupReinjectionRateForGasPhase_(std::size_t group_idx) const;
 
-    /// @brief Collect the lift gas rate (ALQ) of a specific slave group
-    /// @param group_idx Index of the slave group
-    /// @param network If true, use network efficiency factors (GEFAC/WEFAC item 3)
-    /// @return Lift gas rate, summed over all ranks
-    Scalar collectSlaveGroupGasLiftRate_(std::size_t group_idx, bool network) const;
-
-    /// @brief Collect surface production rates for a specific slave group
-    /// @param group_idx Index of the slave group
-    /// @return ProductionRates structure containing oil, gas, and water surface rates
-    /// @note These rates are computed with network=false, so efficiency factors are applied
-    ///       according to regular GEFAC/WEFAC settings
-    ProductionRates collectSlaveGroupSurfaceProductionRates_(std::size_t group_idx) const;
-
-    /// @brief Collect network surface production rates for a specific slave group
-    /// @param group_idx Index of the slave group
-    /// @return ProductionRates structure containing oil, gas, and water surface rates for network
-    /// @note These rates are computed with network=true, meaning efficiency factors are 1.0
-    ///       for groups/wells with GEFAC/WEFAC item 3 = "NO"
-    ProductionRates collectSlaveGroupNetworkSurfaceProductionRates_(std::size_t group_idx) const;
-
     /// @brief Collect reservoir production rates for a specific slave group
     /// @param group_idx Index of the slave group
     /// @return ProductionRates structure containing oil, gas, and water reservoir rates
@@ -131,10 +127,12 @@ private:
     ///       so the conversion uses slave's PVT properties rather than master's
     ProductionRates collectSlaveGroupReservoirProductionRates_(std::size_t group_idx) const;
 
-    /// @brief Collect the voidage rate for a specific slave group
+    /// @brief The injection counterpart of collectSlaveGroupSummaryProductionData_()
+    ///   (potentials, history rates, flowing injectors).
     /// @param group_idx Index of the slave group
-    /// @return Voidage rate (volume removed from reservoir)
-    Scalar collectSlaveGroupVoidageRate_(std::size_t group_idx) const;
+    /// @param injection_data In/out: the group's injection data
+    void collectSlaveGroupSummaryInjectionData_(std::size_t group_idx,
+                                                SlaveGroupInjectionData& injection_data) const;
 
     /// @brief Add the quantities that the master only needs for the summary
     ///   output of its master group (potentials, history rates, flowing
@@ -148,44 +146,34 @@ private:
     void collectSlaveGroupSummaryProductionData_(std::size_t group_idx,
                                                  SlaveGroupProductionData& production_data) const;
 
-    /// @brief The injection counterpart of collectSlaveGroupSummaryProductionData_()
-    ///   (potentials, history rates, flowing injectors).
+    /// @brief Collect surface production rates for a specific slave group
     /// @param group_idx Index of the slave group
-    /// @param injection_data In/out: the group's injection data
-    void collectSlaveGroupSummaryInjectionData_(std::size_t group_idx,
-                                                SlaveGroupInjectionData& injection_data) const;
+    /// @return ProductionRates structure containing oil, gas, and water surface rates
+    /// @note These rates are computed with network=false, so efficiency factors are applied
+    ///       according to regular GEFAC/WEFAC settings
+    ProductionRates collectSlaveGroupSurfaceProductionRates_(std::size_t group_idx) const;
 
-    /// @brief Visit the wells below a group that are owned by this rank and not
-    ///   shut, with the efficiency factor a group summary vector applies to them.
-    /// @details The efficiency factor is the well's WEFAC times its efficiency
-    ///   scaling factor times the GEFAC of the groups between the well and
-    ///   @p group, excluding @p group itself.  The visitor's results are
-    ///   rank-local; the caller sums them over the ranks.
-    /// @param group The group whose wells to visit
-    /// @param efficiency The efficiency factor accumulated above (1 at the top)
-    /// @param visit Called as visit(well_ecl, ws, efficiency) for each well
-    template <typename Visitor>
-    void visitGroupWells_(const Group& group, Scalar efficiency, const Visitor& visit) const;
-
-    /// @brief The active phase index of a phase, or -1 if the phase is not active
-    int activePhaseIdx_(ReservoirCoupling::Phase phase) const;
+    /// @brief Collect the voidage rate for a specific slave group
+    /// @param group_idx Index of the slave group
+    /// @return Voidage rate (volume removed from reservoir)
+    Scalar collectSlaveGroupVoidageRate_(std::size_t group_idx) const;
 
     /// @brief Convert a rate vector to InjectionRates structure
     /// @param rate_vector Vector of injection rates indexed by phase
     /// @return InjectionRates structure containing oil, gas, and water injection rates
     InjectionRates createInjectionRatesFromRateVector_(const std::vector<Scalar>& rate_vector) const;
 
-    /// @brief Send collected production data to the master process
-    ///
-    /// This method sends the production data for all slave groups to the master
-    /// via MPI communication through the ReservoirCouplingSlave.
-    void sendSlaveGroupProductionDataToMaster_() const;
-
     /// @brief Send collected injection data to the master process
     ///
     /// This method sends the injection data for all slave groups to the master
     /// via MPI communication through the ReservoirCouplingSlave.
     void sendSlaveGroupInjectionDataToMaster_() const;
+
+    /// @brief Send collected production data to the master process
+    ///
+    /// This method sends the production data for all slave groups to the master
+    /// via MPI communication through the ReservoirCouplingSlave.
+    void sendSlaveGroupProductionDataToMaster_() const;
 
     /// @brief The part of a group's surface production rates that comes from
     ///   wells which open in this report step but have not been solved yet
@@ -201,6 +189,18 @@ private:
     ///       target rather than rates from a solve.  Reporting those to the
     ///       master states a target as achieved production; see the call sites.
     ProductionRates unsolvedNewWellProductionRates_(const std::string& group_name, bool network) const;
+
+    /// @brief Visit the wells below a group that are owned by this rank and not
+    ///   shut, with the efficiency factor a group summary vector applies to them.
+    /// @details The efficiency factor is the well's WEFAC times its efficiency
+    ///   scaling factor times the GEFAC of the groups between the well and
+    ///   @p group, excluding @p group itself.  The visitor's results are
+    ///   rank-local; the caller sums them over the ranks.
+    /// @param group The group whose wells to visit
+    /// @param efficiency The efficiency factor accumulated above (1 at the top)
+    /// @param visit Called as visit(well_ecl, ws, efficiency) for each well
+    template <typename Visitor>
+    void visitGroupWells_(const Group& group, Scalar efficiency, const Visitor& visit) const;
 
     /// Reference to the GroupStateHelper for group state management
     const GroupStateHelperType& groupStateHelper_;

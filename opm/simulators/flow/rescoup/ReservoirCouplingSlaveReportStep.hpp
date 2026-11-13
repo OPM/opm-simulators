@@ -73,20 +73,30 @@ public:
     /// @return Reference to the parallel communication object
     const Parallel::Communication &comm() const { return this->slave_.getComm(); }
 
+    /// @brief Whether this slave is connected to the master's cross-rescoup
+    ///   network this sync step (i.e. at least one of its master groups is a
+    ///   leaf node in the master network). Set by
+    ///   `receiveCoupledNetworkActiveStatusFromMaster` from the master's
+    ///   per-slave flag. Distinct from the per-iteration `is_final` flag: an
+    ///   unconnected slave never participates in the cross-rescoup exchange
+    ///   and balances only its own (local) network.
+    bool connectedToMasterCoupledNetwork() const
+    { return connected_to_master_coupled_network_; }
+
     /// @brief Get the MPI communicator for slave-master communication
     /// @return MPI communicator handle for communication with the master process
     MPI_Comm getSlaveMasterComm() const { return this->slave_.getMasterComm(); }
+
+    /// @brief Check if a master-computed network-leaf node pressure exists for a master group
+    /// @param gname Slave group name
+    /// @return true if the master sent a node pressure for this group
+    bool hasMasterGroupNodePressure(const std::string& gname) const;
 
     /// @brief Check if a master-imposed injection target exists for a group and phase
     /// @param gname Slave group name
     /// @param phase Injection phase (e.g., Phase::WATER, Phase::GAS)
     /// @return true if the master sent an injection target for this group/phase pair
     bool hasMasterInjectionTarget(const std::string& gname, const Phase phase) const;
-
-    /// @brief Check if a master-computed network-leaf node pressure exists for a master group
-    /// @param gname Slave group name
-    /// @return true if the master sent a node pressure for this group
-    bool hasMasterGroupNodePressure(const std::string& gname) const;
 
     /// @brief Check if master-imposed per-rate-type production limits exist for a group
     /// @param gname Slave group name
@@ -114,9 +124,31 @@ public:
     /// @return true if this is the last substep of a "sync" timestep, false if not
     bool isLastSubstepOfSyncTimestep() const { return is_last_substep_of_sync_timestep_; }
 
+    /// @brief Whether the most recent master-group-node-pressures receive
+    ///   carried the `is_final` flag.  Updated by every call to
+    ///   `receiveNumMasterGroupNodePressuresFromMaster`, and by
+    ///   `receiveCoupledNetworkActiveStatusFromMaster` at the start of
+    ///   each sync step.
+    /// @details See `last_received_master_group_node_pressures_is_final_` variable for details.
+    bool lastReceivedMasterGroupNodePressuresIsFinal() const
+    { return last_received_master_group_node_pressures_is_final_; }
+
     /// @brief Get the logger for reservoir coupling operations
     /// @return Reference to the logger object for this coupling session
     ReservoirCoupling::Logger& logger() const { return this->slave_.logger(); }
+
+    /// @brief Mark slave groups in the Schedule as production/injection groups.
+    /// @details For slave groups that have received master production/injection
+    ///   targets, mark them so isProductionGroup()/isInjectionGroup() return true.
+    ///   This ensures the existing constraint enforcement mechanisms recognize them.
+    /// @param schedule Non-const reference to the Schedule
+    /// @param report_step_idx 0-based report step index
+    void markSlaveGroupsInSchedule(Schedule& schedule, int report_step_idx);
+
+    /// @brief Gas lift limits (GLIFTOPT) the master imposes on a slave group, if any
+    /// @param gname Slave group name
+    /// @return Pointer to the limits (-1 means no limit), or nullptr if none were received
+    const ReservoirCoupling::GasLiftGroupLimits<Scalar>* masterGasLiftLimits(const std::string& gname) const;
 
     /// @brief Get the master-computed network-leaf node pressure for a master group
     /// @param gname Slave group name
@@ -149,17 +181,6 @@ public:
     /// @throws std::out_of_range if no target exists for the given group
     std::pair<Scalar, Group::ProductionCMode> masterProductionTarget(const std::string& gname) const;
 
-    /// @brief Receive master-computed network-leaf node pressures from master
-    ///   and store them locally.  Only emitted for master groups that are
-    ///   leaf nodes in the master's extended network.
-    /// @param num_pressures Number of pressure entries to receive
-    void receiveMasterGroupNodePressuresFromMaster(std::size_t num_pressures);
-
-    /// @brief Receive the master-group-node-pressures header from master.
-    /// @return (num_pressures, is_final).  is_final tells the slave whether
-    ///   the master is done iterating for the current sync timestep.
-    std::pair<std::size_t, bool> receiveNumMasterGroupNodePressuresFromMaster();
-
     /// @brief Receive the master's single-bool flag for the current sync
     ///   timestep and mirror it into
     ///   `last_received_master_group_node_pressures_is_final_`
@@ -168,58 +189,33 @@ public:
     ///   lastReceivedMasterGroupNodePressuresIsFinal().
     void receiveCoupledNetworkActiveStatusFromMaster();
 
-    /// @brief Whether the most recent master-group-node-pressures receive
-    ///   carried the `is_final` flag.  Updated by every call to
-    ///   `receiveNumMasterGroupNodePressuresFromMaster`, and by
-    ///   `receiveCoupledNetworkActiveStatusFromMaster` at the start of
-    ///   each sync step.
-    /// @details See `last_received_master_group_node_pressures_is_final_` variable for details.
-    bool lastReceivedMasterGroupNodePressuresIsFinal() const
-    { return last_received_master_group_node_pressures_is_final_; }
-
-    /// @brief Whether this slave is connected to the master's cross-rescoup
-    ///   network this sync step (i.e. at least one of its master groups is a
-    ///   leaf node in the master network). Set by
-    ///   `receiveCoupledNetworkActiveStatusFromMaster` from the master's
-    ///   per-slave flag. Distinct from the per-iteration `is_final` flag: an
-    ///   unconnected slave never participates in the cross-rescoup exchange
-    ///   and balances only its own (local) network.
-    bool connectedToMasterCoupledNetwork() const
-    { return connected_to_master_coupled_network_; }
-
-    /// @brief Receive the number of injection and production constraints from master
-    /// @return Tuple of (num_injection_targets, num_production_constraints, num_gas_lift_limits)
-    std::tuple<std::size_t, std::size_t, std::size_t> receiveNumGroupConstraintsFromMaster() const;
-
     /// @brief Receive the gas lift limits for the slave groups from master and store them
     /// @details Replaces the limits stored earlier.
     /// @param num_limits Number of gas lift limit records to receive
     void receiveGasLiftGroupLimitsFromMaster(std::size_t num_limits);
 
-    /// @brief Gas lift limits (GLIFTOPT) the master imposes on a slave group, if any
-    /// @param gname Slave group name
-    /// @return Pointer to the limits (-1 means no limit), or nullptr if none were received
-    const ReservoirCoupling::GasLiftGroupLimits<Scalar>* masterGasLiftLimits(const std::string& gname) const;
-
     /// @brief Receive injection group targets from master and store them locally
     /// @param num_targets Number of injection targets to receive
     void receiveInjectionGroupTargetsFromMaster(std::size_t num_targets);
 
+    /// @brief Receive master-computed network-leaf node pressures from master
+    ///   and store them locally.  Only emitted for master groups that are
+    ///   leaf nodes in the master's extended network.
+    /// @param num_pressures Number of pressure entries to receive
+    void receiveMasterGroupNodePressuresFromMaster(std::size_t num_pressures);
+
+    /// @brief Receive the number of injection and production constraints from master
+    /// @return Tuple of (num_injection_targets, num_production_constraints, num_gas_lift_limits)
+    std::tuple<std::size_t, std::size_t, std::size_t> receiveNumGroupConstraintsFromMaster() const;
+
+    /// @brief Receive the master-group-node-pressures header from master.
+    /// @return (num_pressures, is_final).  is_final tells the slave whether
+    ///   the master is done iterating for the current sync timestep.
+    std::pair<std::size_t, bool> receiveNumMasterGroupNodePressuresFromMaster();
+
     /// @brief Receive production group constraints from master and store them locally
     /// @param num_targets Number of production constraints to receive
     void receiveProductionGroupConstraintsFromMaster(std::size_t num_targets);
-
-    /// @brief Send production data to the master process
-    ///
-    /// This method sends production rates, potentials, and related data for all
-    /// slave groups to the master process via MPI communication. The data is used
-    /// by the master for group control calculations and coordination.
-    ///
-    /// @param production_data Vector of production data for each slave group
-    ///
-    /// @note This is a blocking operation that waits for the master to receive the data
-    /// @note Must be called before the master attempts to receive production data
-    void sendProductionDataToMaster(const std::vector<SlaveGroupProductionData> &production_data) const;
 
     /// @brief Send injection data to the master process
     ///
@@ -233,6 +229,18 @@ public:
     /// @note Must be called before the master attempts to receive injection data
     void sendInjectionDataToMaster(const std::vector<SlaveGroupInjectionData> &injection_data) const;
 
+    /// @brief Send production data to the master process
+    ///
+    /// This method sends production rates, potentials, and related data for all
+    /// slave groups to the master process via MPI communication. The data is used
+    /// by the master for group control calculations and coordination.
+    ///
+    /// @param production_data Vector of production data for each slave group
+    ///
+    /// @note This is a blocking operation that waits for the master to receive the data
+    /// @note Must be called before the master attempts to receive production data
+    void sendProductionDataToMaster(const std::vector<SlaveGroupProductionData> &production_data) const;
+
     /// @brief Set whether this is the first substep within a "sync" timestep.
     /// @param value true at start of sync timestep, false after first runSubStep_() call
     void setFirstSubstepOfSyncTimestep(bool value) { is_first_substep_of_sync_timestep_ = value; }
@@ -241,18 +249,6 @@ public:
     /// @details See isLastSubstepOfSyncTimestep() for details.
     /// @param value true if this is the last substep of a "sync" timestep, false if not
     void setLastSubstepOfSyncTimestep(bool value) { is_last_substep_of_sync_timestep_ = value; }
-
-    /// @brief Mark slave groups in the Schedule as production/injection groups.
-    /// @details For slave groups that have received master production/injection
-    ///   targets, mark them so isProductionGroup()/isInjectionGroup() return true.
-    ///   This ensures the existing constraint enforcement mechanisms recognize them.
-    /// @param schedule Non-const reference to the Schedule
-    /// @param report_step_idx 0-based report step index
-    void markSlaveGroupsInSchedule(Schedule& schedule, int report_step_idx);
-
-    /// @brief Get the name of this slave process
-    /// @return Reference to the name string for this slave
-    const std::string& slaveName() const { return this->slave_.getSlaveName(); }
 
     /// @brief Store a master-computed network-leaf node pressure for a master group
     /// @param gname Slave group name
@@ -281,6 +277,10 @@ public:
     /// @brief Record whether the initial well solve for this sync step has run
     /// @param value False before the solve, true after it
     void setWellsSolvedThisSyncStep(bool value) { wells_solved_this_sync_step_ = value; }
+
+    /// @brief Get the name of this slave process
+    /// @return Reference to the name string for this slave
+    const std::string& slaveName() const { return this->slave_.getSlaveName(); }
 
     /// @brief True once the initial well solve for this sync step has run
     /// @details Before it, a well that opens in this report step still carries the

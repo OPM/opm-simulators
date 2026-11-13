@@ -54,6 +54,67 @@ ReservoirCouplingMasterReportStep(
 // ------------------
 
 template <class Scalar>
+data::ReservoirCouplingGroupRates
+ReservoirCouplingMasterReportStep<Scalar>::
+collectGroupRatesForSummary() const
+{
+    using RcPhase = ReservoirCoupling::Phase;
+    using RateKind = ReservoirCoupling::RateKind;
+
+    data::ReservoirCouplingGroupRates result;
+
+    const auto numSlaves = this->numSlaves();
+    for (unsigned int i = 0; i < numSlaves; ++i) {
+        const auto& slaveName = this->slaveName(i);
+        const auto& masterGroupNames = this->getMasterGroupNamesForSlave(i);
+        for (const auto& groupName : masterGroupNames) {
+            const auto groupIdx = this->getMasterGroupCanonicalIdx(slaveName, groupName);
+            const auto& prodData = this->slave_group_production_data_.at(slaveName)[groupIdx];
+            const auto& injData = this->slave_group_injection_data_.at(slaveName)[groupIdx];
+
+            // Production rates (positive values, SI units)
+            data::ReservoirCouplingGroupRates::ProductionRates prod;
+            prod.oil = this->getMasterGroupRate_(groupName, RcPhase::Oil, RateKind::ProductionSurface);
+            prod.gas = this->getMasterGroupRate_(groupName, RcPhase::Gas, RateKind::ProductionSurface);
+            prod.water = this->getMasterGroupRate_(groupName, RcPhase::Water, RateKind::ProductionSurface);
+            prod.resv_oil = this->getMasterGroupRate_(groupName, RcPhase::Oil, RateKind::ProductionReservoir);
+            prod.resv_gas = this->getMasterGroupRate_(groupName, RcPhase::Gas, RateKind::ProductionReservoir);
+            prod.resv_water = this->getMasterGroupRate_(groupName, RcPhase::Water, RateKind::ProductionReservoir);
+            prod.resv = prod.resv_oil + prod.resv_gas + prod.resv_water;
+            prod.gas_lift = prodData.gas_lift_rate;
+            prod.potential_oil = prodData.well_potentials[RcPhase::Oil];
+            prod.potential_gas = prodData.well_potentials[RcPhase::Gas];
+            prod.potential_water = prodData.well_potentials[RcPhase::Water];
+            prod.history_oil = prodData.history_rates[RcPhase::Oil];
+            prod.history_gas = prodData.history_rates[RcPhase::Gas];
+            prod.history_water = prodData.history_rates[RcPhase::Water];
+            result.production[groupName] = prod;
+
+            // Injection rates (positive values, SI units)
+            for (const auto phase : {RcPhase::Oil, RcPhase::Gas, RcPhase::Water}) {
+                const data::ReservoirCouplingGroupRates::InjectionRates inj {
+                    .surface = this->getMasterGroupRate_(groupName, phase, RateKind::InjectionSurface),
+                    .reservoir = this->getMasterGroupRate_(groupName, phase, RateKind::InjectionReservoir),
+                    .potential = injData.well_potentials[phase],
+                    .history = injData.history_rates[phase],
+                };
+                if (inj.surface != 0.0 || inj.reservoir != 0.0
+                    || inj.potential != 0.0 || inj.history != 0.0)
+                {
+                    result.injection[groupName][convertToOpmPhase(phase)] = inj;
+                }
+            }
+
+            result.flowing_wells[groupName] = {
+                .producers = prodData.num_flowing_producers,
+                .injectors = injData.num_flowing_injectors,
+            };
+        }
+    }
+    return result;
+}
+
+template <class Scalar>
 std::size_t
 ReservoirCouplingMasterReportStep<Scalar>::
 getMasterGroupCanonicalIdx(const std::string &slave_name, const std::string &master_group_name) const
@@ -64,9 +125,22 @@ getMasterGroupCanonicalIdx(const std::string &slave_name, const std::string &mas
 template <class Scalar>
 Scalar
 ReservoirCouplingMasterReportStep<Scalar>::
-getMasterGroupInjectionSurfaceRate(const std::string &group_name, ReservoirCoupling::Phase phase) const
+getMasterGroupGasLiftHeadroom(const std::string &group_name) const
 {
-    return this->getMasterGroupRate_(group_name, phase, ReservoirCoupling::RateKind::InjectionSurface);
+    const auto* data = this->slaveGroupProductionDataOrNull_(group_name);
+    return (data == nullptr) ? Scalar{0} : data->gas_lift_headroom;
+}
+
+template <class Scalar>
+Scalar
+ReservoirCouplingMasterReportStep<Scalar>::
+getMasterGroupGasLiftRate(const std::string &group_name, bool network) const
+{
+    const auto* data = this->slaveGroupProductionDataOrNull_(group_name);
+    if (data == nullptr) {
+        return 0.0;
+    }
+    return network ? data->network_gas_lift_rate : data->gas_lift_rate;
 }
 
 template <class Scalar>
@@ -80,9 +154,9 @@ getMasterGroupInjectionReservoirRate(const std::string &group_name, ReservoirCou
 template <class Scalar>
 Scalar
 ReservoirCouplingMasterReportStep<Scalar>::
-getMasterGroupProductionSurfaceRate(const std::string &group_name, ReservoirCoupling::Phase phase) const
+getMasterGroupInjectionSurfaceRate(const std::string &group_name, ReservoirCoupling::Phase phase) const
 {
-    return this->getMasterGroupRate_(group_name, phase, ReservoirCoupling::RateKind::ProductionSurface);
+    return this->getMasterGroupRate_(group_name, phase, ReservoirCoupling::RateKind::InjectionSurface);
 }
 
 template <class Scalar>
@@ -104,48 +178,11 @@ getMasterGroupProductionReservoirRate(const std::string &group_name, ReservoirCo
 }
 
 template <class Scalar>
-bool
-ReservoirCouplingMasterReportStep<Scalar>::
-hasSlaveGroupProductionData(const std::string &group_name) const
-{
-    const auto it = this->getMasterGroupToSlaveNameMap().find(group_name);
-    return it != this->getMasterGroupToSlaveNameMap().end()
-        && this->slave_group_production_data_.count(it->second) > 0;
-}
-
-template <class Scalar>
 Scalar
 ReservoirCouplingMasterReportStep<Scalar>::
-getMasterGroupGasLiftRate(const std::string &group_name, bool network) const
+getMasterGroupProductionSurfaceRate(const std::string &group_name, ReservoirCoupling::Phase phase) const
 {
-    const auto* data = this->slaveGroupProductionDataOrNull_(group_name);
-    if (data == nullptr) {
-        return 0.0;
-    }
-    return network ? data->network_gas_lift_rate : data->gas_lift_rate;
-}
-
-template <class Scalar>
-int
-ReservoirCouplingMasterReportStep<Scalar>::
-getSlaveGroupNumGroupControlledProducers(const std::string &master_group_name) const
-{
-    auto it = this->getMasterGroupToSlaveNameMap().find(master_group_name);
-    if (it != this->getMasterGroupToSlaveNameMap().end()) {
-        auto& slave_name = it->second;
-        auto group_idx = this->getMasterGroupCanonicalIdx(slave_name, master_group_name);
-        return this->slave_group_production_data_.at(slave_name)[group_idx]
-            .num_group_controlled_producers;
-    }
-    else {
-        RCOUP_LOG_THROW(
-            std::runtime_error,
-            fmt::format(
-                "Master group name {} not found in master-to-slave-group-name mapping",
-                master_group_name
-            )
-        );
-    }
+    return this->getMasterGroupRate_(group_name, phase, ReservoirCoupling::RateKind::ProductionSurface);
 }
 
 template <class Scalar>
@@ -173,12 +210,26 @@ getSlaveGroupNumGroupControlledInjectors(const std::string &master_group_name,
 }
 
 template <class Scalar>
-Scalar
+int
 ReservoirCouplingMasterReportStep<Scalar>::
-getMasterGroupGasLiftHeadroom(const std::string &group_name) const
+getSlaveGroupNumGroupControlledProducers(const std::string &master_group_name) const
 {
-    const auto* data = this->slaveGroupProductionDataOrNull_(group_name);
-    return (data == nullptr) ? Scalar{0} : data->gas_lift_headroom;
+    auto it = this->getMasterGroupToSlaveNameMap().find(master_group_name);
+    if (it != this->getMasterGroupToSlaveNameMap().end()) {
+        auto& slave_name = it->second;
+        auto group_idx = this->getMasterGroupCanonicalIdx(slave_name, master_group_name);
+        return this->slave_group_production_data_.at(slave_name)[group_idx]
+            .num_group_controlled_producers;
+    }
+    else {
+        RCOUP_LOG_THROW(
+            std::runtime_error,
+            fmt::format(
+                "Master group name {} not found in master-to-slave-group-name mapping",
+                master_group_name
+            )
+        );
+    }
 }
 
 template <class Scalar>
@@ -201,6 +252,16 @@ getSlaveGroupPotentials(const std::string &master_group_name) const
             )
         );
     }
+}
+
+template <class Scalar>
+bool
+ReservoirCouplingMasterReportStep<Scalar>::
+hasSlaveGroupProductionData(const std::string &group_name) const
+{
+    const auto it = this->getMasterGroupToSlaveNameMap().find(group_name);
+    return it != this->getMasterGroupToSlaveNameMap().end()
+        && this->slave_group_production_data_.count(it->second) > 0;
 }
 
 template <class Scalar>
@@ -315,6 +376,20 @@ receiveProductionDataFromSlaves()
     }
 }
 
+template <class Scalar>
+void
+ReservoirCouplingMasterReportStep<Scalar>::
+saveGroupFlowsAtStartOfSyncStep()
+{
+    this->group_flows_at_start_of_sync_step_.clear();
+    for (const auto& [group_name, slave_name] : this->getMasterGroupToSlaveNameMap()) {
+        if (this->slave_group_production_data_.count(slave_name) > 0
+            && this->slave_group_injection_data_.count(slave_name) > 0) {
+            this->group_flows_at_start_of_sync_step_[group_name] = this->getMasterGroupFlows_(group_name);
+        }
+    }
+}
+
 // Send a single boolean telling the slave whether the master will iterate the
 // cross-rescoup network exchange this sync timestep.  Encoded as a single
 // size_t (0 = inactive, 1 = active) so the slave can mirror the value into its
@@ -341,6 +416,32 @@ sendCoupledNetworkActiveStatusToSlave(std::size_t slave_idx, bool active) const
         this->logger().debug(fmt::format(
             "Sent coupled-network active status (active={}) to {}",
             active, this->slaveName(slave_idx)
+        ));
+    }
+}
+
+template <class Scalar>
+void
+ReservoirCouplingMasterReportStep<Scalar>::
+sendGasLiftGroupLimitsToSlave(std::size_t slave_idx,
+                              const std::vector<GasLiftGroupLimits>& gas_lift_limits) const
+{
+    // Only rank 0 sends data to slaves. Other ranks in the master's MPI communicator
+    // do not participate in master-slave communication (no else branch needed).
+    if (this->comm().rank() == 0) {
+        auto MPI_GAS_LIFT_LIMITS_TYPE = Dune::MPITraits<GasLiftGroupLimits>::getType();
+        // NOTE: See comment about error handling at the top of this file.
+        MPI_Send(
+            gas_lift_limits.data(),
+            /*count=*/gas_lift_limits.size(),
+            /*datatype=*/MPI_GAS_LIFT_LIMITS_TYPE,
+            /*dest_rank=*/0,
+            /*tag=*/static_cast<int>(MessageTag::GasLiftGroupLimits),
+            this->getSlaveComm(slave_idx)
+        );
+        this->logger().debug(fmt::format(
+            "Sent {} gas lift group limits to {}",
+            gas_lift_limits.size(), this->slaveName(slave_idx)
         ));
     }
 }
@@ -473,32 +574,6 @@ sendNumMasterGroupNodePressuresToSlave(std::size_t slave_idx,
 template <class Scalar>
 void
 ReservoirCouplingMasterReportStep<Scalar>::
-sendGasLiftGroupLimitsToSlave(std::size_t slave_idx,
-                              const std::vector<GasLiftGroupLimits>& gas_lift_limits) const
-{
-    // Only rank 0 sends data to slaves. Other ranks in the master's MPI communicator
-    // do not participate in master-slave communication (no else branch needed).
-    if (this->comm().rank() == 0) {
-        auto MPI_GAS_LIFT_LIMITS_TYPE = Dune::MPITraits<GasLiftGroupLimits>::getType();
-        // NOTE: See comment about error handling at the top of this file.
-        MPI_Send(
-            gas_lift_limits.data(),
-            /*count=*/gas_lift_limits.size(),
-            /*datatype=*/MPI_GAS_LIFT_LIMITS_TYPE,
-            /*dest_rank=*/0,
-            /*tag=*/static_cast<int>(MessageTag::GasLiftGroupLimits),
-            this->getSlaveComm(slave_idx)
-        );
-        this->logger().debug(fmt::format(
-            "Sent {} gas lift group limits to {}",
-            gas_lift_limits.size(), this->slaveName(slave_idx)
-        ));
-    }
-}
-
-template <class Scalar>
-void
-ReservoirCouplingMasterReportStep<Scalar>::
 sendProductionConstraintsToSlave(std::size_t slave_idx,
                              const std::vector<ProductionGroupConstraints>& production_constraints) const
 {
@@ -534,20 +609,6 @@ setReportStepIdx(int report_step_idx)
 template <class Scalar>
 void
 ReservoirCouplingMasterReportStep<Scalar>::
-saveGroupFlowsAtStartOfSyncStep()
-{
-    this->group_flows_at_start_of_sync_step_.clear();
-    for (const auto& [group_name, slave_name] : this->getMasterGroupToSlaveNameMap()) {
-        if (this->slave_group_production_data_.count(slave_name) > 0
-            && this->slave_group_injection_data_.count(slave_name) > 0) {
-            this->group_flows_at_start_of_sync_step_[group_name] = this->getMasterGroupFlows_(group_name);
-        }
-    }
-}
-
-template <class Scalar>
-void
-ReservoirCouplingMasterReportStep<Scalar>::
 updateFlowChangeTimeStepLimit()
 {
     this->flow_change_time_step_limit_ = std::numeric_limits<Scalar>::infinity();
@@ -577,95 +638,10 @@ updateFlowChangeTimeStepLimit()
     }
 }
 
-template <class Scalar>
-data::ReservoirCouplingGroupRates
-ReservoirCouplingMasterReportStep<Scalar>::
-collectGroupRatesForSummary() const
-{
-    using RcPhase = ReservoirCoupling::Phase;
-    using RateKind = ReservoirCoupling::RateKind;
-
-    data::ReservoirCouplingGroupRates result;
-
-    const auto numSlaves = this->numSlaves();
-    for (unsigned int i = 0; i < numSlaves; ++i) {
-        const auto& slaveName = this->slaveName(i);
-        const auto& masterGroupNames = this->getMasterGroupNamesForSlave(i);
-        for (const auto& groupName : masterGroupNames) {
-            const auto groupIdx = this->getMasterGroupCanonicalIdx(slaveName, groupName);
-            const auto& prodData = this->slave_group_production_data_.at(slaveName)[groupIdx];
-            const auto& injData = this->slave_group_injection_data_.at(slaveName)[groupIdx];
-
-            // Production rates (positive values, SI units)
-            data::ReservoirCouplingGroupRates::ProductionRates prod;
-            prod.oil = this->getMasterGroupRate_(groupName, RcPhase::Oil, RateKind::ProductionSurface);
-            prod.gas = this->getMasterGroupRate_(groupName, RcPhase::Gas, RateKind::ProductionSurface);
-            prod.water = this->getMasterGroupRate_(groupName, RcPhase::Water, RateKind::ProductionSurface);
-            prod.resv_oil = this->getMasterGroupRate_(groupName, RcPhase::Oil, RateKind::ProductionReservoir);
-            prod.resv_gas = this->getMasterGroupRate_(groupName, RcPhase::Gas, RateKind::ProductionReservoir);
-            prod.resv_water = this->getMasterGroupRate_(groupName, RcPhase::Water, RateKind::ProductionReservoir);
-            prod.resv = prod.resv_oil + prod.resv_gas + prod.resv_water;
-            prod.gas_lift = prodData.gas_lift_rate;
-            prod.potential_oil = prodData.well_potentials[RcPhase::Oil];
-            prod.potential_gas = prodData.well_potentials[RcPhase::Gas];
-            prod.potential_water = prodData.well_potentials[RcPhase::Water];
-            prod.history_oil = prodData.history_rates[RcPhase::Oil];
-            prod.history_gas = prodData.history_rates[RcPhase::Gas];
-            prod.history_water = prodData.history_rates[RcPhase::Water];
-            result.production[groupName] = prod;
-
-            // Injection rates (positive values, SI units)
-            for (const auto phase : {RcPhase::Oil, RcPhase::Gas, RcPhase::Water}) {
-                const data::ReservoirCouplingGroupRates::InjectionRates inj {
-                    .surface = this->getMasterGroupRate_(groupName, phase, RateKind::InjectionSurface),
-                    .reservoir = this->getMasterGroupRate_(groupName, phase, RateKind::InjectionReservoir),
-                    .potential = injData.well_potentials[phase],
-                    .history = injData.history_rates[phase],
-                };
-                if (inj.surface != 0.0 || inj.reservoir != 0.0
-                    || inj.potential != 0.0 || inj.history != 0.0)
-                {
-                    result.injection[groupName][convertToOpmPhase(phase)] = inj;
-                }
-            }
-
-            result.flowing_wells[groupName] = {
-                .producers = prodData.num_flowing_producers,
-                .injectors = injData.num_flowing_injectors,
-            };
-        }
-    }
-    return result;
-}
-
 
 // ------------------
 // Private methods
 // ------------------
-
-template <class Scalar>
-const ReservoirCoupling::SlaveGroupProductionData<Scalar>*
-ReservoirCouplingMasterReportStep<Scalar>::
-slaveGroupProductionDataOrNull_(const std::string &group_name) const
-{
-    const auto it = this->getMasterGroupToSlaveNameMap().find(group_name);
-    if (it == this->getMasterGroupToSlaveNameMap().end()) {
-        RCOUP_LOG_THROW(
-            std::runtime_error,
-            fmt::format(
-                "Master group name {} not found in master-to-slave-group-name mapping",
-                group_name
-            )
-        );
-    }
-    const auto& slave_name = it->second;
-    const auto data_it = this->slave_group_production_data_.find(slave_name);
-    if (data_it == this->slave_group_production_data_.end()) {
-        // The slave has sent no production data, e.g. it has no slave groups yet
-        return nullptr;
-    }
-    return &data_it->second[this->getMasterGroupCanonicalIdx(slave_name, group_name)];
-}
 
 template <class Scalar>
 typename ReservoirCouplingMasterReportStep<Scalar>::GroupFlows
@@ -718,6 +694,30 @@ getMasterGroupRate_(const std::string &group_name, ReservoirCoupling::Phase phas
             )
         );
     }
+}
+
+template <class Scalar>
+const ReservoirCoupling::SlaveGroupProductionData<Scalar>*
+ReservoirCouplingMasterReportStep<Scalar>::
+slaveGroupProductionDataOrNull_(const std::string &group_name) const
+{
+    const auto it = this->getMasterGroupToSlaveNameMap().find(group_name);
+    if (it == this->getMasterGroupToSlaveNameMap().end()) {
+        RCOUP_LOG_THROW(
+            std::runtime_error,
+            fmt::format(
+                "Master group name {} not found in master-to-slave-group-name mapping",
+                group_name
+            )
+        );
+    }
+    const auto& slave_name = it->second;
+    const auto data_it = this->slave_group_production_data_.find(slave_name);
+    if (data_it == this->slave_group_production_data_.end()) {
+        // The slave has sent no production data, e.g. it has no slave groups yet
+        return nullptr;
+    }
+    return &data_it->second[this->getMasterGroupCanonicalIdx(slave_name, group_name)];
 }
 
 // Explicit instantiations

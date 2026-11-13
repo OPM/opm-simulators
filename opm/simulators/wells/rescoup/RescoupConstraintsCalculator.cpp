@@ -63,6 +63,69 @@ RescoupConstraintsCalculator(
 {
 }
 
+// The pre-phase and Phases 1, 2 and 2b of
+// calculateMasterGroupConstraintsAndSendToSlaves(), see the overview above.
+// Separate from the send so that unit tests, which have no slaves to send to,
+// can check the constraints (see tests/rescoup/test_rescoup_constraints.cpp).
+template <class Scalar, class IndexTraits>
+typename RescoupConstraintsCalculator<Scalar, IndexTraits>::MasterGroupConstraints
+RescoupConstraintsCalculator<Scalar, IndexTraits>::
+calculateMasterGroupConstraints()
+{
+    // NOTE: Since this object can only be constructed for a master process,
+    //   we can be sure that if we are here, we are running as master.
+    //
+    // The body below must run on all ranks to ensure correct behavior:
+    //   - updateGroupControlledWells() uses a collective comm_.sum()
+    //   - GroupConstraintCalculator and updateGroupTargetReduction depend on
+    //     GroupStateHelper which performs collective operations on the
+    //     master's MPI communicator.
+    auto& rescoup_master = this->reservoir_coupling_master_;
+    GroupConstraintCalculator calculator{
+        this->well_model_,
+        this->group_state_helper_
+    };
+    // Reset effective-GCW entries from the previous sync step to GCW=1 before
+    // excludeInactiveSlaveMasterGroupsFromDistribution_() (and later the
+    // Phase 2 exclusion) repopulate the 0-entries for this step.
+    rescoup_master.resetEffectiveGCW();
+    this->excludeInactiveSlaveMasterGroupsFromDistribution_();
+    // Recompute GCW and reduction rates after the control changes above.
+    // The earlier updateAndCommunicateGroupData() in beginTimeStep() may
+    // have computed reductions with different controls. Inactive slaves'
+    // master groups are now on individual control with zero rates → excluded
+    // from guide rate fractions via GCW=0.
+    this->updateGCWAndTargetReductions_();
+    this->updateInjectionGCWAndTargetReductions_();
+
+    // Phase 1: compute initial targets for all slaves
+    const auto num_slaves = rescoup_master.numSlaves();
+    std::vector<std::vector<InjectionGroupTarget>> all_injection_targets(num_slaves);
+    std::vector<std::vector<ProductionGroupConstraints>> all_production_constraints(num_slaves);
+    std::vector<std::vector<GasLiftGroupLimits>> all_gas_lift_limits(num_slaves);
+    for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
+        if (rescoup_master.slaveIsCoupled(slave_idx)) {
+            auto [inj, prod] = this->calculateSlaveGroupConstraints_(slave_idx, calculator);
+            all_injection_targets[slave_idx] = std::move(inj);
+            all_production_constraints[slave_idx] = std::move(prod);
+            all_gas_lift_limits[slave_idx] = this->calculateGasLiftGroupLimits_(slave_idx);
+        }
+    }
+
+    // Phase 2: exclude master groups without producers under group control and
+    // redistribute the shortfall to sibling master groups via the standard
+    // localReduction / FractionCalculator machinery.
+    this->excludeAndRedistributeProductionTargets_(calculator, all_production_constraints);
+
+    // Phase 2b: exclude master groups without injectors under group control
+    // and redistribute the surplus to sibling master groups, per phase.
+    this->excludeAndRedistributeInjectionTargets_(calculator, all_injection_targets);
+
+    return {std::move(all_injection_targets),
+            std::move(all_production_constraints),
+            std::move(all_gas_lift_limits)};
+}
+
 // Calculates the constraints (target and per-rate-type limits) for each master group.
 //
 // Runs at the start of each sync step from the slave rates reported before the
@@ -250,69 +313,6 @@ calculateMasterGroupConstraintsAndSendToSlaves()
             );
         }
     }
-}
-
-// The pre-phase and Phases 1, 2 and 2b of
-// calculateMasterGroupConstraintsAndSendToSlaves(), see the overview above.
-// Separate from the send so that unit tests, which have no slaves to send to,
-// can check the constraints (see tests/rescoup/test_rescoup_constraints.cpp).
-template <class Scalar, class IndexTraits>
-typename RescoupConstraintsCalculator<Scalar, IndexTraits>::MasterGroupConstraints
-RescoupConstraintsCalculator<Scalar, IndexTraits>::
-calculateMasterGroupConstraints()
-{
-    // NOTE: Since this object can only be constructed for a master process,
-    //   we can be sure that if we are here, we are running as master.
-    //
-    // The body below must run on all ranks to ensure correct behavior:
-    //   - updateGroupControlledWells() uses a collective comm_.sum()
-    //   - GroupConstraintCalculator and updateGroupTargetReduction depend on
-    //     GroupStateHelper which performs collective operations on the
-    //     master's MPI communicator.
-    auto& rescoup_master = this->reservoir_coupling_master_;
-    GroupConstraintCalculator calculator{
-        this->well_model_,
-        this->group_state_helper_
-    };
-    // Reset effective-GCW entries from the previous sync step to GCW=1 before
-    // excludeInactiveSlaveMasterGroupsFromDistribution_() (and later the
-    // Phase 2 exclusion) repopulate the 0-entries for this step.
-    rescoup_master.resetEffectiveGCW();
-    this->excludeInactiveSlaveMasterGroupsFromDistribution_();
-    // Recompute GCW and reduction rates after the control changes above.
-    // The earlier updateAndCommunicateGroupData() in beginTimeStep() may
-    // have computed reductions with different controls. Inactive slaves'
-    // master groups are now on individual control with zero rates → excluded
-    // from guide rate fractions via GCW=0.
-    this->updateGCWAndTargetReductions_();
-    this->updateInjectionGCWAndTargetReductions_();
-
-    // Phase 1: compute initial targets for all slaves
-    const auto num_slaves = rescoup_master.numSlaves();
-    std::vector<std::vector<InjectionGroupTarget>> all_injection_targets(num_slaves);
-    std::vector<std::vector<ProductionGroupConstraints>> all_production_constraints(num_slaves);
-    std::vector<std::vector<GasLiftGroupLimits>> all_gas_lift_limits(num_slaves);
-    for (std::size_t slave_idx = 0; slave_idx < num_slaves; ++slave_idx) {
-        if (rescoup_master.slaveIsCoupled(slave_idx)) {
-            auto [inj, prod] = this->calculateSlaveGroupConstraints_(slave_idx, calculator);
-            all_injection_targets[slave_idx] = std::move(inj);
-            all_production_constraints[slave_idx] = std::move(prod);
-            all_gas_lift_limits[slave_idx] = this->calculateGasLiftGroupLimits_(slave_idx);
-        }
-    }
-
-    // Phase 2: exclude master groups without producers under group control and
-    // redistribute the shortfall to sibling master groups via the standard
-    // localReduction / FractionCalculator machinery.
-    this->excludeAndRedistributeProductionTargets_(calculator, all_production_constraints);
-
-    // Phase 2b: exclude master groups without injectors under group control
-    // and redistribute the surplus to sibling master groups, per phase.
-    this->excludeAndRedistributeInjectionTargets_(calculator, all_injection_targets);
-
-    return {std::move(all_injection_targets),
-            std::move(all_production_constraints),
-            std::move(all_gas_lift_limits)};
 }
 
 // ----------------------------------------------------------------------
@@ -776,6 +776,35 @@ makeProductionGroupConstraints_(
 }
 
 template <class Scalar, class IndexTraits>
+void
+RescoupConstraintsCalculator<Scalar, IndexTraits>::
+sendSlaveGroupConstraintsToSlave_(
+    const ReservoirCouplingMaster<Scalar>& rescoup_master,
+    std::size_t slave_idx,
+    const std::vector<InjectionGroupTarget>& injection_targets,
+    const std::vector<ProductionGroupConstraints>& production_constraints,
+    const std::vector<GasLiftGroupLimits>& gas_lift_limits
+) const
+{
+    auto num_injection_targets = injection_targets.size();
+    auto num_production_constraints = production_constraints.size();
+    auto num_gas_lift_limits = gas_lift_limits.size();
+    // First, send the number of constraints such that the slave can know if it can expect none
+    // or more constraints.
+    rescoup_master.sendNumGroupConstraintsToSlave(
+        slave_idx, num_injection_targets, num_production_constraints, num_gas_lift_limits);
+    if (num_injection_targets > 0) {
+        rescoup_master.sendInjectionTargetsToSlave(slave_idx, injection_targets);
+    }
+    if (num_production_constraints > 0) {
+        rescoup_master.sendProductionConstraintsToSlave(slave_idx, production_constraints);
+    }
+    if (num_gas_lift_limits > 0) {
+        rescoup_master.sendGasLiftGroupLimitsToSlave(slave_idx, gas_lift_limits);
+    }
+}
+
+template <class Scalar, class IndexTraits>
 Scalar
 RescoupConstraintsCalculator<Scalar, IndexTraits>::
 shareGasLiftLimit_(const Group& limit_group,
@@ -1088,35 +1117,6 @@ shareUnusedTargetAmongExcludedGroups_(
                 "RC redistribution: {} unused {} {:.4f} shared among {} excluded groups",
                 ancestor, Group::ProductionCMode2String(mode), unused, members.size()));
         }
-    }
-}
-
-template <class Scalar, class IndexTraits>
-void
-RescoupConstraintsCalculator<Scalar, IndexTraits>::
-sendSlaveGroupConstraintsToSlave_(
-    const ReservoirCouplingMaster<Scalar>& rescoup_master,
-    std::size_t slave_idx,
-    const std::vector<InjectionGroupTarget>& injection_targets,
-    const std::vector<ProductionGroupConstraints>& production_constraints,
-    const std::vector<GasLiftGroupLimits>& gas_lift_limits
-) const
-{
-    auto num_injection_targets = injection_targets.size();
-    auto num_production_constraints = production_constraints.size();
-    auto num_gas_lift_limits = gas_lift_limits.size();
-    // First, send the number of constraints such that the slave can know if it can expect none
-    // or more constraints.
-    rescoup_master.sendNumGroupConstraintsToSlave(
-        slave_idx, num_injection_targets, num_production_constraints, num_gas_lift_limits);
-    if (num_injection_targets > 0) {
-        rescoup_master.sendInjectionTargetsToSlave(slave_idx, injection_targets);
-    }
-    if (num_production_constraints > 0) {
-        rescoup_master.sendProductionConstraintsToSlave(slave_idx, production_constraints);
-    }
-    if (num_gas_lift_limits > 0) {
-        rescoup_master.sendGasLiftGroupLimitsToSlave(slave_idx, gas_lift_limits);
     }
 }
 

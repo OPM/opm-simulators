@@ -80,22 +80,23 @@ public:
         ReservoirCouplingMaster<Scalar> &master
     );
 
+    /// @brief Collect production/injection rates for all master groups.
+    /// @return ReservoirCouplingGroupRates struct with per-group rates.
+    data::ReservoirCouplingGroupRates collectGroupRatesForSummary() const;
+
     /// @brief Get the MPI communicator for master-slave communication
     /// @return Reference to the parallel communication object
     const Parallel::Communication &comm() const { return this->master_.getComm(); }
 
-    /// @brief Get the names of master groups associated with a specific slave
-    /// @param slave_idx Index of the slave process
-    /// @return Vector of master group names that this slave is connected to
-    const std::vector<std::string>& getMasterGroupNamesForSlave(std::size_t slave_idx) const {
-         return this->master_.getMasterGroupNamesForSlave(slave_idx);
+    /// @brief Description of the group that sets flowChangeTimeStepLimit()
+    /// @return Group name, its largest fractional flow change and its limiting fraction
+    std::tuple<std::string, Scalar, Scalar> flowChangeLimitingGroup() const {
+        return {flow_change_limiting_group_, flow_change_limiting_change_, flow_change_limiting_fraction_};
     }
 
-    /// @brief Get the mapping from master group names to slave names
-    /// @return Map from master group name to the corresponding slave name
-    const std::map<std::string, std::string>& getMasterGroupToSlaveNameMap() const {
-         return this->master_.getMasterGroupToSlaveNameMap();
-    }
+    /// @brief Upper limit for the next sync step length from GRUPMAST item 4 (in seconds)
+    /// @return Infinity if no group limits the flow change
+    Scalar flowChangeTimeStepLimit() const { return flow_change_time_step_limit_; }
 
     /// @brief Get the canonical index for a master group
     /// @param slave_name Name of the slave process
@@ -104,16 +105,16 @@ public:
     std::size_t getMasterGroupCanonicalIdx(
         const std::string &slave_name, const std::string &master_group_name) const;
 
-    /// @brief Get the MPI communicator for a specific slave process
-    /// @param index Index of the slave process
-    /// @return MPI communicator handle for communication with the specified slave
-    MPI_Comm getSlaveComm(int index) const { return this->master_.getSlaveComm(index); }
+    /// @brief How much more lift gas the slave group of a master group can take, 0 if the
+    ///   slave has sent no production data
+    Scalar getMasterGroupGasLiftHeadroom(const std::string &group_name) const;
 
-    /// @brief Get the injection surface rate for a master group
+    /// @brief Get the lift gas rate of the slave group of a master group
     /// @param group_name Name of the master group
-    /// @param phase ReservoirCoupling::Phase enum (Oil, Gas, or Water)
-    /// @return Injection surface rate for the specified phase
-    Scalar getMasterGroupInjectionSurfaceRate(const std::string &group_name, ReservoirCoupling::Phase phase) const;
+    /// @param network If true, the rate with network efficiency factors (GEFAC/WEFAC item 3)
+    /// @return Lift gas rate (ALQ) of the slave group's producers, 0 if the slave has sent no
+    ///   production data
+    Scalar getMasterGroupGasLiftRate(const std::string &group_name, bool network) const;
 
     /// @brief Get the injection reservoir rate for a master group
     /// @param group_name Name of the master group
@@ -121,11 +122,18 @@ public:
     /// @return Injection reservoir rate for the specified phase
     Scalar getMasterGroupInjectionReservoirRate(const std::string &group_name, ReservoirCoupling::Phase phase) const;
 
-    /// @brief Get the production surface rate for a master group
+    /// @brief Get the injection surface rate for a master group
     /// @param group_name Name of the master group
     /// @param phase ReservoirCoupling::Phase enum (Oil, Gas, or Water)
-    /// @return Production surface rate for the specified phase
-    Scalar getMasterGroupProductionSurfaceRate(const std::string &group_name, ReservoirCoupling::Phase phase) const;
+    /// @return Injection surface rate for the specified phase
+    Scalar getMasterGroupInjectionSurfaceRate(const std::string &group_name, ReservoirCoupling::Phase phase) const;
+
+    /// @brief Get the names of master groups associated with a specific slave
+    /// @param slave_idx Index of the slave process
+    /// @return Vector of master group names that this slave is connected to
+    const std::vector<std::string>& getMasterGroupNamesForSlave(std::size_t slave_idx) const {
+         return this->master_.getMasterGroupNamesForSlave(slave_idx);
+    }
 
     /// @brief Get the network production surface rate for a master group
     ///
@@ -151,20 +159,22 @@ public:
     /// @return Production reservoir rate for the specified phase
     Scalar getMasterGroupProductionReservoirRate(const std::string &group_name, ReservoirCoupling::Phase phase) const;
 
-    /// @brief Whether the slave of a master group has sent production data, which a slave
-    ///   with no slave groups (history mode) has not.
-    bool hasSlaveGroupProductionData(const std::string &group_name) const;
-
-    /// @brief Get the lift gas rate of the slave group of a master group
+    /// @brief Get the production surface rate for a master group
     /// @param group_name Name of the master group
-    /// @param network If true, the rate with network efficiency factors (GEFAC/WEFAC item 3)
-    /// @return Lift gas rate (ALQ) of the slave group's producers, 0 if the slave has sent no
-    ///   production data
-    Scalar getMasterGroupGasLiftRate(const std::string &group_name, bool network) const;
+    /// @param phase ReservoirCoupling::Phase enum (Oil, Gas, or Water)
+    /// @return Production surface rate for the specified phase
+    Scalar getMasterGroupProductionSurfaceRate(const std::string &group_name, ReservoirCoupling::Phase phase) const;
 
-    /// @brief How much more lift gas the slave group of a master group can take, 0 if the
-    ///   slave has sent no production data
-    Scalar getMasterGroupGasLiftHeadroom(const std::string &group_name) const;
+    /// @brief Get the mapping from master group names to slave names
+    /// @return Map from master group name to the corresponding slave name
+    const std::map<std::string, std::string>& getMasterGroupToSlaveNameMap() const {
+         return this->master_.getMasterGroupToSlaveNameMap();
+    }
+
+    /// @brief Get the MPI communicator for a specific slave process
+    /// @param index Index of the slave process
+    /// @return MPI communicator handle for communication with the specified slave
+    MPI_Comm getSlaveComm(int index) const { return this->master_.getSlaveComm(index); }
 
     /// @brief Get the number of a slave group's injectors under group control for a phase
     /// @param master_group_name Name of the master group
@@ -190,6 +200,10 @@ public:
     /// @return Reference to the potentials data for the specified group
     const Potentials& getSlaveGroupPotentials(const std::string &master_group_name) const;
 
+    /// @brief Whether the slave of a master group has sent production data, which a slave
+    ///   with no slave groups (history mode) has not.
+    bool hasSlaveGroupProductionData(const std::string &group_name) const;
+
     /// @brief Check if this is the first substep within a "sync" timestep.
     /// @details This flag is used to control reservoir coupling synchronization.
     ///          Master-slave data exchange should only happen at the start of each "sync" timestep,
@@ -197,13 +211,14 @@ public:
     /// @return true if this is the first substep of a "sync" timestep, false if not
     bool isFirstSubstepOfSyncTimestep() const { return is_first_substep_of_sync_timestep_; }
 
+    /// @brief Get the logger for reservoir coupling operations
+    /// @return Reference to the logger object for this coupling session
+    ReservoirCoupling::Logger& logger() const { return this->master_.logger(); }
+
     /// @brief Check if the master needs to receive slave data at the next
     ///   timeStepSucceeded() call.
     /// @details The slave data is needed for correct summary output.
     bool needsSlaveDataReceive() const { return needs_slave_data_receive_; }
-
-    /// @brief Set/clear the flag for pending slave data receive.
-    void setNeedsSlaveDataReceive(bool value) { needs_slave_data_receive_ = value; }
 
     /// @brief Get the number of slave groups for a specific slave process
     /// @param index Index of the slave process
@@ -213,10 +228,6 @@ public:
     /// @brief Get the total number of active slave processes
     /// @return Number of slaves that have been started
     std::size_t numSlaves() const { return this->master_.numSlavesStarted(); }
-
-    /// @brief Get the logger for reservoir coupling operations
-    /// @return Reference to the logger object for this coupling session
-    ReservoirCoupling::Logger& logger() const { return this->master_.logger(); }
 
     /// @brief Receive injection data from all active slave processes
     ///
@@ -239,6 +250,13 @@ public:
     /// @note Must be called after slaves have computed and sent their production data
     void receiveProductionDataFromSlaves();
 
+    /// @brief Remember the flow rates of the master groups as they stand now
+    /// @details Called just before the end-of-sync-step slave data is received. The rates then
+    ///   held are those of the last receive in the sync step: after the slaves' initial well
+    ///   solve and any network iterations. So well changes at the start of the step do not
+    ///   count as flow changes.
+    void saveGroupFlowsAtStartOfSyncStep();
+
     /// @brief Get the simulation schedule
     /// @return Reference to the Schedule object containing well and group definitions
     const Schedule &schedule() const { return this->master_.schedule(); }
@@ -255,6 +273,12 @@ public:
         std::size_t slave_idx, bool active
     ) const;
 
+    /// @brief Send the gas lift limits (GLIFTOPT) for the slave's groups.
+    ///   Rank-0-only on the master comm.
+    void sendGasLiftGroupLimitsToSlave(
+        std::size_t slave_idx, const std::vector<GasLiftGroupLimits>& gas_lift_limits
+    ) const;
+
     void sendInjectionTargetsToSlave(
         std::size_t slave_idx, const std::vector<InjectionGroupTarget>& injection_targets
     ) const;
@@ -269,12 +293,6 @@ public:
     void sendNumGroupConstraintsToSlave(
         std::size_t slave_idx, std::size_t num_injection_targets, std::size_t num_production_constraints,
         std::size_t num_gas_lift_limits
-    ) const;
-
-    /// @brief Send the gas lift limits (GLIFTOPT) for the slave's groups.
-    ///   Rank-0-only on the master comm.
-    void sendGasLiftGroupLimitsToSlave(
-        std::size_t slave_idx, const std::vector<GasLiftGroupLimits>& gas_lift_limits
     ) const;
 
     /// @brief Send the count of master-computed network-leaf node pressures
@@ -296,6 +314,9 @@ public:
     /// @brief Set whether this is the first substep within a "sync" timestep.
     /// @param value true at start of sync timestep, false after first runSubStep_() call
     void setFirstSubstepOfSyncTimestep(bool value) { is_first_substep_of_sync_timestep_ = value; }
+
+    /// @brief Set/clear the flag for pending slave data receive.
+    void setNeedsSlaveDataReceive(bool value) { needs_slave_data_receive_ = value; }
 
     /// @brief Set the current report step index
     /// @param report_step_idx The report step index to set
@@ -324,38 +345,8 @@ public:
         this->slave_group_production_data_[slave_name] = std::move(production_data);
     }
 
-    /// @brief Remember the flow rates of the master groups as they stand now
-    /// @details Called just before the end-of-sync-step slave data is received. The rates then
-    ///   held are those of the last receive in the sync step: after the slaves' initial well
-    ///   solve and any network iterations. So well changes at the start of the step do not
-    ///   count as flow changes.
-    void saveGroupFlowsAtStartOfSyncStep();
-
     /// @brief Set the length of the sync step that is about to be taken
     void setSyncStepLength(Scalar length) { sync_step_length_ = length; }
-
-    /// @brief Update the flow-change time step limit (GRUPMAST item 4, RCMASTS)
-    /// @details Compares the master group flow rates received at the end of the sync step with
-    ///   those saved by saveGroupFlowsAtStartOfSyncStep(). For each master group with a limiting
-    ///   fraction, the next sync step is limited to the step length times the limiting fraction
-    ///   divided by the largest fractional change of the group's reservoir production rate and
-    ///   phase injection rates, but never below the RCMASTS minimum, or the TUNING TSMINZ if
-    ///   RCMASTS is not given. The step just taken is not redone.
-    void updateFlowChangeTimeStepLimit();
-
-    /// @brief Upper limit for the next sync step length from GRUPMAST item 4 (in seconds)
-    /// @return Infinity if no group limits the flow change
-    Scalar flowChangeTimeStepLimit() const { return flow_change_time_step_limit_; }
-
-    /// @brief Description of the group that sets flowChangeTimeStepLimit()
-    /// @return Group name, its largest fractional flow change and its limiting fraction
-    std::tuple<std::string, Scalar, Scalar> flowChangeLimitingGroup() const {
-        return {flow_change_limiting_group_, flow_change_limiting_change_, flow_change_limiting_fraction_};
-    }
-
-    /// @brief Collect production/injection rates for all master groups.
-    /// @return ReservoirCouplingGroupRates struct with per-group rates.
-    data::ReservoirCouplingGroupRates collectGroupRatesForSummary() const;
 
     /// @brief Check if a specific slave process currently takes part in the coupling
     /// @details True only for a slave that has activated and has not ended. A slave that is
@@ -369,12 +360,16 @@ public:
     /// @return Reference to the name string for the specified slave
     const std::string &slaveName(int index) const { return this->master_.getSlaveName(index); }
 
-private:
-    /// @brief The production data of the slave group of a master group; nullptr if the slave has
-    ///   sent none.  Throws for a name that is not a master group.
-    const ReservoirCoupling::SlaveGroupProductionData<Scalar>*
-    slaveGroupProductionDataOrNull_(const std::string &group_name) const;
+    /// @brief Update the flow-change time step limit (GRUPMAST item 4, RCMASTS)
+    /// @details Compares the master group flow rates received at the end of the sync step with
+    ///   those saved by saveGroupFlowsAtStartOfSyncStep(). For each master group with a limiting
+    ///   fraction, the next sync step is limited to the step length times the limiting fraction
+    ///   divided by the largest fractional change of the group's reservoir production rate and
+    ///   phase injection rates, but never below the RCMASTS minimum, or the TUNING TSMINZ if
+    ///   RCMASTS is not given. The step just taken is not redone.
+    void updateFlowChangeTimeStepLimit();
 
+private:
     /// Flow rates of a master group used for the flow-change time step limit
     struct GroupFlows {
         Scalar production_reservoir{};
@@ -391,6 +386,11 @@ private:
     /// @return The requested rate for the specified phase
     Scalar getMasterGroupRate_(const std::string &group_name, ReservoirCoupling::Phase phase,
                                ReservoirCoupling::RateKind kind) const;
+
+    /// @brief The production data of the slave group of a master group; nullptr if the slave has
+    ///   sent none.  Throws for a name that is not a master group.
+    const ReservoirCoupling::SlaveGroupProductionData<Scalar>*
+    slaveGroupProductionDataOrNull_(const std::string &group_name) const;
 
     /// Reference to the parent ReservoirCouplingMaster object
     ReservoirCouplingMaster<Scalar> &master_;

@@ -83,6 +83,14 @@ public:
         GroupStateHelper<Scalar, IndexTraits>& group_state_helper
     );
 
+    /// @brief Run the master-side target distribution without sending the
+    ///   result to the slaves.
+    /// @details The pre-phase and Phases 1, 2 and 2b of
+    ///   `calculateMasterGroupConstraintsAndSendToSlaves()`, with the same
+    ///   group-state side effects and collective calls.
+    /// @return The constraints for each slave, as they would be sent.
+    MasterGroupConstraints calculateMasterGroupConstraints();
+
     /// @brief Run the full master-side target distribution and dispatch
     ///   the resulting constraints to each activated slave.
     /// @details Runs on every rank of the master communicator; the
@@ -95,14 +103,6 @@ public:
     ///   corresponding .cpp file for the per-phase walkthrough and the
     ///   collective-call invariants.
     void calculateMasterGroupConstraintsAndSendToSlaves();
-
-    /// @brief Run the master-side target distribution without sending the
-    ///   result to the slaves.
-    /// @details The pre-phase and Phases 1, 2 and 2b of
-    ///   `calculateMasterGroupConstraintsAndSendToSlaves()`, with the same
-    ///   group-state side effects and collective calls.
-    /// @return The constraints for each slave, as they would be sent.
-    MasterGroupConstraints calculateMasterGroupConstraints();
 
 private:
     /// @brief Compute the gas lift limits (GLIFTOPT) for one slave's master groups.
@@ -158,6 +158,27 @@ private:
     std::optional<Scalar> efficiencyFactorToAncestor_(const std::string& group,
                                                       const std::string& ancestor) const;
 
+    /// @brief Phase 2b: exclude master groups none of whose slave injectors
+    ///   are under group control for a phase from the guide-rate
+    ///   distribution, and redistribute the surplus to sibling master groups.
+    /// @details The injection counterpart of
+    ///   excludeAndRedistributeProductionTargets_(), but decided from the number
+    ///   of the slave group's injectors under group control (reported by the
+    ///   slave) rather than from potentials, which for injectors with
+    ///   cross-flow can be far from what the wells inject.  An excluded group
+    ///   has its effective injection GCW for the phase set to 0, which drops
+    ///   it from the parent's injection guide-rate sum and makes its rate a
+    ///   parent target reduction instead.  The injection GCW and the
+    ///   injection target reductions are then recomputed and all targets are
+    ///   re-evaluated, so the remaining groups absorb the surplus.
+    /// @param calculator Group-constraint calculator (same instance as
+    ///   used for the initial targets).
+    /// @param all_injection_targets In/out: per-slave injection targets,
+    ///   modified in place.
+    void excludeAndRedistributeInjectionTargets_(
+        GroupConstraintCalculator<Scalar, IndexTraits>& calculator,
+        std::vector<std::vector<InjectionGroupTarget>>& all_injection_targets);
+
     /// @brief Phase 2: exclude master groups none of whose slave producers
     ///   are under group control from the guide-rate distribution, and
     ///   redistribute the shortfall to sibling groups.
@@ -180,27 +201,6 @@ private:
         GroupConstraintCalculator<Scalar, IndexTraits>& calculator,
         std::vector<std::vector<ProductionGroupConstraints>>& all_production_constraints);
 
-    /// @brief Phase 2b: exclude master groups none of whose slave injectors
-    ///   are under group control for a phase from the guide-rate
-    ///   distribution, and redistribute the surplus to sibling master groups.
-    /// @details The injection counterpart of
-    ///   excludeAndRedistributeProductionTargets_(), but decided from the number
-    ///   of the slave group's injectors under group control (reported by the
-    ///   slave) rather than from potentials, which for injectors with
-    ///   cross-flow can be far from what the wells inject.  An excluded group
-    ///   has its effective injection GCW for the phase set to 0, which drops
-    ///   it from the parent's injection guide-rate sum and makes its rate a
-    ///   parent target reduction instead.  The injection GCW and the
-    ///   injection target reductions are then recomputed and all targets are
-    ///   re-evaluated, so the remaining groups absorb the surplus.
-    /// @param calculator Group-constraint calculator (same instance as
-    ///   used for the initial targets).
-    /// @param all_injection_targets In/out: per-slave injection targets,
-    ///   modified in place.
-    void excludeAndRedistributeInjectionTargets_(
-        GroupConstraintCalculator<Scalar, IndexTraits>& calculator,
-        std::vector<std::vector<InjectionGroupTarget>>& all_injection_targets);
-
     /// @brief Pre-phase: switch master groups that route to currently-
     ///   inactive slaves to individual control so they are excluded from
     ///   guide-rate distribution.
@@ -222,6 +222,29 @@ private:
     static ProductionGroupConstraints makeProductionGroupConstraints_(
         std::size_t group_idx,
         const typename GroupConstraintCalculator<Scalar, IndexTraits>::ProductionConstraintResult& constraints);
+
+    /// @brief Phase 3: send the computed constraints for one slave to
+    ///   that slave over MPI.
+    /// @details The underlying MPI sends in
+    ///   `ReservoirCouplingMasterReportStep` are rank-0-only, so it is
+    ///   safe to invoke this from every master rank inside the Phase-3
+    ///   loop.
+    /// @param rescoup_master Reservoir-coupling master facade owning the
+    ///   slave communicators.
+    /// @param slave_idx Zero-based index of the activated slave.
+    /// @param injection_targets Per-phase injection rate targets to send.
+    /// @param production_constraints Per-master-group production
+    ///   constraint triples (target, cmode, per-rate-type limits) to
+    ///   send.
+    /// @param gas_lift_limits Gas lift limits for the slave's master groups.
+    ///   They replace the limits the slave has received earlier, also when empty.
+    void sendSlaveGroupConstraintsToSlave_(
+        const ReservoirCouplingMaster<Scalar>& rescoup_master,
+        std::size_t slave_idx,
+        const std::vector<InjectionGroupTarget>& injection_targets,
+        const std::vector<ProductionGroupConstraints>& production_constraints,
+        const std::vector<GasLiftGroupLimits>& gas_lift_limits
+    ) const;
 
     /// @brief Limit for one master group from a GLIFTOPT limit on group @p limit_group.
     /// @details Called by calculateGasLiftGroupLimits_() for each pair of a master group and
@@ -263,29 +286,6 @@ private:
     void shareUnusedTargetAmongExcludedGroups_(
         const std::set<std::string>& excluded_groups,
         std::vector<std::vector<ProductionGroupConstraints>>& all_production_constraints);
-
-    /// @brief Phase 3: send the computed constraints for one slave to
-    ///   that slave over MPI.
-    /// @details The underlying MPI sends in
-    ///   `ReservoirCouplingMasterReportStep` are rank-0-only, so it is
-    ///   safe to invoke this from every master rank inside the Phase-3
-    ///   loop.
-    /// @param rescoup_master Reservoir-coupling master facade owning the
-    ///   slave communicators.
-    /// @param slave_idx Zero-based index of the activated slave.
-    /// @param injection_targets Per-phase injection rate targets to send.
-    /// @param production_constraints Per-master-group production
-    ///   constraint triples (target, cmode, per-rate-type limits) to
-    ///   send.
-    /// @param gas_lift_limits Gas lift limits for the slave's master groups.
-    ///   They replace the limits the slave has received earlier, also when empty.
-    void sendSlaveGroupConstraintsToSlave_(
-        const ReservoirCouplingMaster<Scalar>& rescoup_master,
-        std::size_t slave_idx,
-        const std::vector<InjectionGroupTarget>& injection_targets,
-        const std::vector<ProductionGroupConstraints>& production_constraints,
-        const std::vector<GasLiftGroupLimits>& gas_lift_limits
-    ) const;
 
     /// @brief Recompute the Group-Controlled-Wells count and the
     ///   FIELD-level production target reduction.
