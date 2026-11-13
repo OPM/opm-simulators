@@ -79,6 +79,27 @@ ReservoirCouplingMaster(
 // ------------------
 
 template <class Scalar>
+data::ReservoirCouplingGroupRates
+ReservoirCouplingMaster<Scalar>::
+collectGroupRatesForSummary() const
+{
+    assert(this->report_step_data_);
+    return this->report_step_data_->collectGroupRatesForSummary();
+}
+
+template <class Scalar>
+std::size_t
+ReservoirCouplingMaster<Scalar>::
+getMasterGroupCanonicalIdx(
+    const std::string &slave_name, const std::string &master_group_name) const
+{
+    // NOTE: The master group name order is the canonical order of the master group names
+    //       for a given slave name. This is the order in which the slave will communicate
+    //       slave group data for its slave groups.
+    return this->master_group_name_order_.at(slave_name).at(master_group_name);
+}
+
+template <class Scalar>
 const std::vector<std::string>&
 ReservoirCouplingMaster<Scalar>::
 getMasterGroupNamesForSlave(std::size_t slave_idx) const
@@ -95,18 +116,6 @@ getMasterGroupNamesForSlave(std::size_t slave_idx) const
 
     // Direct O(1) vector access for performance-critical usage
     return this->slave_idx_to_master_groups_[slave_idx];
-}
-
-template <class Scalar>
-std::size_t
-ReservoirCouplingMaster<Scalar>::
-getMasterGroupCanonicalIdx(
-    const std::string &slave_name, const std::string &master_group_name) const
-{
-    // NOTE: The master group name order is the canonical order of the master group names
-    //       for a given slave name. This is the order in which the slave will communicate
-    //       slave group data for its slave groups.
-    return this->master_group_name_order_.at(slave_name).at(master_group_name);
 }
 
 template <class Scalar>
@@ -136,20 +145,20 @@ getMasterGroupRate(
 template <class Scalar>
 int
 ReservoirCouplingMaster<Scalar>::
-getSlaveGroupNumGroupControlledProducers(const std::string &master_group_name) const
-{
-    assert(this->report_step_data_);
-    return this->report_step_data_->getSlaveGroupNumGroupControlledProducers(master_group_name);
-}
-
-template <class Scalar>
-int
-ReservoirCouplingMaster<Scalar>::
 getSlaveGroupNumGroupControlledInjectors(const std::string &master_group_name,
                                          ReservoirCoupling::Phase phase) const
 {
     assert(this->report_step_data_);
     return this->report_step_data_->getSlaveGroupNumGroupControlledInjectors(master_group_name, phase);
+}
+
+template <class Scalar>
+int
+ReservoirCouplingMaster<Scalar>::
+getSlaveGroupNumGroupControlledProducers(const std::string &master_group_name) const
+{
+    assert(this->report_step_data_);
+    return this->report_step_data_->getSlaveGroupNumGroupControlledProducers(master_group_name);
 }
 
 template <class Scalar>
@@ -176,6 +185,16 @@ getSlaveIdx(const std::string &slave_name) const
 template <class Scalar>
 void
 ReservoirCouplingMaster<Scalar>::
+initStartOfReportStep(int report_step_idx)
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->setReportStepIdx(report_step_idx);
+    this->logger_.debug("Initializing start of report step");
+}
+
+template <class Scalar>
+void
+ReservoirCouplingMaster<Scalar>::
 initTimeStepping()
 {
     assert(!this->time_stepper_);
@@ -185,40 +204,12 @@ initTimeStepping()
 }
 
 template <class Scalar>
-void
-ReservoirCouplingMaster<Scalar>::
-initStartOfReportStep(int report_step_idx)
-{
-    assert(this->report_step_data_);
-    this->report_step_data_->setReportStepIdx(report_step_idx);
-    this->logger_.debug("Initializing start of report step");
-}
-
-template <class Scalar>
 bool
 ReservoirCouplingMaster<Scalar>::
 isFirstSubstepOfSyncTimestep() const
 {
     assert(this->report_step_data_);
     return this->report_step_data_->isFirstSubstepOfSyncTimestep();
-}
-
-template <class Scalar>
-bool
-ReservoirCouplingMaster<Scalar>::
-needsSlaveDataReceive() const
-{
-    assert(this->report_step_data_);
-    return this->report_step_data_->needsSlaveDataReceive();
-}
-
-template <class Scalar>
-void
-ReservoirCouplingMaster<Scalar>::
-setNeedsSlaveDataReceive(bool value)
-{
-    assert(this->report_step_data_);
-    this->report_step_data_->setNeedsSlaveDataReceive(value);
 }
 
 template <class Scalar>
@@ -294,25 +285,6 @@ maybeChopSubStep(double suggested_timestep, double current_time) const
 template <class Scalar>
 void
 ReservoirCouplingMaster<Scalar>::
-maybeSpawnSlaveProcesses(int report_step)
-{
-    if (this->numSlavesStarted() > 0) {  // We have already spawned the slave processes
-        return;
-    }
-    const auto& rescoup = this->schedule_[report_step].rescoup();
-    auto slave_count = rescoup.slaveCount();
-    // Spawn slaves when SLAVES keyword is present.
-    // - Prediction mode: SLAVES + GRUPMAST (master allocates rates)
-    // - History mode: SLAVES only (master synchronizes time-stepping)
-    if (slave_count > 0) {
-        ReservoirCouplingSpawnSlaves<Scalar> spawn_slaves{*this, rescoup};
-        spawn_slaves.spawn();
-    }
-}
-
-template <class Scalar>
-void
-ReservoirCouplingMaster<Scalar>::
 maybeReceiveActivationHandshakeFromSlaves(double current_time)
 {
     // Initialize on first call
@@ -373,19 +345,31 @@ maybeReceiveActivationHandshakeFromSlaves(double current_time)
 }
 
 template <class Scalar>
-std::size_t
+void
 ReservoirCouplingMaster<Scalar>::
-numSlaveGroups(unsigned int index)
+maybeSpawnSlaveProcesses(int report_step)
 {
-    return this->master_group_name_order_[this->slave_names_[index]].size();
+    if (this->numSlavesStarted() > 0) {  // We have already spawned the slave processes
+        return;
+    }
+    const auto& rescoup = this->schedule_[report_step].rescoup();
+    auto slave_count = rescoup.slaveCount();
+    // Spawn slaves when SLAVES keyword is present.
+    // - Prediction mode: SLAVES + GRUPMAST (master allocates rates)
+    // - History mode: SLAVES only (master synchronizes time-stepping)
+    if (slave_count > 0) {
+        ReservoirCouplingSpawnSlaves<Scalar> spawn_slaves{*this, rescoup};
+        spawn_slaves.spawn();
+    }
 }
 
 template <class Scalar>
-std::size_t
+bool
 ReservoirCouplingMaster<Scalar>::
-numSlavesStarted() const
+needsSlaveDataReceive() const
 {
-    return this->slave_names_.size();
+    assert(this->report_step_data_);
+    return this->report_step_data_->needsSlaveDataReceive();
 }
 
 template <class Scalar>
@@ -403,12 +387,19 @@ numCoupledSlaves() const
 }
 
 template <class Scalar>
-void
+std::size_t
 ReservoirCouplingMaster<Scalar>::
-receiveNextReportDateFromSlaves()
+numSlaveGroups(unsigned int index)
 {
-    assert(this->time_stepper_);
-    this->time_stepper_->receiveNextReportDateFromSlaves();
+    return this->master_group_name_order_[this->slave_names_[index]].size();
+}
+
+template <class Scalar>
+std::size_t
+ReservoirCouplingMaster<Scalar>::
+numSlavesStarted() const
+{
+    return this->slave_names_.size();
 }
 
 template <class Scalar>
@@ -443,6 +434,15 @@ receiveInjectionDataFromSlaves()
 template <class Scalar>
 void
 ReservoirCouplingMaster<Scalar>::
+receiveNextReportDateFromSlaves()
+{
+    assert(this->time_stepper_);
+    this->time_stepper_->receiveNextReportDateFromSlaves();
+}
+
+template <class Scalar>
+void
+ReservoirCouplingMaster<Scalar>::
 receiveProductionDataFromSlaves()
 {
     assert(this->report_step_data_);
@@ -452,19 +452,19 @@ receiveProductionDataFromSlaves()
 template <class Scalar>
 void
 ReservoirCouplingMaster<Scalar>::
-setFirstSubstepOfSyncTimestep(bool value)
+resizeNextReportDates(int size)
 {
-    assert(this->report_step_data_);
-    this->report_step_data_->setFirstSubstepOfSyncTimestep(value);
+    assert(this->time_stepper_);
+    this->time_stepper_->resizeNextReportDates(size);
 }
 
 template <class Scalar>
 void
 ReservoirCouplingMaster<Scalar>::
-resizeNextReportDates(int size)
+sendCoupledNetworkActiveStatusToSlave(std::size_t slave_idx, bool active) const
 {
-    assert(this->time_stepper_);
-    this->time_stepper_->resizeNextReportDates(size);
+    assert(this->report_step_data_);
+    this->report_step_data_->sendCoupledNetworkActiveStatusToSlave(slave_idx, active);
 }
 
 template <class Scalar>
@@ -526,15 +526,6 @@ sendMasterGroupNodePressuresToSlave(std::size_t slave_idx,
 {
     assert(this->report_step_data_);
     this->report_step_data_->sendMasterGroupNodePressuresToSlave(slave_idx, pressures);
-}
-
-template <class Scalar>
-void
-ReservoirCouplingMaster<Scalar>::
-sendCoupledNetworkActiveStatusToSlave(std::size_t slave_idx, bool active) const
-{
-    assert(this->report_step_data_);
-    this->report_step_data_->sendCoupledNetworkActiveStatusToSlave(slave_idx, active);
 }
 
 template <class Scalar>
@@ -618,6 +609,24 @@ sendTerminateAndDisconnect()
 template <class Scalar>
 void
 ReservoirCouplingMaster<Scalar>::
+setFirstSubstepOfSyncTimestep(bool value)
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->setFirstSubstepOfSyncTimestep(value);
+}
+
+template <class Scalar>
+void
+ReservoirCouplingMaster<Scalar>::
+setNeedsSlaveDataReceive(bool value)
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->setNeedsSlaveDataReceive(value);
+}
+
+template <class Scalar>
+void
+ReservoirCouplingMaster<Scalar>::
 setSlaveNextReportTimeOffset(int index, double offset)
 {
     assert(this->time_stepper_);
@@ -632,15 +641,6 @@ updateMasterGroupNameOrderMap(
 )
 {
     this->master_group_name_order_[slave_name] = master_group_name_map;
-}
-
-template <class Scalar>
-data::ReservoirCouplingGroupRates
-ReservoirCouplingMaster<Scalar>::
-collectGroupRatesForSummary() const
-{
-    assert(this->report_step_data_);
-    return this->report_step_data_->collectGroupRatesForSummary();
 }
 
 // ------------------
