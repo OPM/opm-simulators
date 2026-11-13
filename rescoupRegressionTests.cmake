@@ -62,3 +62,64 @@ add_test_compare_rescoup_simulation(
     --parsing-strictness=low
     --enable-tuning=true
 )
+
+# The rc_m2 cases: variants of one coupled model. Each master spawns RES-1
+# (4 ranks) and RES-2 (1 rank). The cases take RES-2, and some take RES-1,
+# from rc_m2/t2a, so that directory is copied with each case.
+#   case_dir: the case's directory under rescoup/rc_m2
+#   master:   the master deck (no extension)
+#   res1:     the deck of RES-1 (RES-2 is always T2A_MOD2_FLOW)
+# Further arguments are passed on, e.g. REFERENCE_SUBDIR.
+function(add_rc_m2_test case_dir master res1)
+  string(TOLOWER "${master}" master_lower)
+  add_test_compare_rescoup_simulation(
+    CASENAME
+      rc_m2_${case_dir}_${master_lower}
+    DIR
+      rescoup/rc_m2/${case_dir}
+    MASTER_DIR
+      master
+    FILENAME
+      ${master}
+    SLAVE_FILENAMES
+      ${res1}
+      T2A_MOD2_FLOW
+    SLAVE_PROCS
+      4
+      1
+    MASTER_PROCS
+      1
+    SHARED_DIRS
+      rescoup/common
+      rescoup/rc_m2/t2a
+    MPIEXEC
+      ${_rescoup_mpiexec}
+    SIMULATOR
+      flow
+    DEV_SIMULATOR
+      flow_blackoil
+    ABS_TOL
+      ${abs_tol}
+    REL_TOL
+      ${rel_tol}
+    TEST_ARGS
+      --parsing-strictness=low
+      --enable-tuning=true
+    ${ARGN}
+  )
+endfunction()
+
+add_rc_m2_test(t2a TEST2A_FLOW T2A_MOD1_FLOW)
+add_rc_m2_test(injcap TEST2A_IC_FLOW T2A_MOD1_FLOW)
+add_rc_m2_test(netroot TEST2A_FLOW_NETROOT T2A_MOD1_FLOW)
+add_rc_m2_test(slavenet TEST2A_SN_FLOW T2A_SN_MOD1_FLOW)
+add_rc_m2_test(slavenet2 TEST2A_SN2_FLOW T2A_SN2_MOD1_FLOW)
+add_rc_m2_test(slavenet3 TEST2A_SN3_FLOW T2A_SN3_MOD1_FLOW)
+
+# Gas lift: the four masters share one case directory and spawn the same
+# slave decks, so each keeps its reference files in its own sub-directory.
+foreach(master TEST2A_GL_FLOW TEST2A_GL_MGL_LEAF_FLOW TEST2A_GL_MGL_MOD1_FLOW)
+  add_rc_m2_test(gaslift ${master} T2A_GL_MOD1_FLOW REFERENCE_SUBDIR ${master})
+endforeach()
+add_rc_m2_test(gaslift TEST2A_GL_NOGRP_FLOW T2A_GL_NOGRP_MOD1_FLOW
+               REFERENCE_SUBDIR TEST2A_GL_NOGRP_FLOW)
