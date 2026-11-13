@@ -232,16 +232,12 @@ collectSlaveGroupSummaryProductionData_(std::size_t group_idx,
     const auto& group_name = this->reservoir_coupling_slave_.slaveGroupIdxToGroupName(group_idx);
     const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
     const auto& summary_state = this->groupStateHelper_.summaryState();
-    const auto& sched_state = this->schedule_[this->report_step_idx_];
-    const auto& unit_system = this->schedule_.getUnits();
     constexpr std::array rc_phases{RcPhase::Oil, RcPhase::Gas, RcPhase::Water};
 
-    // Per phase: potential, history rate; then the lift gas rate and the number
-    // of flowing producers.
+    // Per phase: potential, history rate; then the number of flowing producers.
     constexpr auto np = rc_phases.size();
-    std::array<Scalar, 2 * np + 2> sums{};
-    const auto lift_gas = 2 * np;
-    const auto num_flowing = lift_gas + 1;
+    std::array<Scalar, 2 * np + 1> sums{};
+    const auto num_flowing = 2 * np;
     this->visitGroupWells_(group, Scalar{1},
         [&](const Well& well_ecl, const SingleWellState<Scalar, IndexTraits>& ws, const Scalar efficiency)
     {
@@ -263,21 +259,6 @@ collectSlaveGroupSummaryProductionData_(std::size_t group_idx,
                       summary_state, ReservoirCoupling::convertToOpmPhase(rc_phases[i]))));
             flowing = flowing || (ws.surface_rates[pos] != 0.0);
         }
-        // As GGLIR, but only the lift gas rate of the wells with an ALQ of type
-        // GRAT or no VFP table.  Wells with an ALQ of type IGLR are left out:
-        // glir() counts them as glr * (oil + water rate), but an IGLR value is
-        // a ratio, not a rate.  The master's GGLIR therefore differs from the
-        // slave's own GGLIR for such wells.
-        const int vfp_table = well_ecl.productionControls(summary_state).vfp_table_number;
-        if (!sched_state.vfpprod.has(vfp_table)) {
-            // Without a VFP table the unit of the ALQ is not known to the
-            // input, so alq_state is in input units.  As in glir().
-            sums[lift_gas] += efficiency * unit_system.to_si(UnitSystem::measure::gas_surface_rate,
-                                                             ws.alq_state.get());
-        }
-        else if (sched_state.vfpprod(vfp_table).getALQType() == VFPProdTable::ALQ_TYPE::ALQ_GRAT) {
-            sums[lift_gas] += efficiency * ws.alq_state.get();
-        }
         if (flowing && ws.status == Well::Status::OPEN) {
             sums[num_flowing] += 1;
         }
@@ -288,7 +269,6 @@ collectSlaveGroupSummaryProductionData_(std::size_t group_idx,
         production_data.well_potentials[rc_phases[i]] = sums[i];
         production_data.history_rates[rc_phases[i]] = sums[np + i];
     }
-    production_data.gas_lift_rate = sums[lift_gas];
     production_data.num_flowing_producers = static_cast<int>(sums[num_flowing]);
 }
 
@@ -347,6 +327,18 @@ collectSlaveGroupReinjectionRateForGasPhase_(std::size_t group_idx) const
     const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
     const int gas_phase_idx = this->phase_usage_.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
     return this->group_state_.injection_rein_rates(group.name())[gas_phase_idx];
+}
+
+template<typename Scalar, typename IndexTraits>
+Scalar
+RescoupSendSlaveGroupData<Scalar, IndexTraits>::
+collectSlaveGroupGasLiftRate_(std::size_t group_idx, bool network) const
+{
+    auto& rescoup_slave = this->reservoir_coupling_slave_;
+    const auto& group_name = rescoup_slave.slaveGroupIdxToGroupName(group_idx);
+    const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
+    // sumWellGasLiftRates() only sums wells owned by this rank
+    return this->comm().sum(this->groupStateHelper_.sumWellGasLiftRates(group, network));
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -497,6 +489,19 @@ collectSlaveGroupProductionData_(std::size_t group_idx) const
     // stored slave group data on every receive, so it would then also have to keep
     // the summary fields of the last end-of-sync-step message.
     this->collectSlaveGroupSummaryProductionData_(group_idx, production_data);
+    // The master uses the lift gas rate (GGLIR, which includes the lift gas supply of satellite
+    // groups) for its summary and for sharing the GLIFTOPT limits, and the network lift gas rate
+    // for network nodes with NODEPROP item 4 = YES.
+    production_data.gas_lift_rate =
+        this->collectSlaveGroupGasLiftRate_(group_idx, /*network=*/false);
+    production_data.network_gas_lift_rate =
+        this->collectSlaveGroupGasLiftRate_(group_idx, /*network=*/true);
+    {
+        const auto& group_name = this->reservoir_coupling_slave_.slaveGroupIdxToGroupName(group_idx);
+        const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
+        production_data.gas_lift_headroom =
+            this->comm().sum(this->groupStateHelper_.sumWellGasLiftHeadroom(group));
+    }
     return production_data;
 }
 

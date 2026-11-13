@@ -153,6 +153,15 @@ isSlaveGroup(const std::string& group_name) const {
 }
 
 template <class Scalar>
+const ReservoirCoupling::GasLiftGroupLimits<Scalar>*
+ReservoirCouplingSlave<Scalar>::
+masterGasLiftLimits(const std::string& gname) const
+{
+    assert(this->report_step_data_);
+    return this->report_step_data_->masterGasLiftLimits(gname);
+}
+
+template <class Scalar>
 Scalar
 ReservoirCouplingSlave<Scalar>::
 masterGroupNodePressure(const std::string& gname) const
@@ -324,6 +333,15 @@ notifyEndOfRunAndDisconnect()
 template <class Scalar>
 void
 ReservoirCouplingSlave<Scalar>::
+receiveGasLiftGroupLimitsFromMaster(std::size_t num_limits)
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->receiveGasLiftGroupLimitsFromMaster(num_limits);
+}
+
+template <class Scalar>
+void
+ReservoirCouplingSlave<Scalar>::
 receiveInjectionGroupTargetsFromMaster(std::size_t num_targets)
 {
     assert(this->report_step_data_);
@@ -376,7 +394,7 @@ receiveCoupledNetworkActiveStatusFromMaster()
 }
 
 template <class Scalar>
-std::pair<std::size_t, std::size_t>
+std::tuple<std::size_t, std::size_t, std::size_t>
 ReservoirCouplingSlave<Scalar>::
 receiveNumGroupConstraintsFromMaster() const {
     assert(this->report_step_data_);
