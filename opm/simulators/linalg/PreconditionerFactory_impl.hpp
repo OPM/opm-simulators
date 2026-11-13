@@ -25,6 +25,8 @@
 
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>
 
+#include <opm/simulators/linalg/BCRSMatrix.hpp>
+#include <opm/simulators/linalg/BlockVector.hpp>
 #include <opm/simulators/linalg/DILU.hpp>
 #include <opm/simulators/linalg/ExtraSmoothers.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
@@ -198,49 +200,49 @@ PreconditionerFactory<Operator, Comm>::addCreator(const std::string& type, ParCr
 using CommSeq = Dune::Amg::SequentialInformation;
 
 template<class Scalar, int Dim>
-using OpFSeq = Dune::MatrixAdapter<Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, Dim, Dim>>,
-                                   Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
-                                   Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>>;
+using OpFSeq = Dune::MatrixAdapter<Opm::BCRSMatrix<Dune::FieldMatrix<Scalar, Dim, Dim>>,
+                                   Opm::BlockVector<Dune::FieldVector<Scalar, Dim>>,
+                                   Opm::BlockVector<Dune::FieldVector<Scalar, Dim>>>;
 template<class Scalar, int Dim>
-using OpBSeq = Dune::MatrixAdapter<Dune::BCRSMatrix<MatrixBlock<Scalar, Dim, Dim>>,
-                                   Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
-                                   Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>>;
+using OpBSeq = Dune::MatrixAdapter<Opm::BCRSMatrix<MatrixBlock<Scalar, Dim, Dim>>,
+                                   Opm::BlockVector<Dune::FieldVector<Scalar, Dim>>,
+                                   Opm::BlockVector<Dune::FieldVector<Scalar, Dim>>>;
 
 template<class Scalar, int Dim, bool overlap>
-using OpW = WellModelMatrixAdapter<Dune::BCRSMatrix<MatrixBlock<Scalar, Dim, Dim>>,
-                                   Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
-                                   Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>>;
+using OpW = WellModelMatrixAdapter<Opm::BCRSMatrix<MatrixBlock<Scalar, Dim, Dim>>,
+                                   Opm::BlockVector<Dune::FieldVector<Scalar, Dim>>,
+                                   Opm::BlockVector<Dune::FieldVector<Scalar, Dim>>>;
 
 template<class Scalar, int Dim, bool overlap>
-using OpWG = WellModelGhostLastMatrixAdapter<Dune::BCRSMatrix<MatrixBlock<Scalar, Dim, Dim>>,
-                                             Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
-                                             Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
+using OpWG = WellModelGhostLastMatrixAdapter<Opm::BCRSMatrix<MatrixBlock<Scalar, Dim, Dim>>,
+                                             Opm::BlockVector<Dune::FieldVector<Scalar, Dim>>,
+                                             Opm::BlockVector<Dune::FieldVector<Scalar, Dim>>,
                                              overlap>;
 
 #if HAVE_MPI
 using CommPar = Dune::OwnerOverlapCopyCommunication<int, int>;
 
 template<class Scalar, int Dim>
-using OpFPar = Dune::OverlappingSchwarzOperator<Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, Dim, Dim>>,
-                                                Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
-                                                Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
+using OpFPar = Dune::OverlappingSchwarzOperator<Opm::BCRSMatrix<Dune::FieldMatrix<Scalar, Dim, Dim>>,
+                                                Opm::BlockVector<Dune::FieldVector<Scalar, Dim>>,
+                                                Opm::BlockVector<Dune::FieldVector<Scalar, Dim>>,
                                                 CommPar>;
 
 template<class Scalar, int Dim>
-using OpBPar = Dune::OverlappingSchwarzOperator<Dune::BCRSMatrix<MatrixBlock<Scalar, Dim, Dim>>,
-                                                Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
-                                                Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
+using OpBPar = Dune::OverlappingSchwarzOperator<Opm::BCRSMatrix<MatrixBlock<Scalar, Dim, Dim>>,
+                                                Opm::BlockVector<Dune::FieldVector<Scalar, Dim>>,
+                                                Opm::BlockVector<Dune::FieldVector<Scalar, Dim>>,
                                                 CommPar>;
 template<class Scalar, int Dim>
-using OpGLFPar = Opm::GhostLastMatrixAdapter<Dune::BCRSMatrix<Dune::FieldMatrix<Scalar,Dim,Dim>>,
-                                             Dune::BlockVector<Dune::FieldVector<Scalar,Dim>>,
-                                             Dune::BlockVector<Dune::FieldVector<Scalar,Dim>>,
+using OpGLFPar = Opm::GhostLastMatrixAdapter<Opm::BCRSMatrix<Dune::FieldMatrix<Scalar,Dim,Dim>>,
+                                             Opm::BlockVector<Dune::FieldVector<Scalar,Dim>>,
+                                             Opm::BlockVector<Dune::FieldVector<Scalar,Dim>>,
                                              CommPar>;
 
 template<class Scalar, int Dim>
-using OpGLBPar = Opm::GhostLastMatrixAdapter<Dune::BCRSMatrix<MatrixBlock<Scalar,Dim,Dim>>,
-                                             Dune::BlockVector<Dune::FieldVector<Scalar,Dim>>,
-                                             Dune::BlockVector<Dune::FieldVector<Scalar,Dim>>,
+using OpGLBPar = Opm::GhostLastMatrixAdapter<Opm::BCRSMatrix<MatrixBlock<Scalar,Dim,Dim>>,
+                                             Opm::BlockVector<Dune::FieldVector<Scalar,Dim>>,
+                                             Opm::BlockVector<Dune::FieldVector<Scalar,Dim>>,
                                              CommPar>;
 
 #define INSTANTIATE_PF_PAR(T,Dim)                                     \

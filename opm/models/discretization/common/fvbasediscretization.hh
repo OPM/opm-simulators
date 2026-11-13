@@ -63,6 +63,7 @@
 
 #include <opm/simulators/linalg/linalgparameters.hh>
 #include <opm/simulators/linalg/nullborderlistmanager.hh>
+#include <opm/simulators/linalg/BlockVector.hpp>
 
 #include <algorithm>
 #include <array>
@@ -171,14 +172,14 @@ struct Constraints<TypeTag, TTag::FvBaseDiscretization>
  */
 template<class TypeTag>
 struct ElementEqVector<TypeTag, TTag::FvBaseDiscretization>
-{ using type = Dune::BlockVector<GetPropType<TypeTag, Properties::EqVector>>; };
+{ using type = Opm::BlockVector<GetPropType<TypeTag, Properties::EqVector>>; };
 
 /*!
  * \brief The type for storing a residual for the whole grid.
  */
 template<class TypeTag>
 struct GlobalEqVector<TypeTag, TTag::FvBaseDiscretization>
-{ using type = Dune::BlockVector<GetPropType<TypeTag, Properties::EqVector>>; };
+{ using type = Opm::BlockVector<GetPropType<TypeTag, Properties::EqVector>>; };
 
 /*!
  * \brief An object representing a local set of primary variables.
@@ -192,7 +193,7 @@ struct PrimaryVariables<TypeTag, TTag::FvBaseDiscretization>
  */
 template<class TypeTag>
 struct SolutionVector<TypeTag, TTag::FvBaseDiscretization>
-{ using type = Dune::BlockVector<GetPropType<TypeTag, Properties::PrimaryVariables>>; };
+{ using type = Opm::BlockVector<GetPropType<TypeTag, Properties::PrimaryVariables>>; };
 
 /*!
  * \brief The class representing intensive quantities.

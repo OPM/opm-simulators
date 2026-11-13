@@ -23,6 +23,8 @@
 #ifndef OPM_STANDARDWELL_EQUATIONS_HEADER_INCLUDED
 #define OPM_STANDARDWELL_EQUATIONS_HEADER_INCLUDED
 
+#include <opm/simulators/linalg/BCRSMatrix.hpp>
+#include <opm/simulators/linalg/BlockVector.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/simulators/wells/WellHelpers.hpp>
 #include <opm/common/TimingMacros.hpp>
@@ -56,14 +58,14 @@ public:
 
     // the matrix type for the diagonal matrix D
     using DiagMatrixBlockWellType = Dune::DynamicMatrix<Scalar>;
-    using DiagMatWell = Dune::BCRSMatrix<DiagMatrixBlockWellType>;
+    using DiagMatWell = Opm::BCRSMatrix<DiagMatrixBlockWellType>;
 
     // the matrix type for the non-diagonal matrix B and C^T
     using OffDiagMatrixBlockWellType = Dune::DynamicMatrix<Scalar>;
-    using OffDiagMatWell = Dune::BCRSMatrix<OffDiagMatrixBlockWellType>;
+    using OffDiagMatWell = Opm::BCRSMatrix<OffDiagMatrixBlockWellType>;
 
     // block vector type
-    using BVector = Dune::BlockVector<Dune::FieldVector<Scalar,numEq>>;
+    using BVector = Opm::BlockVector<Dune::FieldVector<Scalar,numEq>>;
 
     explicit StandardWellEquations(const ParallelWellInfo<Scalar>& parallel_well_info);
 

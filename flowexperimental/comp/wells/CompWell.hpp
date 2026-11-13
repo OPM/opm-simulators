@@ -55,8 +55,8 @@ public:
     using EvalWell = typename PrimaryVariables::EvalWell;
     using BVectorWell = typename WellEquations::BVectorWell;
 
-    using VectorBlockType = Dune::FieldVector<Scalar, Indices::numEq>;
-    using BVector = Dune::BlockVector<VectorBlockType>;
+    using VectorBlockType = typename Base::VectorBlockType;
+    using BVector = typename Base::BVector;
 
     using SingleWellState = typename Base::SingleWellState;
 

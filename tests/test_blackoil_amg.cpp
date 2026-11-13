@@ -25,6 +25,8 @@
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/ParallelOverlappingILU0.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
+#include <opm/simulators/linalg/BCRSMatrix.hpp>
+#include <opm/simulators/linalg/BlockVector.hpp>
 #include <opm/simulators/linalg/amgcpr.hh>
 #include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
@@ -35,7 +37,6 @@
 #include <dune/common/parallel/indexset.hh>
 #include <dune/common/parallel/plocalindex.hh>
 #include <dune/common/parallel/communication.hh>
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/owneroverlapcopy.hh>
 #include <dune/istl/schwarz.hh>
 
@@ -275,9 +276,9 @@ void runBlackoilAmgLaplace()
 {
     constexpr int BS=2, N=100;
     typedef Dune::FieldMatrix<double,BS,BS> MatrixBlock;
-    typedef Dune::BCRSMatrix<MatrixBlock> BCRSMat;
+    typedef Opm::BCRSMatrix<MatrixBlock> BCRSMat;
     typedef Dune::FieldVector<double,BS> VectorBlock;
-    typedef Dune::BlockVector<VectorBlock> Vector;
+    typedef Opm::BlockVector<VectorBlock> Vector;
     typedef int GlobalId;
     typedef Dune::OwnerOverlapCopyCommunication<GlobalId> Communication;
     typedef Dune::OverlappingSchwarzOperator<BCRSMat,Vector,Vector,Communication> Operator;
@@ -323,8 +324,8 @@ BOOST_AUTO_TEST_CASE(TransposedCprKeepsCopiesConsistent)
         return;
     }
 
-    using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 2, 2>>;
-    using Vector = Dune::BlockVector<Dune::FieldVector<double, 2>>;
+    using Matrix = Opm::BCRSMatrix<Dune::FieldMatrix<double, 2, 2>>;
+    using Vector = Opm::BlockVector<Dune::FieldVector<double, 2>>;
     using Communication = Dune::OwnerOverlapCopyCommunication<int, int>;
     using Operator = Dune::OverlappingSchwarzOperator<Matrix, Vector, Vector, Communication>;
 
@@ -423,8 +424,8 @@ BOOST_AUTO_TEST_CASE(IsolatedRowsHaveConsistentInitialSolution)
         return;
     }
 
-    using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
-    using Vector = Dune::BlockVector<Dune::FieldVector<double, 1>>;
+    using Matrix = Opm::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
+    using Vector = Opm::BlockVector<Dune::FieldVector<double, 1>>;
     using Communication = Dune::OwnerOverlapCopyCommunication<int, int>;
     using Operator = Dune::OverlappingSchwarzOperator<Matrix, Vector, Vector, Communication>;
     using Smoother = Opm::ParallelOverlappingILU0<Matrix, Vector, Vector, Communication>;
@@ -521,8 +522,8 @@ BOOST_AUTO_TEST_CASE(IsolatedRowsHaveConsistentInitialSolution)
 #if HAVE_SUITESPARSE_UMFPACK
 BOOST_AUTO_TEST_CASE(UmfpackRequiresSequentialSolve)
 {
-    using Matrix = Dune::BCRSMatrix<Opm::MatrixBlock<double, 1, 1>>;
-    using Vector = Dune::BlockVector<Dune::FieldVector<double, 1>>;
+    using Matrix = Opm::BCRSMatrix<Opm::MatrixBlock<double, 1, 1>>;
+    using Vector = Opm::BlockVector<Dune::FieldVector<double, 1>>;
     using Communication = Dune::OwnerOverlapCopyCommunication<int, int>;
     using ParallelOperator = Dune::OverlappingSchwarzOperator<Matrix, Vector, Vector, Communication>;
     using SequentialOperator = Dune::MatrixAdapter<Matrix, Vector, Vector>;

@@ -32,8 +32,8 @@
 #include "bicgstabsolver.hh"
 #include "combinedcriterion.hh"
 #include "istlsparsematrixadapter.hh"
+#include "BlockVector.hpp"
 
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/paamg/amg.hh>
 #include <dune/istl/paamg/pinfo.hh>
 #include <dune/istl/owneroverlapcopy.hh>
@@ -103,7 +103,7 @@ class ParallelAmgBackend : public ParallelBaseBackend<TypeTag>
     using MatrixBlock = typename SparseMatrixAdapter::MatrixBlock;
     using IstlMatrix = typename SparseMatrixAdapter::IstlMatrix;
 
-    using Vector = Dune::BlockVector<VectorBlock>;
+    using Vector = Opm::BlockVector<VectorBlock>;
 
     // define the smoother used for the AMG and specify its
     // arguments

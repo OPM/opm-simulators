@@ -21,7 +21,6 @@
 #include <opm/simulators/linalg/gpuistl/GpuJac.hpp>
 
 #include <dune/common/fmatrix.hh>
-#include <dune/istl/bcrsmatrix.hh>
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>

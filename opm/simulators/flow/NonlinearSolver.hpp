@@ -22,7 +22,6 @@
 #define OPM_NON_LINEAR_SOLVER_HPP
 
 #include <dune/common/fmatrix.hh>
-#include <dune/istl/bcrsmatrix.hh>
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>

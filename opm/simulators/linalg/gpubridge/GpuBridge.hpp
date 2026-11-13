@@ -70,8 +70,8 @@ public:
 
     /// Solve linear system, A*x = b
     /// \warning Values of A might get overwritten!
-    /// \param[in] bridgeMat       matrix A, should be of type Dune::BCRSMatrix
-    /// \param[in] jacMat          matrix A, but modified for the preconditioner, should be of type Dune::BCRSMatrix
+    /// \param[in] bridgeMat       matrix A, should be a matrix like Dune::BCRSMatrix
+    /// \param[in] jacMat          matrix A, but modified for the preconditioner, should a matrix like Dune::BCRSMatrix
     /// \param[in] numJacobiBlocks number of jacobi blocks in jacMat
     /// \param[in] b               vector b, should be of type Dune::BlockVector
     /// \param[in] wellContribs    contains all WellContributions, to apply them separately, instead of adding them to matrix A
