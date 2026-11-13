@@ -135,6 +135,38 @@ sendSlaveGroupDataToMaster()
 
 
 template<typename Scalar, typename IndexTraits>
+int
+RescoupSendSlaveGroupData<Scalar, IndexTraits>::
+activePhaseIdx_(ReservoirCoupling::Phase phase) const
+{
+    const auto& pu = this->phase_usage_;
+    const int canonical = [phase]() {
+        switch (phase) {
+        case ReservoirCoupling::Phase::Oil:   return static_cast<int>(IndexTraits::oilPhaseIdx);
+        case ReservoirCoupling::Phase::Gas:   return static_cast<int>(IndexTraits::gasPhaseIdx);
+        case ReservoirCoupling::Phase::Water: return static_cast<int>(IndexTraits::waterPhaseIdx);
+        default: return -1;
+        }
+    }();
+    if (canonical < 0 || !pu.phaseIsActive(canonical)) {
+        return -1;
+    }
+    return pu.canonicalToActivePhaseIdx(canonical);
+}
+
+template<typename Scalar, typename IndexTraits>
+Scalar
+RescoupSendSlaveGroupData<Scalar, IndexTraits>::
+collectSlaveGroupGasLiftRate_(std::size_t group_idx, bool network) const
+{
+    auto& rescoup_slave = this->reservoir_coupling_slave_;
+    const auto& group_name = rescoup_slave.slaveGroupIdxToGroupName(group_idx);
+    const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
+    // sumWellGasLiftRates() only sums wells owned by this rank
+    return this->comm().sum(this->groupStateHelper_.sumWellGasLiftRates(group, network));
+}
+
+template<typename Scalar, typename IndexTraits>
 typename RescoupSendSlaveGroupData<Scalar, IndexTraits>::SlaveGroupInjectionData
 RescoupSendSlaveGroupData<Scalar, IndexTraits>::
 collectSlaveGroupInjectionData_(std::size_t group_idx) const
@@ -163,6 +195,59 @@ collectSlaveGroupInjectionData_(std::size_t group_idx) const
 }
 
 template<typename Scalar, typename IndexTraits>
+typename RescoupSendSlaveGroupData<Scalar, IndexTraits>::ProductionRates
+RescoupSendSlaveGroupData<Scalar, IndexTraits>::
+collectSlaveGroupNetworkSurfaceProductionRates_(std::size_t group_idx) const
+{
+    auto& rescoup_slave = this->reservoir_coupling_slave_;
+    const auto& group_name = rescoup_slave.slaveGroupIdxToGroupName(group_idx);
+    const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
+    const auto& pu = this->phase_usage_;
+
+    // Collect surface rates for each phase with network=true
+    // This means efficiency factors are 1.0 for groups/wells with GEFAC/WEFAC item 3 = "NO"
+    Scalar oil_rate = 0.0;
+    if (pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
+        oil_rate = this->groupStateHelper_.sumWellPhaseRates(
+            /*res_rates=*/false, group, pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx),
+            /*is_injector=*/false, /*network=*/true);
+    }
+
+    Scalar gas_rate = 0.0;
+    if (pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
+        gas_rate = this->groupStateHelper_.sumWellPhaseRates(
+            /*res_rates=*/false, group, pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx),
+            /*is_injector=*/false, /*network=*/true);
+    }
+
+    Scalar water_rate = 0.0;
+    if (pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
+        water_rate = this->groupStateHelper_.sumWellPhaseRates(
+            /*res_rates=*/false, group, pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx),
+            /*is_injector=*/false, /*network=*/true);
+    }
+
+    // Correct the sums for wells that have not been solved yet; see
+    // unsolvedNewWellProductionRates_().  The master uses these rates as the flow of
+    // its network's leaf nodes.  The correction is rank-local, like the sums above, so
+    // it is applied before the reduction.
+    const auto unsolved = this->unsolvedNewWellProductionRates_(group_name, /*network=*/true);
+    oil_rate -= unsolved[ReservoirCoupling::Phase::Oil];
+    gas_rate -= unsolved[ReservoirCoupling::Phase::Gas];
+    water_rate -= unsolved[ReservoirCoupling::Phase::Water];
+
+    // Sum across all MPI ranks since wells in a group may be owned by different ranks
+    oil_rate = this->comm().sum(oil_rate);
+    gas_rate = this->comm().sum(gas_rate);
+    water_rate = this->comm().sum(water_rate);
+    ProductionRates network_rates;
+    network_rates[ReservoirCoupling::Phase::Oil] = oil_rate;
+    network_rates[ReservoirCoupling::Phase::Gas] = gas_rate;
+    network_rates[ReservoirCoupling::Phase::Water] = water_rate;
+    return network_rates;
+}
+
+template<typename Scalar, typename IndexTraits>
 typename RescoupSendSlaveGroupData<Scalar, IndexTraits>::Potentials
 RescoupSendSlaveGroupData<Scalar, IndexTraits>::
 collectSlaveGroupPotentials_(std::size_t group_idx) const
@@ -175,6 +260,109 @@ collectSlaveGroupPotentials_(std::size_t group_idx) const
     potentials[ReservoirCoupling::Phase::Gas] = gr_pot.gas_rate;
     potentials[ReservoirCoupling::Phase::Water] = gr_pot.water_rate;
     return potentials;
+}
+
+template<typename Scalar, typename IndexTraits>
+typename RescoupSendSlaveGroupData<Scalar, IndexTraits>::SlaveGroupProductionData
+RescoupSendSlaveGroupData<Scalar, IndexTraits>::
+collectSlaveGroupProductionData_(std::size_t group_idx) const
+{
+    SlaveGroupProductionData production_data;
+    // Potentials are used to calculate guide rates for master production groups
+    production_data.potentials = this->collectSlaveGroupPotentials_(group_idx);
+    // Production rates are used to transform guiderate targets for master production groups
+    //   from one phase to another
+    production_data.surface_rates = this->collectSlaveGroupSurfaceProductionRates_(group_idx);
+    // Network surface rates are used for network leaf node calculations where efficiency
+    // factors may be excluded (when GEFAC/WEFAC item 3 = "NO")
+    production_data.network_surface_rates =
+        this->collectSlaveGroupNetworkSurfaceProductionRates_(group_idx);
+    // Reservoir rates are needed when master's parent group has RESV control mode,
+    // so the conversion uses slave's PVT properties rather than master's
+    production_data.reservoir_rates = this->collectSlaveGroupReservoirProductionRates_(group_idx);
+    production_data.voidage_rate = this->collectSlaveGroupVoidageRate_(group_idx);
+    production_data.gas_reinjection_rate = this->collectSlaveGroupReinjectionRateForGasPhase_(group_idx);
+    // The group state holds the count summed over all ranks.
+    production_data.num_group_controlled_producers =
+        this->group_state_.number_of_wells_under_group_control(
+            this->reservoir_coupling_slave_.slaveGroupIdxToGroupName(group_idx));
+    // MAYBE TODO: The summary quantities are collected (with one comm().sum() per
+    // slave group) on every send, but the master only uses them for its summary,
+    // from the data sent at the end of a sync step.  If this ever shows up in
+    // profiling, skip them for the other sends.  Note that the master replaces its
+    // stored slave group data on every receive, so it would then also have to keep
+    // the summary fields of the last end-of-sync-step message.
+    this->collectSlaveGroupSummaryProductionData_(group_idx, production_data);
+    // The master uses the lift gas rate (GGLIR, which includes the lift gas supply of satellite
+    // groups) for its summary and for sharing the GLIFTOPT limits, and the network lift gas rate
+    // for network nodes with NODEPROP item 4 = YES.
+    production_data.gas_lift_rate =
+        this->collectSlaveGroupGasLiftRate_(group_idx, /*network=*/false);
+    production_data.network_gas_lift_rate =
+        this->collectSlaveGroupGasLiftRate_(group_idx, /*network=*/true);
+    {
+        const auto& group_name = this->reservoir_coupling_slave_.slaveGroupIdxToGroupName(group_idx);
+        const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
+        production_data.gas_lift_headroom =
+            this->comm().sum(this->groupStateHelper_.sumWellGasLiftHeadroom(group));
+    }
+    return production_data;
+}
+
+template<typename Scalar, typename IndexTraits>
+Scalar
+RescoupSendSlaveGroupData<Scalar, IndexTraits>::
+collectSlaveGroupReinjectionRateForGasPhase_(std::size_t group_idx) const
+{
+    auto& rescoup_slave = this->reservoir_coupling_slave_;
+    const auto& group_name = rescoup_slave.slaveGroupIdxToGroupName(group_idx);
+    const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
+    const int gas_phase_idx = this->phase_usage_.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
+    return this->group_state_.injection_rein_rates(group.name())[gas_phase_idx];
+}
+
+template<typename Scalar, typename IndexTraits>
+typename RescoupSendSlaveGroupData<Scalar, IndexTraits>::ProductionRates
+RescoupSendSlaveGroupData<Scalar, IndexTraits>::
+collectSlaveGroupReservoirProductionRates_(std::size_t group_idx) const
+{
+    auto& rescoup_slave = this->reservoir_coupling_slave_;
+    const auto& group_name = rescoup_slave.slaveGroupIdxToGroupName(group_idx);
+    const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
+    const auto& pu = this->phase_usage_;
+
+    // Collect reservoir rates for each phase by summing well reservoir rates
+    // These rates are computed using slave's PVT properties (formation volume factors, etc.)
+    // NOTE: sumWellResRates() only sums wells owned by this rank, so we need to
+    // communicate the rates across all ranks using comm().sum()
+    Scalar oil_rate = 0.0;
+    if (pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
+        oil_rate = this->groupStateHelper_.sumWellResRates(
+            group, pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx), /*is_injector=*/false);
+    }
+
+    Scalar gas_rate = 0.0;
+    if (pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
+        gas_rate = this->groupStateHelper_.sumWellResRates(
+            group, pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx), /*is_injector=*/false);
+    }
+
+    Scalar water_rate = 0.0;
+    if (pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
+        water_rate = this->groupStateHelper_.sumWellResRates(
+            group, pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx), /*is_injector=*/false);
+    }
+
+    // Sum across all MPI ranks since wells in a group may be owned by different ranks
+    oil_rate = this->comm().sum(oil_rate);
+    gas_rate = this->comm().sum(gas_rate);
+    water_rate = this->comm().sum(water_rate);
+
+    ProductionRates reservoir_rates;
+    reservoir_rates[ReservoirCoupling::Phase::Oil] = oil_rate;
+    reservoir_rates[ReservoirCoupling::Phase::Gas] = gas_rate;
+    reservoir_rates[ReservoirCoupling::Phase::Water] = water_rate;
+    return reservoir_rates;
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -273,75 +461,6 @@ collectSlaveGroupSummaryProductionData_(std::size_t group_idx,
 }
 
 template<typename Scalar, typename IndexTraits>
-int
-RescoupSendSlaveGroupData<Scalar, IndexTraits>::
-activePhaseIdx_(ReservoirCoupling::Phase phase) const
-{
-    const auto& pu = this->phase_usage_;
-    const int canonical = [phase]() {
-        switch (phase) {
-        case ReservoirCoupling::Phase::Oil:   return static_cast<int>(IndexTraits::oilPhaseIdx);
-        case ReservoirCoupling::Phase::Gas:   return static_cast<int>(IndexTraits::gasPhaseIdx);
-        case ReservoirCoupling::Phase::Water: return static_cast<int>(IndexTraits::waterPhaseIdx);
-        default: return -1;
-        }
-    }();
-    if (canonical < 0 || !pu.phaseIsActive(canonical)) {
-        return -1;
-    }
-    return pu.canonicalToActivePhaseIdx(canonical);
-}
-
-template<typename Scalar, typename IndexTraits>
-template <typename Visitor>
-void
-RescoupSendSlaveGroupData<Scalar, IndexTraits>::
-visitGroupWells_(const Group& group, const Scalar efficiency, const Visitor& visit) const
-{
-    for (const std::string& child_name : group.groups()) {
-        const Group& child = this->schedule_.getGroup(child_name, this->report_step_idx_);
-        this->visitGroupWells_(child, efficiency * child.getGroupEfficiencyFactor(), visit);
-    }
-    const auto& well_state = this->groupStateHelper_.wellState();
-    for (const std::string& well_name : group.wells()) {
-        const auto well_index = well_state.index(well_name);
-        if (!well_index.has_value() || !well_state.wellIsOwned(well_index.value(), well_name)) {
-            continue;
-        }
-        const auto& ws = well_state.well(well_index.value());
-        if (ws.status == Well::Status::SHUT) {
-            continue;
-        }
-        const Well& well_ecl = this->schedule_.getWell(well_name, this->report_step_idx_);
-        visit(well_ecl, ws, efficiency * well_ecl.getEfficiencyFactor() * ws.efficiency_scaling_factor);
-    }
-}
-
-template<typename Scalar, typename IndexTraits>
-Scalar
-RescoupSendSlaveGroupData<Scalar, IndexTraits>::
-collectSlaveGroupReinjectionRateForGasPhase_(std::size_t group_idx) const
-{
-    auto& rescoup_slave = this->reservoir_coupling_slave_;
-    const auto& group_name = rescoup_slave.slaveGroupIdxToGroupName(group_idx);
-    const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
-    const int gas_phase_idx = this->phase_usage_.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
-    return this->group_state_.injection_rein_rates(group.name())[gas_phase_idx];
-}
-
-template<typename Scalar, typename IndexTraits>
-Scalar
-RescoupSendSlaveGroupData<Scalar, IndexTraits>::
-collectSlaveGroupGasLiftRate_(std::size_t group_idx, bool network) const
-{
-    auto& rescoup_slave = this->reservoir_coupling_slave_;
-    const auto& group_name = rescoup_slave.slaveGroupIdxToGroupName(group_idx);
-    const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
-    // sumWellGasLiftRates() only sums wells owned by this rank
-    return this->comm().sum(this->groupStateHelper_.sumWellGasLiftRates(group, network));
-}
-
-template<typename Scalar, typename IndexTraits>
 typename RescoupSendSlaveGroupData<Scalar, IndexTraits>::ProductionRates
 RescoupSendSlaveGroupData<Scalar, IndexTraits>::
 collectSlaveGroupSurfaceProductionRates_(std::size_t group_idx) const
@@ -359,150 +478,6 @@ collectSlaveGroupSurfaceProductionRates_(std::size_t group_idx) const
     // NOTE: GuideRate::RateVector is a vector of doubles, so we need to convert it to Scalar
     // TODO: Fix GuideRate::RateVector to be a vector of Scalars instead of doubles
     return ProductionRates{production_rates};
-}
-
-template<typename Scalar, typename IndexTraits>
-typename RescoupSendSlaveGroupData<Scalar, IndexTraits>::ProductionRates
-RescoupSendSlaveGroupData<Scalar, IndexTraits>::
-collectSlaveGroupNetworkSurfaceProductionRates_(std::size_t group_idx) const
-{
-    auto& rescoup_slave = this->reservoir_coupling_slave_;
-    const auto& group_name = rescoup_slave.slaveGroupIdxToGroupName(group_idx);
-    const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
-    const auto& pu = this->phase_usage_;
-
-    // Collect surface rates for each phase with network=true
-    // This means efficiency factors are 1.0 for groups/wells with GEFAC/WEFAC item 3 = "NO"
-    Scalar oil_rate = 0.0;
-    if (pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
-        oil_rate = this->groupStateHelper_.sumWellPhaseRates(
-            /*res_rates=*/false, group, pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx),
-            /*is_injector=*/false, /*network=*/true);
-    }
-
-    Scalar gas_rate = 0.0;
-    if (pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
-        gas_rate = this->groupStateHelper_.sumWellPhaseRates(
-            /*res_rates=*/false, group, pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx),
-            /*is_injector=*/false, /*network=*/true);
-    }
-
-    Scalar water_rate = 0.0;
-    if (pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
-        water_rate = this->groupStateHelper_.sumWellPhaseRates(
-            /*res_rates=*/false, group, pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx),
-            /*is_injector=*/false, /*network=*/true);
-    }
-
-    // Correct the sums for wells that have not been solved yet; see
-    // unsolvedNewWellProductionRates_().  The master uses these rates as the flow of
-    // its network's leaf nodes.  The correction is rank-local, like the sums above, so
-    // it is applied before the reduction.
-    const auto unsolved = this->unsolvedNewWellProductionRates_(group_name, /*network=*/true);
-    oil_rate -= unsolved[ReservoirCoupling::Phase::Oil];
-    gas_rate -= unsolved[ReservoirCoupling::Phase::Gas];
-    water_rate -= unsolved[ReservoirCoupling::Phase::Water];
-
-    // Sum across all MPI ranks since wells in a group may be owned by different ranks
-    oil_rate = this->comm().sum(oil_rate);
-    gas_rate = this->comm().sum(gas_rate);
-    water_rate = this->comm().sum(water_rate);
-    ProductionRates network_rates;
-    network_rates[ReservoirCoupling::Phase::Oil] = oil_rate;
-    network_rates[ReservoirCoupling::Phase::Gas] = gas_rate;
-    network_rates[ReservoirCoupling::Phase::Water] = water_rate;
-    return network_rates;
-}
-
-template<typename Scalar, typename IndexTraits>
-typename RescoupSendSlaveGroupData<Scalar, IndexTraits>::ProductionRates
-RescoupSendSlaveGroupData<Scalar, IndexTraits>::
-collectSlaveGroupReservoirProductionRates_(std::size_t group_idx) const
-{
-    auto& rescoup_slave = this->reservoir_coupling_slave_;
-    const auto& group_name = rescoup_slave.slaveGroupIdxToGroupName(group_idx);
-    const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
-    const auto& pu = this->phase_usage_;
-
-    // Collect reservoir rates for each phase by summing well reservoir rates
-    // These rates are computed using slave's PVT properties (formation volume factors, etc.)
-    // NOTE: sumWellResRates() only sums wells owned by this rank, so we need to
-    // communicate the rates across all ranks using comm().sum()
-    Scalar oil_rate = 0.0;
-    if (pu.phaseIsActive(IndexTraits::oilPhaseIdx)) {
-        oil_rate = this->groupStateHelper_.sumWellResRates(
-            group, pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx), /*is_injector=*/false);
-    }
-
-    Scalar gas_rate = 0.0;
-    if (pu.phaseIsActive(IndexTraits::gasPhaseIdx)) {
-        gas_rate = this->groupStateHelper_.sumWellResRates(
-            group, pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx), /*is_injector=*/false);
-    }
-
-    Scalar water_rate = 0.0;
-    if (pu.phaseIsActive(IndexTraits::waterPhaseIdx)) {
-        water_rate = this->groupStateHelper_.sumWellResRates(
-            group, pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx), /*is_injector=*/false);
-    }
-
-    // Sum across all MPI ranks since wells in a group may be owned by different ranks
-    oil_rate = this->comm().sum(oil_rate);
-    gas_rate = this->comm().sum(gas_rate);
-    water_rate = this->comm().sum(water_rate);
-
-    ProductionRates reservoir_rates;
-    reservoir_rates[ReservoirCoupling::Phase::Oil] = oil_rate;
-    reservoir_rates[ReservoirCoupling::Phase::Gas] = gas_rate;
-    reservoir_rates[ReservoirCoupling::Phase::Water] = water_rate;
-    return reservoir_rates;
-}
-
-template<typename Scalar, typename IndexTraits>
-typename RescoupSendSlaveGroupData<Scalar, IndexTraits>::SlaveGroupProductionData
-RescoupSendSlaveGroupData<Scalar, IndexTraits>::
-collectSlaveGroupProductionData_(std::size_t group_idx) const
-{
-    SlaveGroupProductionData production_data;
-    // Potentials are used to calculate guide rates for master production groups
-    production_data.potentials = this->collectSlaveGroupPotentials_(group_idx);
-    // Production rates are used to transform guiderate targets for master production groups
-    //   from one phase to another
-    production_data.surface_rates = this->collectSlaveGroupSurfaceProductionRates_(group_idx);
-    // Network surface rates are used for network leaf node calculations where efficiency
-    // factors may be excluded (when GEFAC/WEFAC item 3 = "NO")
-    production_data.network_surface_rates =
-        this->collectSlaveGroupNetworkSurfaceProductionRates_(group_idx);
-    // Reservoir rates are needed when master's parent group has RESV control mode,
-    // so the conversion uses slave's PVT properties rather than master's
-    production_data.reservoir_rates = this->collectSlaveGroupReservoirProductionRates_(group_idx);
-    production_data.voidage_rate = this->collectSlaveGroupVoidageRate_(group_idx);
-    production_data.gas_reinjection_rate = this->collectSlaveGroupReinjectionRateForGasPhase_(group_idx);
-    // The group state holds the count summed over all ranks.
-    production_data.num_group_controlled_producers =
-        this->group_state_.number_of_wells_under_group_control(
-            this->reservoir_coupling_slave_.slaveGroupIdxToGroupName(group_idx));
-    // MAYBE TODO: The summary quantities are collected (with one comm().sum() per
-    // slave group) on every send, but the master only uses them for its summary,
-    // from the data sent at the end of a sync step.  If this ever shows up in
-    // profiling, skip them for the other sends.  Note that the master replaces its
-    // stored slave group data on every receive, so it would then also have to keep
-    // the summary fields of the last end-of-sync-step message.
-    this->collectSlaveGroupSummaryProductionData_(group_idx, production_data);
-    // The master uses the lift gas rate (GGLIR, which includes the lift gas supply of satellite
-    // groups) for its summary and for sharing the GLIFTOPT limits, and the network lift gas rate
-    // for network nodes with NODEPROP item 4 = YES.
-    production_data.gas_lift_rate =
-        this->collectSlaveGroupGasLiftRate_(group_idx, /*network=*/false);
-    production_data.network_gas_lift_rate =
-        this->collectSlaveGroupGasLiftRate_(group_idx, /*network=*/true);
-    {
-        const auto& group_name = this->reservoir_coupling_slave_.slaveGroupIdxToGroupName(group_idx);
-        const Group& group = this->schedule_.getGroup(group_name, this->report_step_idx_);
-        production_data.gas_lift_headroom =
-            this->comm().sum(this->groupStateHelper_.sumWellGasLiftHeadroom(group));
-    }
-    return production_data;
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -550,26 +525,6 @@ createInjectionRatesFromRateVector_(const std::vector<Scalar>& rate_vector) cons
 template <class Scalar, class IndexTraits>
 void
 RescoupSendSlaveGroupData<Scalar, IndexTraits>::
-sendSlaveGroupProductionDataToMaster_() const
-{
-    auto& rescoup_slave = this->reservoir_coupling_slave_;
-    auto num_slave_groups = rescoup_slave.numSlaveGroups();
-    if (num_slave_groups == 0) {
-        // History mode: no slave groups defined, nothing to send
-        return;
-    }
-    std::vector<SlaveGroupProductionData> production_data;
-    for (std::size_t group_idx = 0; group_idx < num_slave_groups; ++group_idx) {
-        // NOTE: We have to send production data even if the slave group is not a production group,
-        //   i.e. if it is a pure injection group or has GroupType NONE
-        production_data.emplace_back(this->collectSlaveGroupProductionData_(group_idx));
-    }
-    rescoup_slave.sendProductionDataToMaster(production_data);
-}
-
-template <class Scalar, class IndexTraits>
-void
-RescoupSendSlaveGroupData<Scalar, IndexTraits>::
 sendSlaveGroupInjectionDataToMaster_() const
 {
     auto& rescoup_slave = this->reservoir_coupling_slave_;
@@ -589,6 +544,26 @@ sendSlaveGroupInjectionDataToMaster_() const
         injection_data.emplace_back(this->collectSlaveGroupInjectionData_(group_idx));
     }
     rescoup_slave.sendInjectionDataToMaster(injection_data);
+}
+
+template <class Scalar, class IndexTraits>
+void
+RescoupSendSlaveGroupData<Scalar, IndexTraits>::
+sendSlaveGroupProductionDataToMaster_() const
+{
+    auto& rescoup_slave = this->reservoir_coupling_slave_;
+    auto num_slave_groups = rescoup_slave.numSlaveGroups();
+    if (num_slave_groups == 0) {
+        // History mode: no slave groups defined, nothing to send
+        return;
+    }
+    std::vector<SlaveGroupProductionData> production_data;
+    for (std::size_t group_idx = 0; group_idx < num_slave_groups; ++group_idx) {
+        // NOTE: We have to send production data even if the slave group is not a production group,
+        //   i.e. if it is a pure injection group or has GroupType NONE
+        production_data.emplace_back(this->collectSlaveGroupProductionData_(group_idx));
+    }
+    rescoup_slave.sendProductionDataToMaster(production_data);
 }
 
 // A well that opens in this report step is put on its WCONPROD target by
@@ -663,6 +638,31 @@ unsolvedNewWellProductionRates_(const std::string& group_name, bool network) con
         rates[ReservoirCoupling::Phase::Water] += contribution(IndexTraits::waterPhaseIdx);
     }
     return rates;
+}
+
+template<typename Scalar, typename IndexTraits>
+template <typename Visitor>
+void
+RescoupSendSlaveGroupData<Scalar, IndexTraits>::
+visitGroupWells_(const Group& group, const Scalar efficiency, const Visitor& visit) const
+{
+    for (const std::string& child_name : group.groups()) {
+        const Group& child = this->schedule_.getGroup(child_name, this->report_step_idx_);
+        this->visitGroupWells_(child, efficiency * child.getGroupEfficiencyFactor(), visit);
+    }
+    const auto& well_state = this->groupStateHelper_.wellState();
+    for (const std::string& well_name : group.wells()) {
+        const auto well_index = well_state.index(well_name);
+        if (!well_index.has_value() || !well_state.wellIsOwned(well_index.value(), well_name)) {
+            continue;
+        }
+        const auto& ws = well_state.well(well_index.value());
+        if (ws.status == Well::Status::SHUT) {
+            continue;
+        }
+        const Well& well_ecl = this->schedule_.getWell(well_name, this->report_step_idx_);
+        visit(well_ecl, ws, efficiency * well_ecl.getEfficiencyFactor() * ws.efficiency_scaling_factor);
+    }
 }
 
 
