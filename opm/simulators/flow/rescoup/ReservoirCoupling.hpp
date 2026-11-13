@@ -51,8 +51,8 @@ public:
     void error(const std::string &msg) const;
     bool haveDeferredLogger() const { return deferred_logger_ != nullptr; }
     void info(const std::string &msg) const;
-    void warning(const std::string &msg) const;
     void setDeferredLogger(DeferredLogger *deferred_logger) { deferred_logger_ = deferred_logger; }
+    void warning(const std::string &msg) const;
 
 private:
     template<typename DeferredFn, typename OpmLogFn>
