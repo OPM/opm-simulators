@@ -139,6 +139,36 @@ OPM_CREATE_GPU_RESOURCE(GPUStream, cudaStream_t, cudaStreamCreate, cudaStreamDes
  */
 OPM_CREATE_GPU_RESOURCE(GPUEvent, cudaEvent_t, cudaEventCreate, cudaEventDestroy);
 
+/** @brief Record completion of the work already queued on a stream. */
+inline void recordEvent(const GPUEvent& event, cudaStream_t stream)
+{
+    OPM_GPU_SAFE_CALL(cudaEventRecord(event.get(), stream));
+}
+
+/**
+ * @brief Order subsequent stream work after the recorded event without blocking the host.
+ * @note The event must have been recorded before calling this function.
+ */
+inline void waitForEventAsync(cudaStream_t stream, const GPUEvent& event)
+{
+    OPM_GPU_SAFE_CALL(cudaStreamWaitEvent(stream, event.get(), 0));
+}
+
+/** @brief Block the host until the recorded event completes. */
+inline void synchronizeEvent(const GPUEvent& event)
+{
+    OPM_GPU_SAFE_CALL(cudaEventSynchronize(event.get()));
+}
+
+/**
+ * @brief Drain a stream during teardown, reporting errors without throwing.
+ * @note Call before destroying buffers used by queued work, even if no event was recorded.
+ */
+inline void synchronizeStreamNoThrow(cudaStream_t stream) noexcept
+{
+    OPM_GPU_WARN_IF_ERROR(cudaStreamSynchronize(stream));
+}
+
 /**
  * @brief Manages a CUDA graph resource.
  *

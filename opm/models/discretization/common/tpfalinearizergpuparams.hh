@@ -41,6 +41,7 @@ template <class TypeTag> class TpfaLinearizerGpuParams;
 #include <cstddef>
 #include <utility>
 #include <memory>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -54,6 +55,13 @@ template <class TypeTag> class TpfaLinearizerGpuParams;
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/simulators/flow/SimpleFIBlackOilModel.hpp>
 #include <opm/simulators/flow/ThermalGasWaterFlowProblem.hpp>
+
+// This header is not hipified; select the generated bridge for HIP builds.
+#if USE_HIP
+#include <opm/simulators/linalg/gpuistl_hip/GpuFlowGasWaterEnergyBridge.hpp>
+#else
+#include <opm/simulators/linalg/gpuistl/GpuFlowGasWaterEnergyBridge.hpp>
+#endif
 
 #include <opm/models/discretization/common/tpfalinearizerstructs.hh>
 
@@ -82,9 +90,9 @@ __global__ void apply_source_deltas(const unsigned* indices,
  *
  * \brief Owns assembly buffers across linearizations.
  *
- * Topology, matrix and residual storage persist. Refresh uploads both host IQ
- * time levels and boundary data before each subsequent assembly. Property state
- * remains independently owned; sharing that state is a separate change.
+ * Topology, matrix and residual storage persist. Assembly borrows device IQ
+ * views from the model-owned property bridge when available; CPU-property
+ * fallback retains its own IQ buffers. Boundary data is refreshed each pass.
  */
 template <class TypeTag>
 class TpfaLinearizerGpuParams
@@ -141,6 +149,8 @@ private:
     using GpuFlowProblemBufferType = ThermalGasWaterFlowProblem<Scalar, gpuistl::GpuBuffer>;
 
     using GpuModel = GetPropType<TypeTag, Properties::GpuFIBlackOilModel>;
+    using PropertyAssemblyBridge =
+        gpuistl::GpuFlowGasWaterEnergyBridge<TypeTag, CorrectTypeTagView>;
 
     FullDomain<gpuistl::GpuBuffer<int>> domainBuffer_;
     SparseTable<NeighborInfoGPU, gpuistl::GpuBuffer> neighborInfoBuffer_;
@@ -158,25 +168,35 @@ private:
     gpuistl::GpuBuffer<unsigned> sourceIndices_;
     gpuistl::GpuBuffer<VectorBlockGPU> sourceResidualDeltas_;
     gpuistl::GpuBuffer<MatrixBlockGPU> sourceJacobianDeltas_;
-    // dynamicGpuFluidSystemBuffer_ must be declared before dynamicGpuFluidSystemPtr_
-    // because the ptr holds a GpuView into the buffer's GPU memory.
-    GpuFluidSystemBuffer dynamicGpuFluidSystemBuffer_;
-    // The fluid-system ptr is kept alive because gpuModelBuffer_ and
-    // boundaryInfoBuffer_ store raw GPU pointers into it.
+    // Fallback-only IQ and fluid-system owners. The direct path borrows
+    // these views from the model-owned propertyAssemblyBridge_.
+    std::optional<GpuFluidSystemBuffer> dynamicGpuFluidSystemBuffer_;
     GpuFluidSystemPtr dynamicGpuFluidSystemPtr_;
-    GpuModelBufferType gpuModelBuffer_;
-    GpuFlowProblemBufferType gpuFlowProblemBuffer_;
+    std::optional<GpuModelBufferType> gpuModelBuffer_;
+    std::optional<GpuFlowProblemBufferType> gpuFlowProblemBuffer_;
+    const PropertyAssemblyBridge* propertyAssemblyBridge_{nullptr};
     gpuistl::GpuBuffer<BoundaryInfoGPU> boundaryInfoBuffer_;
     std::array<std::vector<GPUBOIQ>, 2> intensiveQuantityStaging_;
     std::vector<VectorBlockGPU> sourceResidualStaging_;
     std::vector<MatrixBlockGPU> sourceJacobianStaging_;
     std::size_t sourceCapacity_{0};
 
+    bool bindPropertyAssemblyBridge_(Model& model)
+    {
+        // Custom model TypeTags may support assembly without a property dispatcher.
+        if constexpr (requires { model.gpuPropertyAssemblyBridge(); }) {
+            if (model.hasGpuPropertyAssemblyBridge()) {
+                propertyAssemblyBridge_ = &model.gpuPropertyAssemblyBridge();
+                return true;
+            }
+        }
+        propertyAssemblyBridge_ = nullptr;
+        return false;
+    }
+
 public:
     /*!
      * \brief Construct and populate all GPU buffers needed for one linearization pass.
-        To avoid optionals we use initializerlists, although some are a bit ugly
-        with the lambdas
      *
      * \param domain                  The full domain (CPU).
      * \param neighborInfo            CPU neighbor-info sparse table.
@@ -211,20 +231,11 @@ public:
         , residualBuffer_(gpuistl::copy_to_gpu_residual<GlobalEqVector, VectorBlockGPU>(residual))
         , residualView_(gpuistl::make_view(residualBuffer_))
         , flattenedResidual_(residualBuffer_.size() * numEq)
-        , dynamicGpuFluidSystemBuffer_(
-              ::Opm::gpuistl::copy_to_gpu(FluidSystem::getNonStaticInstance()))
-        , dynamicGpuFluidSystemPtr_(
-              gpuistl::make_gpu_shared_ptr(::Opm::gpuistl::make_view(dynamicGpuFluidSystemBuffer_)))
-        , gpuModelBuffer_([&]() -> GpuModelBufferType {
-            std::vector<Scalar> volumes(numCells);
-            for (unsigned i = 0; i < numCells; ++i) {
-                volumes[domain.cells[i]] = model.dofTotalVolume(domain.cells[i]);
-            }
-            GpuModel gpuModel(
-                model.intensiveQuantityCache()[0], model.intensiveQuantityCache()[1], volumes);
-            return gpuistl::copy_to_gpu(gpuModel, *dynamicGpuFluidSystemPtr_.get());
-        }())
-        , gpuFlowProblemBuffer_([&]() -> GpuFlowProblemBufferType {
+    {
+        static_assert(std::is_same_v<typename PropertyAssemblyBridge::DeviceTypeTagPublic,
+                                     CorrectTypeTagView>);
+
+        gpuFlowProblemBuffer_.emplace([&]() -> GpuFlowProblemBufferType {
             std::vector<Scalar> alpha0(numCells);
             std::vector<Scalar> alpha1(numCells);
             std::vector<Scalar> alpha2(numCells);
@@ -257,11 +268,32 @@ public:
             ThermalGasWaterFlowProblem<Scalar> gpuFlowProblem(
                 alpha0, alpha1, alpha2, alpha3, alpha4, alpha5, problem.moduleParams());
             return gpuistl::copy_to_gpu(gpuFlowProblem);
-        }())
-        , boundaryInfoBuffer_(
-              gpuistl::copy_to_gpu<VectorBlockGPU, GpuScalarFluidState, BoundaryInfoGPU>(
-                  boundaryInfo, *dynamicGpuFluidSystemPtr_.get()))
-    {
+        }());
+
+        if (bindPropertyAssemblyBridge_(model)) {
+            propertyAssemblyBridge_->waitForAssembly(/*timeIdx=*/0);
+            boundaryInfoBuffer_
+                = gpuistl::copy_to_gpu<VectorBlockGPU, GpuScalarFluidState, BoundaryInfoGPU>(
+                    boundaryInfo, propertyAssemblyBridge_->deviceFluidSystem());
+            return;
+        }
+
+        dynamicGpuFluidSystemBuffer_.emplace(
+            ::Opm::gpuistl::copy_to_gpu(FluidSystem::getNonStaticInstance()));
+        dynamicGpuFluidSystemPtr_ =
+            gpuistl::make_gpu_shared_ptr(::Opm::gpuistl::make_view(*dynamicGpuFluidSystemBuffer_));
+        gpuModelBuffer_.emplace([&]() -> GpuModelBufferType {
+            std::vector<Scalar> volumes(numCells);
+            for (unsigned i = 0; i < numCells; ++i) {
+                volumes[domain.cells[i]] = model.dofTotalVolume(domain.cells[i]);
+            }
+            GpuModel gpuModel(
+                model.intensiveQuantityCache()[0], model.intensiveQuantityCache()[1], volumes);
+            return gpuistl::copy_to_gpu(gpuModel, *dynamicGpuFluidSystemPtr_.get());
+        }());
+        boundaryInfoBuffer_ =
+            gpuistl::copy_to_gpu<VectorBlockGPU, GpuScalarFluidState, BoundaryInfoGPU>(
+                boundaryInfo, *dynamicGpuFluidSystemPtr_.get());
     }
 
     void refreshForLinearization(Model& model,
@@ -271,24 +303,46 @@ public:
         if (numCells != residualBuffer_.size()) {
             OPM_THROW(std::logic_error, "GPU assembly topology changed without erasing the matrix");
         }
-        // Host IQs remain authoritative in this extraction. Convert their fluid
-        // system pointers while retaining the device allocations for both levels.
-        for (unsigned timeIdx = 0; timeIdx < 2; ++timeIdx) {
-            const auto& cache = model.intensiveQuantityCache()[timeIdx];
-            auto& staging = intensiveQuantityStaging_[timeIdx];
-            staging.clear();
-            staging.reserve(cache.size());
-            for (const auto& iq : cache) {
-                staging.push_back(iq.template withOtherFluidSystem<CorrectTypeTagView>(
-                    *dynamicGpuFluidSystemPtr_));
+        if (bindPropertyAssemblyBridge_(model)) {
+            propertyAssemblyBridge_->waitForAssembly(/*timeIdx=*/0);
+            boundaryInfoBuffer_ =
+                gpuistl::copy_to_gpu<VectorBlockGPU, GpuScalarFluidState, BoundaryInfoGPU>(
+                    boundaryInfo, propertyAssemblyBridge_->deviceFluidSystem());
+        } else {
+            propertyAssemblyBridge_ = nullptr;
+            // A runtime fallback can require owners that were absent when the
+            // persistent assembly parameters were first constructed.
+            if (!dynamicGpuFluidSystemBuffer_) {
+                dynamicGpuFluidSystemBuffer_.emplace(
+                    ::Opm::gpuistl::copy_to_gpu(FluidSystem::getNonStaticInstance()));
+                dynamicGpuFluidSystemPtr_ = gpuistl::make_gpu_shared_ptr(
+                    ::Opm::gpuistl::make_view(*dynamicGpuFluidSystemBuffer_));
+                std::vector<Scalar> volumes(numCells);
+                for (unsigned cell = 0; cell < numCells; ++cell) {
+                    volumes[cell] = model.dofTotalVolume(cell);
+                }
+                GpuModel gpuModel(
+                    model.intensiveQuantityCache()[0], model.intensiveQuantityCache()[1], volumes);
+                gpuModelBuffer_.emplace(
+                    gpuistl::copy_to_gpu(gpuModel, *dynamicGpuFluidSystemPtr_));
             }
-            auto& target = timeIdx == 0 ? gpuModelBuffer_.cachedIntensiveQuantities0_
-                                        : gpuModelBuffer_.cachedIntensiveQuantities1_;
-            target.copyFromHost(staging);
+            for (unsigned timeIdx = 0; timeIdx < 2; ++timeIdx) {
+                const auto& cache = model.intensiveQuantityCache()[timeIdx];
+                auto& staging = intensiveQuantityStaging_[timeIdx];
+                staging.clear();
+                staging.reserve(cache.size());
+                for (const auto& iq : cache) {
+                    staging.push_back(iq.template withOtherFluidSystem<CorrectTypeTagView>(
+                        *dynamicGpuFluidSystemPtr_));
+                }
+                auto& target = timeIdx == 0 ? gpuModelBuffer_->cachedIntensiveQuantities0_
+                                            : gpuModelBuffer_->cachedIntensiveQuantities1_;
+                target.copyFromHost(staging);
+            }
+            boundaryInfoBuffer_ =
+                gpuistl::copy_to_gpu<VectorBlockGPU, GpuScalarFluidState, BoundaryInfoGPU>(
+                    boundaryInfo, *dynamicGpuFluidSystemPtr_);
         }
-        boundaryInfoBuffer_ =
-            gpuistl::copy_to_gpu<VectorBlockGPU, GpuScalarFluidState, BoundaryInfoGPU>(
-                boundaryInfo, *dynamicGpuFluidSystemPtr_);
         gpuistl::detail::gpuMemsetZero(residualBuffer_.data(),
                                      residualBuffer_.size() * sizeof(VectorBlockGPU));
     }
@@ -380,14 +434,22 @@ public:
         return residualView_;
     }
 
+    bool usesGpuPropertyAssemblyBridge() const
+    {
+        return propertyAssemblyBridge_ != nullptr;
+    }
+
     auto modelView()
     {
-        return gpuistl::make_view(gpuModelBuffer_);
+        if (propertyAssemblyBridge_) {
+            return propertyAssemblyBridge_->modelView();
+        }
+        return gpuistl::make_view(*gpuModelBuffer_);
     }
 
     auto flowProblemView()
     {
-        return gpuistl::make_view(gpuFlowProblemBuffer_);
+        return gpuistl::make_view(*gpuFlowProblemBuffer_);
     }
 
     auto boundaryInfoView()

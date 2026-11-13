@@ -293,6 +293,14 @@ public:
 
     bool gpuSystemActive() const { return gpuLinearizer_.gpuSystemActive(); }
 
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+    //! Whether the last assembly borrowed model-owned device IQs.
+    bool usesGpuPropertyAssemblyBridge() const
+    {
+        return gpuLinearizer_.usesGpuPropertyAssemblyBridge();
+    }
+#endif
+
     decltype(auto) gpuJacobian() { return gpuLinearizer_.gpuJacobian(); }
     decltype(auto) gpuResidual() { return gpuLinearizer_.gpuResidual(); }
     decltype(auto) flattenedGpuResidual() { return gpuLinearizer_.flattenedGpuResidual(); }

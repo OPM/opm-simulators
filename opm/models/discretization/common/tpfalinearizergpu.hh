@@ -124,6 +124,13 @@ public:
         return gpuSystemActive_;
     }
 
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+    bool usesGpuPropertyAssemblyBridge() const
+    {
+        return gpuParams_ && gpuParams_->usesGpuPropertyAssemblyBridge();
+    }
+#endif
+
     decltype(auto) gpuJacobian()
     {
         requireGpuSupport();
