@@ -19,12 +19,12 @@
     },
     "constructors": {
         "filename_constructor": {
-            "signature_template": "opm.simulators.{{name}}.__init__(deck_filename: str) -> {{name}}",
-            "doc": "Constructor using a deck file name.\n\n:param deck_filename: The file name of the deck to be used for the simulation.\n:type deck_filename: str\n:return: The {{name}}.\n:type return: {{name}}"
+            "signature_template": "opm.simulators.{{name}}.__init__(filename: str, args: list[str] = []) -> {{name}}",
+            "doc": "Constructor using a deck file name.\n\n:param filename: The file name of the deck to be used for the simulation.\n:type filename: str\n:param args: Extra command-line options for the simulator, written as they would be given to ``flow``, for example ``[\"--enable-async-ecl-output=false\"]``. They are applied when ``step_init()`` is called. Defaults to no extra options.\n:type args: list[str]\n:return: The {{name}}.\n:type return: {{name}}"
         },
         "objects_constructor": {
-            "signature_template": "opm.simulators.{{name}}.__init__(deck: Deck, state: EclipseState, schedule: Schedule, summary_config: SummaryConfig) -> {{name}}",
-            "doc": "Constructor using Deck, EclipseState, Schedule, and SummaryConfig objects.\n\n:param deck: Deck object.\n:type deck: Deck\n:param state: EclipseState object.\n:type state: EclipseState\n:param schedule: Schedule object.\n:type schedule: Schedule\n:param summary_config: SummaryConfig object.\n:type summary_config: SummaryConfig\n:return: The {{name}}.\n:type return: {{name}}"
+            "signature_template": "opm.simulators.{{name}}.__init__(Deck: Deck, EclipseState: EclipseState, Schedule: Schedule, SummaryConfig: SummaryConfig, args: list[str] = []) -> {{name}}",
+            "doc": "Constructor using Deck, EclipseState, Schedule, and SummaryConfig objects.\n\n:param Deck: Deck object.\n:type Deck: Deck\n:param EclipseState: EclipseState object.\n:type EclipseState: EclipseState\n:param Schedule: Schedule object.\n:type Schedule: Schedule\n:param SummaryConfig: SummaryConfig object.\n:type SummaryConfig: SummaryConfig\n:param args: Extra command-line options for the simulator, written as they would be given to ``flow``, for example ``[\"--enable-async-ecl-output=false\"]``. They are applied when ``step_init()`` is called. Defaults to no extra options.\n:type args: list[str]\n:return: The {{name}}.\n:type return: {{name}}"
         }
     },
     "common_methods": {
