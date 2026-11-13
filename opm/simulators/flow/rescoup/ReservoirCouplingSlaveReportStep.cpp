@@ -82,6 +82,34 @@ hasMasterProductionTarget(const std::string& gname) const
 }
 
 template <class Scalar>
+void
+ReservoirCouplingSlaveReportStep<Scalar>::
+markSlaveGroupsInSchedule(Schedule& schedule, const int report_step_idx)
+{
+    for (std::size_t i = 0; i < this->slave_.numSlaveGroups(); ++i) {
+        const auto& gname = this->slave_.slaveGroupIdxToGroupName(i);
+        if (this->hasMasterProductionTarget(gname)) {
+            schedule.markSlaveProductionGroup(report_step_idx, gname);
+        }
+        for (const auto phase : {Phase::WATER, Phase::OIL, Phase::GAS}) {
+            if (this->hasMasterInjectionTarget(gname, phase)) {
+                schedule.markSlaveInjectionGroup(report_step_idx, gname);
+                break;  // only need to mark once per group
+            }
+        }
+    }
+}
+
+template <class Scalar>
+const ReservoirCoupling::GasLiftGroupLimits<Scalar>*
+ReservoirCouplingSlaveReportStep<Scalar>::
+masterGasLiftLimits(const std::string& gname) const
+{
+    auto it = this->master_gas_lift_limits_.find(gname);
+    return (it == this->master_gas_lift_limits_.end()) ? nullptr : &it->second;
+}
+
+template <class Scalar>
 Scalar
 ReservoirCouplingSlaveReportStep<Scalar>::
 masterGroupNodePressure(const std::string& gname) const
@@ -153,6 +181,45 @@ receiveCoupledNetworkActiveStatusFromMaster()
     this->logger().debug(fmt::format(
         "Received coupled-network active status (active={}) from master process",
         active));
+}
+
+template <class Scalar>
+void
+ReservoirCouplingSlaveReportStep<Scalar>::
+receiveGasLiftGroupLimitsFromMaster(std::size_t num_limits)
+{
+    using GasLiftGroupLimits = ReservoirCoupling::GasLiftGroupLimits<Scalar>;
+    std::vector<GasLiftGroupLimits> limits(num_limits);
+    // The master sends nothing when it has no records, which then replace the limits
+    // received before: there are none in force.
+    if (num_limits > 0 && this->comm().rank() == 0) {
+        auto MPI_GAS_LIFT_LIMITS_TYPE = Dune::MPITraits<GasLiftGroupLimits>::getType();
+        // NOTE: See comment about error handling at the top of this file.
+        MPI_Recv(
+            limits.data(),
+            /*count=*/num_limits,
+            /*datatype=*/MPI_GAS_LIFT_LIMITS_TYPE,
+            /*source_rank=*/0,
+            /*tag=*/static_cast<int>(MessageTag::GasLiftGroupLimits),
+            this->getSlaveMasterComm(),
+            MPI_STATUS_IGNORE
+        );
+    }
+    if (num_limits > 0) {
+        this->comm().broadcast(limits.data(), num_limits, /*emitter_rank=*/0);
+    }
+    this->master_gas_lift_limits_.clear();
+    for (const auto& limit : limits) {
+        if (limit.max_lift_gas < 0 && limit.max_total_gas < 0) {
+            continue;
+        }
+        const auto& group_name = this->slave_.slaveGroupIdxToGroupName(limit.group_name_idx);
+        this->master_gas_lift_limits_[group_name] = limit;
+        this->logger().debug(fmt::format(
+            "Stored master gas lift limits for group '{}': max_lift_gas={}, max_total_gas={}",
+            group_name, limit.max_lift_gas, limit.max_total_gas
+        ));
+    }
 }
 
 template <class Scalar>
@@ -304,54 +371,6 @@ receiveNumMasterGroupNodePressuresFromMaster()
 template <class Scalar>
 void
 ReservoirCouplingSlaveReportStep<Scalar>::
-receiveGasLiftGroupLimitsFromMaster(std::size_t num_limits)
-{
-    using GasLiftGroupLimits = ReservoirCoupling::GasLiftGroupLimits<Scalar>;
-    std::vector<GasLiftGroupLimits> limits(num_limits);
-    // The master sends nothing when it has no records, which then replace the limits
-    // received before: there are none in force.
-    if (num_limits > 0 && this->comm().rank() == 0) {
-        auto MPI_GAS_LIFT_LIMITS_TYPE = Dune::MPITraits<GasLiftGroupLimits>::getType();
-        // NOTE: See comment about error handling at the top of this file.
-        MPI_Recv(
-            limits.data(),
-            /*count=*/num_limits,
-            /*datatype=*/MPI_GAS_LIFT_LIMITS_TYPE,
-            /*source_rank=*/0,
-            /*tag=*/static_cast<int>(MessageTag::GasLiftGroupLimits),
-            this->getSlaveMasterComm(),
-            MPI_STATUS_IGNORE
-        );
-    }
-    if (num_limits > 0) {
-        this->comm().broadcast(limits.data(), num_limits, /*emitter_rank=*/0);
-    }
-    this->master_gas_lift_limits_.clear();
-    for (const auto& limit : limits) {
-        if (limit.max_lift_gas < 0 && limit.max_total_gas < 0) {
-            continue;
-        }
-        const auto& group_name = this->slave_.slaveGroupIdxToGroupName(limit.group_name_idx);
-        this->master_gas_lift_limits_[group_name] = limit;
-        this->logger().debug(fmt::format(
-            "Stored master gas lift limits for group '{}': max_lift_gas={}, max_total_gas={}",
-            group_name, limit.max_lift_gas, limit.max_total_gas
-        ));
-    }
-}
-
-template <class Scalar>
-const ReservoirCoupling::GasLiftGroupLimits<Scalar>*
-ReservoirCouplingSlaveReportStep<Scalar>::
-masterGasLiftLimits(const std::string& gname) const
-{
-    auto it = this->master_gas_lift_limits_.find(gname);
-    return (it == this->master_gas_lift_limits_.end()) ? nullptr : &it->second;
-}
-
-template <class Scalar>
-void
-ReservoirCouplingSlaveReportStep<Scalar>::
 receiveProductionGroupConstraintsFromMaster(std::size_t num_targets)
 {
     std::vector<ProductionGroupConstraints> production_constraints(num_targets);
@@ -448,25 +467,6 @@ ReservoirCouplingSlaveReportStep<Scalar>::
 setMasterProductionTarget(const std::string& gname, const Scalar target, const Group::ProductionCMode cmode)
 {
     this->master_production_targets_[gname] = {target, cmode};
-}
-
-template <class Scalar>
-void
-ReservoirCouplingSlaveReportStep<Scalar>::
-markSlaveGroupsInSchedule(Schedule& schedule, const int report_step_idx)
-{
-    for (std::size_t i = 0; i < this->slave_.numSlaveGroups(); ++i) {
-        const auto& gname = this->slave_.slaveGroupIdxToGroupName(i);
-        if (this->hasMasterProductionTarget(gname)) {
-            schedule.markSlaveProductionGroup(report_step_idx, gname);
-        }
-        for (const auto phase : {Phase::WATER, Phase::OIL, Phase::GAS}) {
-            if (this->hasMasterInjectionTarget(gname, phase)) {
-                schedule.markSlaveInjectionGroup(report_step_idx, gname);
-                break;  // only need to mark once per group
-            }
-        }
-    }
 }
 
 // ------------------
