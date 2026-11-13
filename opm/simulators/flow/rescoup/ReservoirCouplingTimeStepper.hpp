@@ -75,10 +75,6 @@ public:
     /// @return MPI communicator handle for communication with the specified slave
     MPI_Comm getSlaveComm(int index) const { return this->master_.getSlaveComm(index); }
 
-    /// @brief Get the total number of active slave processes
-    /// @return Number of slaves that have been started
-    std::size_t numSlaves() const { return this->master_.numSlavesStarted(); }
-
     /// @brief Get the logger for reservoir coupling operations
     /// @return Reference to the logger object for this coupling session
     ReservoirCoupling::Logger& logger() const { return this->master_.logger(); }
@@ -97,6 +93,10 @@ public:
     /// @note This is crucial for maintaining time step synchronization in coupled simulations
     double maybeChopSubStep(double suggested_timestep_original, double elapsed_time) const;
 
+    /// @brief Get the total number of active slave processes
+    /// @return Number of slaves that have been started
+    std::size_t numSlaves() const { return this->master_.numSlavesStarted(); }
+
     /// @brief Receive next report dates from all active slave processes
     ///
     /// This method receives the next report time from each slave process via MPI
@@ -114,6 +114,29 @@ public:
     /// @brief Get the simulation schedule
     /// @return Reference to the Schedule object containing timing and control information
     const Schedule& schedule() const { return this->master_.schedule(); }
+
+    /// @brief Send the next time step size to all active slave processes
+    ///
+    /// This method broadcasts the time step size that slaves should use for their
+    /// next simulation step via MPI communication. This ensures all processes advance
+    /// through simulation time in a coordinated manner.
+    ///
+    /// @param timestep Time step size to send to slaves (in seconds)
+    ///
+    /// @note This is a blocking operation that waits for all slaves to receive the data
+    void sendNextTimeStepToSlaves(double timestep);
+
+    /// @brief Set the next report time offset for a specific slave
+    /// @param index Index of the slave process
+    /// @param offset Time offset from simulation start to the slave's next report time (in seconds)
+    void setSlaveNextReportTimeOffset(int index, double offset) {
+        this->slave_next_report_time_offsets_[index] = offset;
+   }
+
+    /// @brief Get the activation date for a specific slave
+    /// @param index Index of the slave process
+    /// @return Activation date as time offset (in seconds)
+    double slaveActivationDate(int index) const { return this->master_.getSlaveActivationDate(index); }
 
     /// @brief Check if a specific slave process has reached the end of its own schedule
     /// @param index Index of the slave process
@@ -136,29 +159,6 @@ public:
     /// @param index Index of the slave process
     /// @return Simulation start date as time offset (in seconds)
     double slaveStartDate(int index) const { return this->master_.getSlaveStartDate(index); }
-
-    /// @brief Get the activation date for a specific slave
-    /// @param index Index of the slave process
-    /// @return Activation date as time offset (in seconds)
-    double slaveActivationDate(int index) const { return this->master_.getSlaveActivationDate(index); }
-
-    /// @brief Send the next time step size to all active slave processes
-    ///
-    /// This method broadcasts the time step size that slaves should use for their
-    /// next simulation step via MPI communication. This ensures all processes advance
-    /// through simulation time in a coordinated manner.
-    ///
-    /// @param timestep Time step size to send to slaves (in seconds)
-    ///
-    /// @note This is a blocking operation that waits for all slaves to receive the data
-    void sendNextTimeStepToSlaves(double timestep);
-
-    /// @brief Set the next report time offset for a specific slave
-    /// @param index Index of the slave process
-    /// @param offset Time offset from simulation start to the slave's next report time (in seconds)
-    void setSlaveNextReportTimeOffset(int index, double offset) {
-        this->slave_next_report_time_offsets_[index] = offset;
-   }
 
 private:
     /// Reference to the parent ReservoirCouplingMaster object
