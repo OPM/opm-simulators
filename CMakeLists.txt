@@ -342,6 +342,16 @@ macro(opm-simulators_sources_hook)
     target_compile_definitions(opmsimulators PUBLIC HAVE_AVX2_EXTENSION=1)
   endif()
 
+  # The vendored tomlc17 parser is kept unmodified. Its intentional switch
+  # fall-throughs are marked by comments only, which are lost when the
+  # source is preprocessed separately (e.g., by ccache or distcc).
+  set_source_files_properties(
+    external/tomlc17/tomlc17.c
+    PROPERTIES
+    COMPILE_OPTIONS
+      $<$<C_COMPILER_ID:GNU,Clang,AppleClang>:-Wno-implicit-fallthrough>
+  )
+
   # Boost 1.66 used on RHEL8 cannot be built as c++-20
   if(Boost_VERSION VERSION_LESS 1.67)
     set_source_files_properties(

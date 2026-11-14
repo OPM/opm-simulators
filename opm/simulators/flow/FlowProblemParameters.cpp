@@ -79,7 +79,8 @@ void registerFlowProblemParameters()
         ("Maximum number of reported failures for each individual saturation function consistency check");
 
     Parameters::Register<Parameters::HybridNewtonConfigFile>
-        ("JSON Config file path for Hybrid Newton");
+        ("TOML (.toml) or JSON (.json) configuration file for Hybrid Newton. "
+         "Use --write-toml-example=hybrid-newton to generate a documented example file");
 
     Parameters::Register<Parameters::UseHybridNewton>
         ("Wheter or not to use Hybrid Newton");
