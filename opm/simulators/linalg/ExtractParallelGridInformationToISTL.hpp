@@ -22,7 +22,11 @@
 
 #include <any>
 
-namespace Dune { class CpGrid; }
+namespace Dune {
+class CpGrid;
+template <int dim, int dimworld, typename coord_t>
+class PolyhedralGrid;
+}
 
 namespace Opm
 {
@@ -38,6 +42,9 @@ namespace Opm
 /// then this will ecapsulate an instance of ParallelISTLInformation.
 
 void extractParallelGridInformationToISTL(const Dune::CpGrid& grid, std::any& anyComm);
+
+/// \copydoc extractParallelGridInformationToISTL(const Dune::CpGrid&, std::any&)
+void extractParallelGridInformationToISTL(const Dune::PolyhedralGrid<3, 3, double>& grid, std::any& anyComm);
 
 // Grid is not CpGrid --> do nothing.
 template <class Grid>

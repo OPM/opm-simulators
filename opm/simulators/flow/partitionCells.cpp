@@ -750,6 +750,30 @@ Opm::partitionCellsSimple(const int num_cells, const int num_domains)
     return { part, num_domains };
 }
 
+void Opm::keepCellGroupsTogether(std::vector<int>& parts, const std::vector<std::vector<int>>& groups)
+{
+    // Repeat until nothing moves, since a cell can join groups that were already processed.
+    // This ends because the partition of a cell only decreases.
+    for (bool changed = true; changed;) {
+        changed = false;
+        for (const auto& cells : groups) {
+            if (cells.empty()) {
+                continue;
+            }
+            int target = parts[cells.front()];
+            for (const int cell : cells) {
+                target = std::min(target, parts[cell]);
+            }
+            for (const int cell : cells) {
+                if (parts[cell] != target) {
+                    parts[cell] = target;
+                    changed = true;
+                }
+            }
+        }
+    }
+}
+
 // ===========================================================================
 
 // ---------------------------------------------------------------------------
