@@ -400,7 +400,7 @@ setupCPRW(const std::string& /*conf*/, const FlowLinearSolverParameters& p)
     prm.put("preconditioner.verbosity", 0);
     prm.put("preconditioner.coarsesolver.maxiter", 1);
     prm.put("preconditioner.coarsesolver.tol", 1e-1);
-    prm.put("preconditioner.coarsesolver.solver", "loopsolver"s);
+    prm.put("preconditioner.coarsesolver.solver", "preconditioner2inverseoperator"s);
     prm.put("preconditioner.coarsesolver.verbosity", 0);
     prm.put("preconditioner.coarsesolver.preconditioner.type", "amg"s);
     setupDuneAMG(prm, "preconditioner.coarsesolver.preconditioner.");
@@ -437,14 +437,15 @@ setupCPR(const std::string& conf, const FlowLinearSolverParameters& p)
     prm.put("preconditioner.verbosity", 0);
     prm.put("preconditioner.coarsesolver.maxiter", 1);
     prm.put("preconditioner.coarsesolver.tol", 1e-1);
-    prm.put("preconditioner.coarsesolver.solver", "loopsolver"s);
     prm.put("preconditioner.coarsesolver.verbosity", 0);
     // Choose coarsesolver AMG backend based on accelerator backend and available AMG backends
     if (p.linear_solver_accelerator_ == Parameters::LinearSolverAcceleratorType::GPU) {
+        prm.put("preconditioner.coarsesolver.solver", "loopsolver"s);
         setupGpuAmgBackend(
             prm, "preconditioner.coarsesolver.preconditioner.type", "preconditioner.coarsesolver.preconditioner.");
         return prm;
     } else {
+        prm.put("preconditioner.coarsesolver.solver", "preconditioner2inverseoperator"s);
         prm.put("preconditioner.coarsesolver.preconditioner.type", "amg"s);
         setupDuneAMG(prm, "preconditioner.coarsesolver.preconditioner.");
     }
