@@ -1323,9 +1323,19 @@ applyPinchNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianTo
     const auto& pinchNnc = eclState_.getPinchNNC();
     const auto& transMult = this->eclState_.getTransMult();
 
+    // Dual porosity (not dual permeability): the matrix has no internal flow, so a
+    // pinch-out connection between two matrix cells keeps the zero that update() gave
+    // its face instead of the pinch transmissibility.
+    const auto& porosityModel = eclState_.runspec().porosityModel();
+    const bool matrixHasNoFlow = porosityModel.dualContinuum() && !porosityModel.dualPermeability();
+    const std::size_t matrixCellCount = EclipseGrid::matrixCellCount(cartMapper_.cartesianDimensions());
+
     for (const auto& nncEntry : pinchNnc) {
         auto c1 = nncEntry.cell1;
         auto c2 = nncEntry.cell2;
+        if (matrixHasNoFlow && c1 < matrixCellCount && c2 < matrixCellCount) {
+            continue;
+        }
         auto lowIt = cartesianToCompressed.find(c1);
         auto highIt = cartesianToCompressed.find(c2);
         int low = (lowIt == cartesianToCompressed.end())? -1 : lowIt->second;
