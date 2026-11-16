@@ -328,6 +328,13 @@ template<typename GenericWellModel, typename VfpProperties, typename Communicati
 class NetworkPressureComputation
 {
 public:
+    /// @param well_model Well model to compute for
+    /// @param network Network to compute for
+    /// @param vfp_props VFP properties
+    /// @param unit_system Unit system to use
+    /// @param report_step_idx Report step index
+    /// @param comm Parallel communication helper
+    /// @param terminal_pressure_overrides Forced terminal pressure values
     /// @param node_gas_consumption Net gas rate (consumption minus import, SI
     ///        units) to remove from the flow at each node, see
     ///        networkGasConsumptionRates().  Applies to production networks.
