@@ -392,6 +392,9 @@ public:
 
         const FluidSystem& fsys = intQuantsIn.getFluidSystem();
 
+        // water volume flux, needed for solvent dissolved in water
+        ConditionalStorage<enableSolvent, Evaluation> waterVolumeFlux(0.0);
+
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!fsys.phaseIsActive(phaseIdx)) {
                 continue;
@@ -441,6 +444,12 @@ public:
                 darcyFlux = pressureDifference
                     * (Toolbox::value(up.mobility(phaseIdx, facedir)) * transMult
                        * (-trans / faceArea));
+            }
+
+            if constexpr (enableSolvent) {
+                if (phaseIdx == waterPhaseIdx) {
+                    *waterVolumeFlux = darcyFlux;
+                }
             }
 
             unsigned activeCompIdx
@@ -497,10 +506,32 @@ public:
         }
 
         // deal with solvents (if present)
-        static_assert(
-            !enableSolvent,
-            "Relevant computeFlux() method must be implemented for this module before enabling.");
-        // SolventModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        if constexpr (enableSolvent) {
+            constexpr unsigned interiorDofIdx = 0;
+            constexpr unsigned exteriorDofIdx = 1;
+            unsigned solventUpIdx;
+            unsigned solventDnIdx;
+            Evaluation solventVolumeFlux;
+            ExtensiveQuantities::updateSolventVolumeFlux(solventVolumeFlux,
+                                                         solventUpIdx,
+                                                         solventDnIdx,
+                                                         interiorDofIdx,
+                                                         exteriorDofIdx,
+                                                         intQuantsIn,
+                                                         intQuantsEx,
+                                                         thpresInToEx,
+                                                         thpresExToIn,
+                                                         trans,
+                                                         faceArea,
+                                                         distZg);
+            if (solventUpIdx == interiorDofIdx) {
+                SolventModule::template addSolventFluxes_<Evaluation>(
+                    flux, solventVolumeFlux, *waterVolumeFlux, intQuantsIn);
+            } else {
+                SolventModule::template addSolventFluxes_<Scalar>(
+                    flux, solventVolumeFlux, *waterVolumeFlux, intQuantsEx);
+            }
+        }
 
         // deal with zFracton (if present)
         static_assert(
@@ -696,9 +727,16 @@ public:
             EnergyModule::addHeatFlux(bdyFlux, heatFlux);
         }
 
-        static_assert(
-            !enableSolvent,
-            "Relevant treatment of boundary conditions must be implemented before enabling.");
+        if constexpr (enableSolvent) {
+            // NOTE: the treatment of solvent boundary flux follows element context version with
+            // its limitations: (i) solvent flux = gas flux and (ii) no flux of dissolved solvent
+            // in water
+            const Evaluation solventVolumeFlux
+                = (upIdx[gasPhaseIdx] == 0) ? volumeFlux[gasPhaseIdx] : Evaluation(0.0);
+            SolventModule::template addSolventFluxes_<Evaluation>(
+                bdyFlux, solventVolumeFlux, /*waterVolumeFlux=*/Evaluation(0.0), insideIntQuants);
+        }
+
         static_assert(
             !enablePolymer,
             "Relevant treatment of boundary conditions must be implemented before enabling.");
