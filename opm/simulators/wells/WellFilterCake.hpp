@@ -53,9 +53,14 @@ public:
     //! \details Calculates the filtrate deposition volumes and associated skin factors / injectivity multipliers.
     //! The filtrate is carried by the injected phase of the well (water, gas or oil injectors;
     //! MULTI injectors are ignored).
+    //! \param well Well to update for
+    //! \param well_state Well state information
+    //! \param dt Time step
+    //! \param conc Concentration
     //! \param conc_volume_factor Per local perforation: volume of injected fluid in the
     //!        concentration basis per surface volume (1 for a surface basis, B for a reservoir
     //!        basis).  An empty vector means a surface basis.
+    //! \param deferred_logger Deferred logging helper
     void updatePostStep(const WellInterfaceGeneric<Scalar, IndexTraits>& well,
                 WellState<Scalar, IndexTraits>& well_state,
                 const double dt,

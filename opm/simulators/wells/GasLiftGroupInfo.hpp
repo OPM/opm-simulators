@@ -144,6 +144,7 @@ protected:
     getProducerWellRates_(const Well* well, const int index);
 
     /// @brief Add the rates a slave reports for a reservoir coupling master group
+    /// @param group Master group
     /// @param rates Rates of the group, as in initializeGroupRatesRecursive_(), which have been
     ///   summed over the ranks already: the slave's rates are the same on all ranks.
     void addSlaveRatesOfMasterGroup_(const Group& group, std::array<Scalar, 7>& rates) const;
