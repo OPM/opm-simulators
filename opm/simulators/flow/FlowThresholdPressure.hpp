@@ -28,16 +28,26 @@
 #ifndef OPM_FLOW_THRESHOLD_PRESSURE_HPP
 #define OPM_FLOW_THRESHOLD_PRESSURE_HPP
 
+#include <opm/common/ErrorMacros.hpp>
+
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/SatfuncPropertyInitializers.hpp>
+#include <opm/input/eclipse/EclipseState/Runspec.hpp>
+
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
 
 #include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/utils/parametersystem.hpp>
 #include <opm/models/utils/propertysystem.hh>
 
+#include <opm/simulators/flow/FlowProblemParameters.hpp>
 #include <opm/simulators/flow/GenericThresholdPressure.hpp>
 
 #include <algorithm>
+#include <stdexcept>
+#include <string>
 
 namespace Opm {
 
@@ -66,6 +76,7 @@ class FlowThresholdPressure : public GenericThresholdPressure<GetPropType<TypeTa
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 
     enum { numPhases = FluidSystem::numPhases };
 
@@ -77,6 +88,19 @@ public:
                    simulator.vanguard().eclState())
         , simulator_(simulator)
     {
+        const std::string phases = Parameters::Get<Parameters::ThresholdPressureDefaultPhases>();
+        if (phases == "mobile") {
+            useConnateCriterion_ = false;
+        }
+        else if (phases == "above-connate") {
+            useConnateCriterion_ = true;
+        }
+        else {
+            OPM_THROW(std::invalid_argument,
+                      "Invalid value '" + phases + "' for parameter "
+                      "ThresholdPressureDefaultPhases. Valid values are "
+                      "'mobile' and 'above-connate'.");
+        }
     }
 
     /*!
@@ -98,6 +122,37 @@ private:
     {
         const auto& vanguard = simulator_.vanguard();
         const auto& gridView = vanguard.gridView();
+
+        // Connate saturations of the unscaled saturation function tables,
+        // one value per saturation region.
+        satfunc::RawTableEndPoints rawEndPoints;
+        if (useConnateCriterion_) {
+            const auto& eclState = vanguard.eclState();
+            const auto& runspec = eclState.runspec();
+            rawEndPoints = satfunc::getRawTableEndpoints
+                (eclState.getTableManager(), runspec.phases(),
+                 runspec.saturationFunctionControls().minimumRelpermMobilityThreshold());
+        }
+
+        // Whether the phase is present above the connate saturation of the
+        // unscaled saturation function tables of the cell.
+        auto aboveConnate = [&](const unsigned phaseIdx,
+                                const unsigned elemIdx,
+                                const auto& intQuants)
+        {
+            const Scalar sat = getValue(intQuants.fluidState().saturation(phaseIdx));
+            const auto satRegion = simulator_.problem().satnumRegionIndex(elemIdx);
+            Scalar connate = 0.0;
+            if (phaseIdx == static_cast<unsigned>(FluidSystem::waterPhaseIdx)) {
+                connate = rawEndPoints.connate.water[satRegion];
+            }
+            else if (phaseIdx == static_cast<unsigned>(FluidSystem::gasPhaseIdx)) {
+                connate = rawEndPoints.connate.gas[satRegion];
+            }
+            return sat > connate;
+        };
+
+        const Scalar gravity = simulator_.problem().gravity()[GridView::dimensionworld - 1];
 
         using Toolbox = MathToolbox<Evaluation>;
         // loop over the whole grid and compute the maximum gravity adjusted pressure
@@ -132,14 +187,42 @@ private:
                 // determine the maximum difference of the pressure of any phase over the
                 // intersection
                 Scalar pth = 0.0;
-                const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, /*timeIdx=*/0);
-                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                    unsigned upIdx = extQuants.upstreamIndex(phaseIdx);
-                    const auto& up = elemCtx.intensiveQuantities(upIdx, /*timeIdx=*/0);
+                if (useConnateCriterion_) {
+                    // Gravity corrected phase pressure differences, also for
+                    // phases which are immobile in both cells.
+                    const auto& intQuantsIn = elemCtx.intensiveQuantities(i, /*timeIdx=*/0);
+                    const auto& intQuantsEx = elemCtx.intensiveQuantities(j, /*timeIdx=*/0);
+                    const auto& fsIn = intQuantsIn.fluidState();
+                    const auto& fsEx = intQuantsEx.fluidState();
+                    const Scalar distZg =
+                        (simulator_.problem().dofCenterDepth(elemCtx, i, /*timeIdx=*/0) -
+                         simulator_.problem().dofCenterDepth(elemCtx, j, /*timeIdx=*/0)) * gravity;
+                    for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                        if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                            continue;
+                        }
+                        const Scalar rhoAvg = (getValue(fsIn.density(phaseIdx)) +
+                                               getValue(fsEx.density(phaseIdx))) / 2;
+                        const Scalar phaseVal = getValue(fsEx.pressure(phaseIdx)) + rhoAvg*distZg
+                                              - getValue(fsIn.pressure(phaseIdx));
+                        const bool exteriorIsUpstream = phaseVal > 0.0;
+                        const auto& up = exteriorIsUpstream ? intQuantsEx : intQuantsIn;
+                        const unsigned upElemIdx = exteriorIsUpstream ? outsideElemIdx : insideElemIdx;
+                        if (aboveConnate(phaseIdx, upElemIdx, up)) {
+                            pth = std::max(pth, std::abs(phaseVal));
+                        }
+                    }
+                }
+                else {
+                    const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, /*timeIdx=*/0);
+                    for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                        unsigned upIdx = extQuants.upstreamIndex(phaseIdx);
+                        const auto& up = elemCtx.intensiveQuantities(upIdx, /*timeIdx=*/0);
 
-                    if (up.mobility(phaseIdx) > 0.0) {
-                        Scalar phaseVal = Toolbox::value(extQuants.pressureDifference(phaseIdx));
-                        pth = std::max(pth, std::abs(phaseVal));
+                        if (up.mobility(phaseIdx) > 0.0) {
+                            Scalar phaseVal = Toolbox::value(extQuants.pressureDifference(phaseIdx));
+                            pth = std::max(pth, std::abs(phaseVal));
+                        }
                     }
                 }
 
@@ -160,6 +243,7 @@ private:
     }
 
     const Simulator& simulator_;
+    bool useConnateCriterion_{false};
 };
 
 } // namespace Opm

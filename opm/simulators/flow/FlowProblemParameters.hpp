@@ -79,6 +79,10 @@ struct TracerSolver { static constexpr auto value = "istl"; };
 // Time steps that use the ISTL tracer solver after the reorder solver failed for a tracer batch
 struct TracerReorderRetrySteps { static constexpr int value = 10; };
 
+// Which phases contribute when computing defaulted threshold pressures
+// from the initial solution.
+struct ThresholdPressureDefaultPhases { static constexpr auto value = "mobile"; };
+
 } // namespace Opm::Parameters
 
 namespace Opm {
