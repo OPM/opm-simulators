@@ -267,6 +267,8 @@ public:
             this->enableDriftCompensationTemp_ = Parameters::Get<Parameters::EnableDriftCompensationTemp>();
         }
 
+        moduleParams_.saturationWeightedDensity
+            = Parameters::Get<Parameters::SaturationWeightedDensity>();
     }
 
     virtual ~FlowProblem() = default;

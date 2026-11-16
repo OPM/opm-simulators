@@ -92,6 +92,11 @@ void registerFlowProblemParameters()
     Parameters::Register<Parameters::TracerReorderRetrySteps>
         ("Number of time steps that use the ISTL solver in tracer after the reorder solver "
          "failed for the tracers of a phase, before the reorder solver is tried again");
+    Parameters::Register<Parameters::SaturationWeightedDensity>
+        ("Use the saturation-weighted average of the phase densities of the two "
+         "cells in the gravity term of the phase potential across a face, instead "
+         "of the arithmetic average. A cell with almost none of a phase then does "
+         "not affect that phase's density on the face.");
     Parameters::Register<Parameters::EnableStateRollback>
         ("Enable in-memory state snapshotting and restoration on unconverged Newton iterations and chopped time steps");
 

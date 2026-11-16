@@ -79,6 +79,10 @@ struct TracerSolver { static constexpr auto value = "istl"; };
 // Time steps that use the ISTL tracer solver after the reorder solver failed for a tracer batch
 struct TracerReorderRetrySteps { static constexpr int value = 10; };
 
+// Use saturation-weighted instead of arithmetic averages of the phase densities
+// in the gravity term of the phase potential across a face
+struct SaturationWeightedDensity { static constexpr bool value = false; };
+
 } // namespace Opm::Parameters
 
 namespace Opm {

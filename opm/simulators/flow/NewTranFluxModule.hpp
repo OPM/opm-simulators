@@ -53,6 +53,7 @@
 
 #include <opm/models/utils/signum.hh>
 
+#include <algorithm>
 #include <array>
 
 namespace Opm {
@@ -360,6 +361,25 @@ public:
         const Evaluation& rhoIn = intQuantsIn.fluidState().density(phaseIdx);
         Scalar rhoEx = Toolbox::value(intQuantsEx.fluidState().density(phaseIdx));
         Evaluation rhoAvg = (rhoIn + rhoEx)/2;
+
+        if (moduleParams.saturationWeightedDensity) {
+            // weight by the saturations, so that a cell with (almost) none of the
+            // phase does not contribute its density. Fall back to the arithmetic
+            // average if neither cell has the phase. A cell without the phase
+            // gets a constant zero weight: keeping the derivative of the weight
+            // at S = 0 makes Newton cycle where the phase appears and disappears.
+            Evaluation satIn = intQuantsIn.fluidState().saturation(phaseIdx);
+            if (Toolbox::value(satIn) <= 0.0) {
+                satIn = 0.0;
+            }
+            const Scalar satEx =
+                std::max(Scalar{Toolbox::value(intQuantsEx.fluidState().saturation(phaseIdx))},
+                         Scalar{0.0});
+            constexpr Scalar minSatSum = 1e-10;
+            if (Toolbox::value(satIn) + satEx > minSatSum) {
+                rhoAvg = (satIn * rhoIn + satEx * rhoEx) / (satIn + satEx);
+            }
+        }
 
         if constexpr (enableConvectiveMixing) {
             ConvectiveMixingModule::modifyAvgDensity(rhoAvg, intQuantsIn, intQuantsEx, phaseIdx, moduleParams.convectiveMixingModuleParam);

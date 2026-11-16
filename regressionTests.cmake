@@ -595,6 +595,25 @@ add_multiple_tests(
 
 add_test_compareECLFiles(
   CASENAME
+    spe1case2_gascap_vapoil_vrep_satwdens
+  FILENAME
+    SPE1CASE2_GASCAP_VAPOIL_VREP_SATWDENS
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  DIR
+    spe1
+  TEST_ARGS
+    --saturation-weighted-density=true
+)
+
+add_test_compareECLFiles(
+  CASENAME
     spe1case2_oilgas
   FILENAME
     SPE1CASE2_OILGAS
