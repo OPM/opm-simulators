@@ -1703,7 +1703,9 @@ namespace Opm
 
         const int max_iter_number = this->param_.max_inner_iter_ms_wells_;
 
-        {
+        // The cached equations are not those of the zero-rate system, and may be left
+        // from a failed solve. A zero-rate solve assembles its own before checking them.
+        if (!solving_with_zero_rate) {
             // getWellFiniteResiduals returns false for nan/inf residuals
             const auto& [isFinite, residuals] = this->getFiniteWellResiduals(Base::B_avg_, deferred_logger);
             if(!isFinite)
