@@ -1267,7 +1267,7 @@ GroupStateHelper<Scalar, IndexTraits>::sumWellGasLiftHeadroom(const Group& group
                             Scalar{0});
         },
         // master_value: the headroom the slave reported for a master group
-        /*master_value=*/[this](const Group& master_group) -> Scalar {
+        /*master_value=*/[this]([[maybe_unused]] const Group& master_group) -> Scalar {
 #ifdef RESERVOIR_COUPLING_ENABLED
             if (this->isReservoirCouplingMaster()) {
                 return this->reservoirCouplingMaster().getMasterGroupGasLiftHeadroom(master_group.name());
