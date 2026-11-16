@@ -159,29 +159,27 @@ getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
     }
 
     std::vector<Scalar> maximum_residual(numWellEq, 0.0);
+    // A NaN is not larger than any value and would be ignored by a plain comparison, so it is kept explicitly.
+    const auto update_maximum = [](Scalar& maximum, const Scalar value)
+    {
+        if (std::isnan(value) || value > maximum) {
+            maximum = value;
+        }
+    };
 
     ConvergenceReport report;
     // TODO: the energy equation should not have a B_avg here to use, maybe we can use 1 for it
     for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
         for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
             if (eq_idx < baseif_.numConservationQuantities()) { // phase or component mass equations
-                const Scalar flux_residual = B_avg[eq_idx] * abs_residual[seg][eq_idx];
-                if (flux_residual > maximum_residual[eq_idx]) {
-                    maximum_residual[eq_idx] = flux_residual;
-                }
+                update_maximum(maximum_residual[eq_idx], B_avg[eq_idx] * abs_residual[seg][eq_idx]);
             } else if (enable_energy && eq_idx == Temperature) { // energy equation
-                const Scalar energy_residual = abs_residual[seg][eq_idx];
-                if (energy_residual > maximum_residual[eq_idx]) {
-                    maximum_residual[eq_idx] = energy_residual;
-                }
+                update_maximum(maximum_residual[eq_idx], abs_residual[seg][eq_idx]);
             } else { // pressure or control equation
                 // for the top segment (seg == 0), it is control equation, will be checked later separately
                 if (seg > 0) {
                     // Pressure equation
-                    const Scalar pressure_residual = abs_residual[seg][eq_idx];
-                    if (pressure_residual > maximum_residual[eq_idx]) {
-                        maximum_residual[eq_idx] = pressure_residual;
-                    }
+                    update_maximum(maximum_residual[eq_idx], abs_residual[seg][eq_idx]);
                 }
             }
         }
