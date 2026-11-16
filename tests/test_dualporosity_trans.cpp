@@ -138,6 +138,45 @@ END)";
 }
 
 
+Deck dualContinuumPinchDeck(bool dualperm)
+{
+    // 1x1x6: matrix cells cart 0-2 (k=0..2), fracture cells cart 3-5 (k=3..5), co-located
+    // twins.  The middle layer of each continuum is thin and inactive, and PINCH item 4 is
+    // ALL, so each continuum gets a pinch-out connection across it.  Active cells in
+    // compressed order: matrix 0 (cart 0), 1 (cart 2); fracture 2 (cart 3), 3 (cart 5).
+    const std::string deckData = std::string(R"(RUNSPEC
+OIL
+WATER
+DIMENS
+ 1 1 6 /
+)") + (dualperm ? "DUALPERM\n" : "DUALPORO\n") + R"(NODPPM
+GRID
+DX
+ 6*100. /
+DY
+ 6*100. /
+DZ
+ 10. 0.1 10. 10. 0.1 10. /
+TOPS
+ 2000. 2010. 2010.1 2000. 2010. 2010.1 /
+ACTNUM
+ 1 0 1 1 0 1 /
+PINCH
+ 0.5 GAP 1* ALL /
+PORO
+ 3*0.20 3*0.01 /
+PERMX
+ 3*1.0 3*1000.0 /
+PERMY
+ 3*1.0 3*1000.0 /
+PERMZ
+ 3*0.5 3*500.0 /
+SIGMA
+ 0.12 /
+)" "END";
+    return Parser{}.parseString(deckData);
+}
+
 struct TransResult {
     std::map<std::size_t, double> byId;
     double trans(std::size_t c1, std::size_t c2) const {
@@ -220,6 +259,20 @@ BOOST_AUTO_TEST_CASE(DualPorosityTransPolicy)
     }
 
     checkOnlySameHalfOrTwin(res);
+}
+
+BOOST_AUTO_TEST_CASE(DualPorosityPinchOutConnectionsFollowThePolicy)
+{
+    // Dual porosity: the matrix has no internal flow, also across a pinched-out layer;
+    // the fracture flows across it.
+    const auto dp = computeTransFromDeck(dualContinuumPinchDeck(/*dualperm=*/false));
+    BOOST_CHECK_EQUAL(dp.trans(0, 1), 0.0);
+    BOOST_CHECK_GT(dp.trans(2, 3), 0.0);
+
+    // Dual permeability: the matrix flows, so its pinch-out connection is kept.
+    const auto dk = computeTransFromDeck(dualContinuumPinchDeck(/*dualperm=*/true));
+    BOOST_CHECK_GT(dk.trans(0, 1), 0.0);
+    BOOST_CHECK_GT(dk.trans(2, 3), 0.0);
 }
 
 BOOST_AUTO_TEST_CASE(DualPorosityPermScaling)
