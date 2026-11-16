@@ -489,6 +489,7 @@ protected:
                                    std::map<std::string, std::vector<double>>& regionData) const;
 
     static bool isOutputCreationDirective_(const std::string& keyword);
+    static bool isPrintFileOnlyReport_(const std::string& keyword);
 
     // Sum Fip values over regions.
     static ScalarBuffer regionSum(const ScalarBuffer& property,

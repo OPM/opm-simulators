@@ -648,8 +648,11 @@ doAllocBuffers(const unsigned bufferSize,
 
     // Output RESTART_OPM_EXTENDED only when explicitly requested by user.
     for (auto& [keyword, should_write] : rstKeywords) {
-        if (this->isOutputCreationDirective_(keyword) || keyword == "WELLS") {
-            // 'BASIC', 'FREQ' and similar.  Don't attempt to create
+        if (this->isOutputCreationDirective_(keyword) ||
+            this->isPrintFileOnlyReport_(keyword))
+        {
+            // 'BASIC', 'FREQ' and similar, or RPTSCHED report requests
+            // that affect the PRT file only.  Don't attempt to create
             // cell-based output for these keywords and don't warn about
             // not being able to create such cell-based result vectors.
             should_write = 0;
@@ -1005,6 +1008,16 @@ isOutputCreationDirective_(const std::string& keyword)
     return (keyword == "BASIC") || (keyword == "FREQ")
         || (keyword == "RESTART")                        // From RPTSCHED
         || (keyword == "SAVE")  || (keyword == "SFREQ"); // Not really supported
+}
+
+template<class FluidSystem>
+bool GenericOutputModule<FluidSystem>::
+isPrintFileOnlyReport_(const std::string& keyword)
+{
+    // RPTSCHED mnemonics for PRT file reports handled elsewhere (well
+    // reports in EclWriter, reservoir volume report through FIPConfig).
+    return (keyword == "WELLS") || (keyword == "WELSPECS")
+        || (keyword == "FIPRESV");
 }
 
 template<class FluidSystem>
