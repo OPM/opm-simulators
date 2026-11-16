@@ -213,53 +213,46 @@ public:
         const unsigned inIdx = extQuants.interiorIndex();
         const auto& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
 
-        if constexpr (blackoilConserveSurfaceVolume) {
-            if (upIdx == inIdx)  {
-                flux[contiSolventEqIdx] = extQuants.solventVolumeFlux() *
-                                          up.solventInverseFormationVolumeFactor();
-            }
-            else {
-                flux[contiSolventEqIdx] = extQuants.solventVolumeFlux() *
-                                          decay<Scalar>(up.solventInverseFormationVolumeFactor());
-            }
-
-
-            if (isSolubleInWater()) {
-                if (upIdx == inIdx) {
-                    flux[contiSolventEqIdx] +=
-                            extQuants.volumeFlux(waterPhaseIdx) *
-                            up.fluidState().invB(waterPhaseIdx) *
-                            up.rsSolw();
-                }
-                else {
-                    flux[contiSolventEqIdx] +=
-                            extQuants.volumeFlux(waterPhaseIdx) *
-                            decay<Scalar>(up.fluidState().invB(waterPhaseIdx)) *
-                            decay<Scalar>(up.rsSolw());
-                }
-            }
+        if (upIdx == inIdx) {
+            addSolventFluxes_<Evaluation>(
+                flux, extQuants.solventVolumeFlux(), extQuants.volumeFlux(waterPhaseIdx), up);
+        } else {
+            addSolventFluxes_<Scalar>(
+                flux, extQuants.solventVolumeFlux(), extQuants.volumeFlux(waterPhaseIdx), up);
         }
-        else {
-            if (upIdx == inIdx) {
-                flux[contiSolventEqIdx] = extQuants.solventVolumeFlux() * up.solventDensity();
-            }
-            else {
-                flux[contiSolventEqIdx] = extQuants.solventVolumeFlux() * decay<Scalar>(up.solventDensity());
-            }
+    }
+
+    /*!
+     * \brief Add the solvent component flux over a face to rate vector
+     *
+     * \tparam UpEval Evaluation if upstream cell is the derivative cell; Scalar otherwise
+     * \param[in,out] flux Rate vector the solvent flux is written to
+     * \param solventVolumeFlux Volume flux of the solvent over the face
+     * \param waterVolumeFlux Water volume flux over the face (used if solvent is soluble in water)
+     * \param up Intensive quantities of the upstream cell of the solvent flux
+     */
+    template <class UpEval>
+    static void addSolventFluxes_(RateVector& flux,
+                                  const Evaluation& solventVolumeFlux,
+                                  const Evaluation& waterVolumeFlux,
+                                  const IntensiveQuantities& up)
+    {
+        if constexpr (blackoilConserveSurfaceVolume) {
+            flux[contiSolventEqIdx]
+                = solventVolumeFlux * decay<UpEval>(up.solventInverseFormationVolumeFactor());
 
             if (isSolubleInWater()) {
-                if (upIdx == inIdx) {
-                    flux[contiSolventEqIdx] +=
-                            extQuants.volumeFlux(waterPhaseIdx) *
-                            up.fluidState().density(waterPhaseIdx) *
-                            up.rsSolw();
-                }
-                else {
-                    flux[contiSolventEqIdx] +=
-                            extQuants.volumeFlux(waterPhaseIdx) *
-                            decay<Scalar>(up.fluidState().density(waterPhaseIdx)) *
-                            decay<Scalar>(up.rsSolw());
-                }
+                flux[contiSolventEqIdx] += waterVolumeFlux
+                    * decay<UpEval>(up.fluidState().invB(waterPhaseIdx))
+                    * decay<UpEval>(up.rsSolw());
+            }
+        } else {
+            flux[contiSolventEqIdx] = solventVolumeFlux * decay<UpEval>(up.solventDensity());
+
+            if (isSolubleInWater()) {
+                flux[contiSolventEqIdx] += waterVolumeFlux
+                    * decay<UpEval>(up.fluidState().density(waterPhaseIdx))
+                    * decay<UpEval>(up.rsSolw());
             }
         }
     }
@@ -781,7 +774,8 @@ public:
      *
      * At this point the pressures and saturations of the fluid state are correct.
      */
-    void solventPvtUpdate_(const ElementContext& elemCtx,
+    template <class ElemContext>
+    void solventPvtUpdate_(const ElemContext& elemCtx,
                            unsigned scvIdx,
                            unsigned timeIdx)
     {
@@ -848,6 +842,16 @@ public:
         solventMobility_ /= solventViscosity_;
     }
 
+    void solventPvtUpdate_(const Problem& problem,
+                           const unsigned globalSpaceIdx,
+                           const unsigned timeIdx)
+    {
+        // minimal context so effectiveProperties can look up the cell MISCNUM solvent tables
+        ProblemAndCellIndexOnlyContext<Problem> elemCtx{problem, globalSpaceIdx};
+        unsigned dofIdx = 0; // Dummy
+        this->solventPvtUpdate_(elemCtx, dofIdx, timeIdx);
+    }
+
     Evaluation solventSaturation() const
     { return asImp_().fluidState_.solventSaturation(); }
 
@@ -873,7 +877,8 @@ public:
 private:
     // Computes the effective properties based on
     // Todd-Longstaff mixing model.
-    void effectiveProperties(const ElementContext& elemCtx,
+    template <class ElemContext>
+    void effectiveProperties(const ElemContext& elemCtx,
                              unsigned scvIdx,
                              unsigned timeIdx)
     {
@@ -1284,13 +1289,58 @@ public:
         const Scalar zEx = elemCtx.problem().dofCenterDepth(elemCtx, exteriorDofIdx, timeIdx);
         const Scalar distZ = zIn - zEx;
 
+        const Scalar faceArea = elemCtx.stencil(timeIdx).interiorFace(scvfIdx).area();
+
+        updateSolventVolumeFlux(solventVolumeFlux_,
+                                solventUpstreamDofIdx_,
+                                solventDownstreamDofIdx_,
+                                interiorDofIdx,
+                                exteriorDofIdx,
+                                intQuantsIn,
+                                intQuantsEx,
+                                thpresInToEx,
+                                thpresExToIn,
+                                trans,
+                                faceArea,
+                                distZ * g);
+    }
+
+    /*!
+     * \brief Solvent volume flux over a face from gas pressure difference and transmissibility.
+     *
+     * \param[out] volumeFlux Solvent volume flux, derivatives only if upstream is the interior cell
+     * \param[out] upIdx Index of the upstream cell (interiorDofIdx or exteriorDofIdx)
+     * \param[out] dnIdx Index of the downstream cell
+     * \param interiorDofIdx Index identifying the interior cell
+     * \param exteriorDofIdx Index identifying the exterior cell
+     * \param intQuantsIn Intensive quantities of the interior cell
+     * \param intQuantsEx Intensive quantities of the exterior cell
+     * \param thpresInToEx Threshold pressure from interior to exterior
+     * \param thpresExToIn Threshold pressure from exterior to interior
+     * \param trans Transmissibility of the face
+     * \param faceArea Area of the face
+     * \param distZg Depth difference (interior - exterior) times gravity
+     */
+    static void updateSolventVolumeFlux(Evaluation& volumeFlux,
+                                        unsigned& upIdx,
+                                        unsigned& dnIdx,
+                                        const unsigned interiorDofIdx,
+                                        const unsigned exteriorDofIdx,
+                                        const IntensiveQuantities& intQuantsIn,
+                                        const IntensiveQuantities& intQuantsEx,
+                                        const Scalar thpresInToEx,
+                                        const Scalar thpresExToIn,
+                                        const Scalar trans,
+                                        const Scalar faceArea,
+                                        const Scalar distZg)
+    {
         const Evaluation rhoIn = intQuantsIn.solventDensity();
         const Scalar rhoEx = Toolbox::value(intQuantsEx.solventDensity());
         const Evaluation rhoAvg = rhoIn * 0.5 + rhoEx * 0.5;
 
         const Evaluation& pressureInterior = intQuantsIn.fluidState().pressure(gasPhaseIdx);
         Evaluation pressureExterior = Toolbox::value(intQuantsEx.fluidState().pressure(gasPhaseIdx));
-        pressureExterior += distZ * g * rhoAvg;
+        pressureExterior += distZg * rhoAvg;
 
         Evaluation pressureDiffSolvent = pressureExterior - pressureInterior;
         const Scalar thpres = pressureDiffSolvent < 0.0 ? thpresInToEx : thpresExToIn;
@@ -1309,31 +1359,29 @@ public:
         }
 
         if (pressureDiffSolvent > 0.0) {
-            solventUpstreamDofIdx_ = exteriorDofIdx;
-            solventDownstreamDofIdx_ = interiorDofIdx;
+            upIdx = exteriorDofIdx;
+            dnIdx = interiorDofIdx;
         }
         else if (pressureDiffSolvent < 0.0) {
-            solventUpstreamDofIdx_ = interiorDofIdx;
-            solventDownstreamDofIdx_ = exteriorDofIdx;
+            upIdx = interiorDofIdx;
+            dnIdx = exteriorDofIdx;
         }
         else {
             // pressure potential gradient is zero; force consistent upstream and
             // downstream indices over the intersection regardless of the side which it
             // is looked at.
-            solventUpstreamDofIdx_ = std::min(interiorDofIdx, exteriorDofIdx);
-            solventDownstreamDofIdx_ = std::max(interiorDofIdx, exteriorDofIdx);
-            solventVolumeFlux_ = 0.0;
+            upIdx = std::min(interiorDofIdx, exteriorDofIdx);
+            dnIdx = std::max(interiorDofIdx, exteriorDofIdx);
+            volumeFlux = 0.0;
             return;
         }
 
-        const Scalar faceArea = elemCtx.stencil(timeIdx).interiorFace(scvfIdx).area();
-        const IntensiveQuantities& up = elemCtx.intensiveQuantities(solventUpstreamDofIdx_, timeIdx);
-        if (solventUpstreamDofIdx_ == interiorDofIdx) {
-            solventVolumeFlux_ = up.solventMobility() * (-trans / faceArea) * pressureDiffSolvent;
-        }
-        else {
-            solventVolumeFlux_ =
-                scalarValue(up.solventMobility()) * (-trans / faceArea) * pressureDiffSolvent;
+        const IntensiveQuantities& up = (upIdx == interiorDofIdx) ? intQuantsIn : intQuantsEx;
+        if (upIdx == interiorDofIdx) {
+            volumeFlux = up.solventMobility() * (-trans / faceArea) * pressureDiffSolvent;
+        } else {
+            volumeFlux
+                = scalarValue(up.solventMobility()) * (-trans / faceArea) * pressureDiffSolvent;
         }
     }
 

@@ -24,7 +24,9 @@
 
 #include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
 #include <opm/models/blackoil/blackoildiffusionmodule.hh>
+#include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
+#include <opm/models/discretization/common/tpfalinearizer.hh>
 
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicit.hpp>
@@ -41,6 +43,16 @@ struct FlowSolventProblem
 template<class TypeTag>
 struct EnableSolvent<TypeTag, TTag::FlowSolventProblem>
 { static constexpr bool value = true; };
+
+template <class TypeTag>
+struct Linearizer<TypeTag, TTag::FlowSolventProblem> {
+    using type = TpfaLinearizer<TypeTag>;
+};
+
+template <class TypeTag>
+struct LocalResidual<TypeTag, TTag::FlowSolventProblem> {
+    using type = BlackOilLocalResidualTPFA<TypeTag>;
+};
 
 } // namespace Opm::Properties
 
