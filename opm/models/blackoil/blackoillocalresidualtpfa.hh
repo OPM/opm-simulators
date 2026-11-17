@@ -499,6 +499,9 @@ public:
                     ExtboModule::template addExtboFluxes_<Evaluation>(
                         flux, phaseIdx, darcyFlux, up);
                 }
+                if constexpr (enableFoam) {
+                    FoamModule::template addFoamFluxes_<Evaluation>(flux, phaseIdx, darcyFlux, up);
+                }
             } else {
                 const auto& invB = getInvB_<FluidSystem, FluidState, Scalar>(
                     up.fluidState(), phaseIdx, pvtRegionIdx, fsys);
@@ -519,6 +522,9 @@ public:
                 }
                 if constexpr (enableExtbo) {
                     ExtboModule::template addExtboFluxes_<Scalar>(flux, phaseIdx, darcyFlux, up);
+                }
+                if constexpr (enableFoam) {
+                    FoamModule::template addFoamFluxes_<Scalar>(flux, phaseIdx, darcyFlux, up);
                 }
             }
         }
@@ -615,11 +621,10 @@ public:
         // NB need to be tha last energy call since it does scaling
         // EnergyModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
-        // deal with foam (if present)
+        // deal with foam transported by solvent (if present)
         static_assert(
-            !enableFoam,
-            "Relevant computeFlux() method must be implemented for this module before enabling.");
-        // FoamModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+            !(enableFoam && enableSolvent),
+            "Foam flux with SOLVENT transport phase must be implemented before enabling.");
 
         // deal with diffusion (if present). opm-models expects per area flux (added in the
         // tmpdiffusivity).
