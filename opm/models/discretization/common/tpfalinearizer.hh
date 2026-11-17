@@ -147,6 +147,7 @@ class TpfaLinearizer
     static constexpr bool enableFullyImplicitThermal = (getPropValue<TypeTag, Properties::EnergyModuleType>() == EnergyModules::FullyImplicitThermal);
     static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
     static constexpr bool enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>();
+    static constexpr bool enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>();
     static const bool enableBioeffects = getPropValue<TypeTag, Properties::EnableBioeffects>();
 
     // copying the linearizer is not a good idea
@@ -540,6 +541,7 @@ private:
                                               {},
                                               {},
                                               {},
+                                              {},
                                               {}};
                         if constexpr (enableFullyImplicitThermal) {
                             nbinfo.inAlpha = problem_().thermalHalfTransmissibility(myIdx, neighborIdx);
@@ -550,6 +552,11 @@ private:
                         }
                         if constexpr (enableDispersion) {
                             nbinfo.dispersivity = problem_().dispersivity(myIdx, neighborIdx);
+                        }
+                        if constexpr (enablePolymer) {
+                            nbinfo.dist = (stencil.subControlVolume(primaryDofIdx).globalPos()
+                                           - stencil.subControlVolume(dofIdx).globalPos())
+                                              .two_norm();
                         }
                         loc_nbinfo[dofIdx - 1] = NeighborInfoCPU{neighborIdx, nbinfo, nullptr};
                     }

@@ -148,6 +148,7 @@ public:
         ConditionalStorage<enableFullyImplicitThermal, double> outAlpha;
         ConditionalStorage<enableDiffusion, double> diffusivity;
         ConditionalStorage<enableDispersion, double> dispersivity;
+        ConditionalStorage<enablePolymer, double> dist;
     };
 
     /*!
@@ -343,6 +344,12 @@ public:
         const Scalar outAlpha = problem.thermalHalfTransmissibility(globalIndexEx, globalIndexIn);
         const Scalar diffusivity = problem.diffusivity(globalIndexEx, globalIndexIn);
         const Scalar dispersivity = problem.dispersivity(globalIndexEx, globalIndexIn);
+        // distance between cell centers (only needed for polymer)
+        Scalar dist = 0.0;
+        if constexpr (enablePolymer) {
+            dist = (elemCtx.pos(interiorDofIdx, timeIdx) - elemCtx.pos(exteriorDofIdx, timeIdx))
+                       .two_norm();
+        }
 
         const ResidualNBInfo res_nbinfo {trans,
                                          faceArea,
@@ -355,7 +362,8 @@ public:
                                          inAlpha,
                                          outAlpha,
                                          diffusivity,
-                                         dispersivity};
+                                         dispersivity,
+                                         dist};
 
         calculateFluxes_(flux,
                          darcy,
@@ -392,8 +400,10 @@ public:
 
         const FluidSystem& fsys = intQuantsIn.getFluidSystem();
 
-        // water volume flux, needed for solvent dissolved in water
-        ConditionalStorage<enableSolvent, Evaluation> waterVolumeFlux(0.0);
+        // water volume flux, needed for solvent dissolved in water or polymer flow, which
+        // also needs water phase upstream cell
+        ConditionalStorage<enableSolvent || enablePolymer, Evaluation> waterVolumeFlux(0.0);
+        ConditionalStorage<enablePolymer, bool> waterUpIsIn(true);
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!fsys.phaseIsActive(phaseIdx)) {
@@ -456,6 +466,13 @@ public:
                 = fsys.canonicalToActiveCompIdx(fsys.solventComponentIndex(phaseIdx));
             // NB! For the FLORES fluxes without derivatives
             darcy[conti0EqIdx + activeCompIdx] = darcyFlux.value() * faceArea;
+
+            if constexpr (enablePolymer) {
+                if (phaseIdx == waterPhaseIdx) {
+                    *waterVolumeFlux = darcyFlux;
+                    *waterUpIsIn = (globalUpIndex == globalIndexIn);
+                }
+            }
 
             unsigned pvtRegionIdx = up.pvtRegionIndex();
             // if (upIdx == globalFocusDofIdx){
@@ -535,10 +552,29 @@ public:
         }
 
         // deal with polymer (if present)
-        static_assert(
-            !enablePolymer,
-            "Relevant computeFlux() method must be implemented for this module before enabling.");
-        // PolymerModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        if constexpr (enablePolymer) {
+            const IntensiveQuantities& up = *waterUpIsIn ? intQuantsIn : intQuantsEx;
+            Evaluation waterShearFactor = 1.0;
+            Evaluation polymerShearFactor = 1.0;
+            if (PolymerModule::hasPlyshlog()) {
+                ExtensiveQuantities::updateShearMultipliers(waterShearFactor,
+                                                            polymerShearFactor,
+                                                            *waterVolumeFlux,
+                                                            intQuantsIn,
+                                                            intQuantsEx,
+                                                            *waterUpIsIn,
+                                                            trans,
+                                                            faceArea,
+                                                            nbInfo.dist);
+            }
+            if (*waterUpIsIn) {
+                PolymerModule::template addPolymerFluxes_<Evaluation>(
+                    flux, *waterVolumeFlux, waterShearFactor, polymerShearFactor, up);
+            } else {
+                PolymerModule::template addPolymerFluxes_<Scalar>(
+                    flux, *waterVolumeFlux, waterShearFactor, polymerShearFactor, up);
+            }
+        }
 
         // deal with convective mixing
         if constexpr (enableConvectiveMixing) {
@@ -733,9 +769,10 @@ public:
                 bdyFlux, solventVolumeFlux, /*waterVolumeFlux=*/Evaluation(0.0), insideIntQuants);
         }
 
-        static_assert(
-            !enablePolymer,
-            "Relevant treatment of boundary conditions must be implemented before enabling.");
+        if constexpr (enablePolymer) {
+            bdyFlux[Indices::contiPolymerEqIdx]
+                = volumeFlux[waterPhaseIdx] * insideIntQuants.polymerConcentration();
+        }
 
         const FluidSystem& fsys = insideIntQuants.getFluidSystem();
 

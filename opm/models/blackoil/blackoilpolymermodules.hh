@@ -270,42 +270,55 @@ public:
         const unsigned upIdx = extQuants.upstreamIndex(FluidSystem::waterPhaseIdx);
         const unsigned inIdx = extQuants.interiorIndex();
         const auto& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
-        const unsigned contiWaterEqIdx =
-            Indices::conti0EqIdx + FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx);
 
         if (upIdx == inIdx) {
-            flux[contiPolymerEqIdx] =
-                    extQuants.volumeFlux(waterPhaseIdx) *
-                    up.fluidState().invB(waterPhaseIdx) *
-                    up.polymerViscosityCorrection() /
-                    extQuants.polymerShearFactor() *
-                    up.polymerConcentration();
-
-            // modify water
-            flux[contiWaterEqIdx] /= extQuants.waterShearFactor();
+            addPolymerFluxes_<Evaluation>(flux,
+                                          extQuants.volumeFlux(waterPhaseIdx),
+                                          extQuants.waterShearFactor(),
+                                          extQuants.polymerShearFactor(),
+                                          up);
         }
         else {
-            flux[contiPolymerEqIdx] =
-                    extQuants.volumeFlux(waterPhaseIdx) *
-                    decay<Scalar>(up.fluidState().invB(waterPhaseIdx)) *
-                    decay<Scalar>(up.polymerViscosityCorrection()) /
-                    decay<Scalar>(extQuants.polymerShearFactor()) *
-                    decay<Scalar>(up.polymerConcentration());
-
-            // modify water
-            flux[contiWaterEqIdx] /= decay<Scalar>(extQuants.waterShearFactor());
+            addPolymerFluxes_<Scalar>(flux,
+                                      extQuants.volumeFlux(waterPhaseIdx),
+                                      extQuants.waterShearFactor(),
+                                      extQuants.polymerShearFactor(),
+                                      up);
         }
+    }
+
+    /*!
+     * \brief Add the polymer flux over a face and apply the shear factor to the water flux.
+     *
+     * \tparam UpEval Evaluation if upstream cell is the derivative cell, Scalar otherwise
+     * \param[in,out] flux Rate vector with the water flux, the polymer flux is written to
+     * \param waterVolumeFlux Water volume flux over the face
+     * \param waterShearFactor Shear factor the water flux is divided by
+     * \param polymerShearFactor Shear factor the polymer flux is divided by
+     * \param up Intensive quantities of the upstream cell of the water flux
+     */
+    template <class UpEval>
+    static void addPolymerFluxes_(RateVector& flux,
+                                  const Evaluation& waterVolumeFlux,
+                                  const Evaluation& waterShearFactor,
+                                  const Evaluation& polymerShearFactor,
+                                  const IntensiveQuantities& up)
+    {
+        const unsigned contiWaterEqIdx = Indices::conti0EqIdx
+            + FluidSystem::canonicalToActiveCompIdx(FluidSystem::waterCompIdx);
+
+        flux[contiPolymerEqIdx] = waterVolumeFlux
+            * decay<UpEval>(up.fluidState().invB(waterPhaseIdx))
+            * decay<UpEval>(up.polymerViscosityCorrection()) / decay<UpEval>(polymerShearFactor)
+            * decay<UpEval>(up.polymerConcentration());
+
+        // modify water
+        flux[contiWaterEqIdx] /= decay<UpEval>(waterShearFactor);
 
         // flux related to transport of polymer molecular weight
         if constexpr (enablePolymerMolarWeight) {
-            if (upIdx == inIdx) {
-                flux[contiPolymerMolarWeightEqIdx] =
-                    flux[contiPolymerEqIdx] * up.polymerMoleWeight();
-            }
-            else {
-                flux[contiPolymerMolarWeightEqIdx] =
-                    flux[contiPolymerEqIdx] * decay<Scalar>(up.polymerMoleWeight());
-            }
+            flux[contiPolymerMolarWeightEqIdx]
+                = flux[contiPolymerEqIdx] * decay<UpEval>(up.polymerMoleWeight());
         }
     }
 
@@ -436,6 +449,34 @@ public:
         return params_.plyvmhCoefficients_[polymerMixRegionIdx];
     }
 
+    static Scalar plyrockDeadPoreVolume(unsigned satnumRegionIdx)
+    { return params_.plyrockDeadPoreVolume_[satnumRegionIdx]; }
+
+    static Scalar plyrockResidualResistanceFactor(unsigned satnumRegionIdx)
+    { return params_.plyrockResidualResistanceFactor_[satnumRegionIdx]; }
+
+    static Scalar plyrockRockDensityFactor(unsigned satnumRegionIdx)
+    { return params_.plyrockRockDensityFactor_[satnumRegionIdx]; }
+
+    static Scalar plyrockAdsorbtionIndex(unsigned satnumRegionIdx)
+    { return params_.plyrockAdsorbtionIndex_[satnumRegionIdx]; }
+
+    static Scalar plyrockMaxAdsorbtion(unsigned satnumRegionIdx)
+    { return params_.plyrockMaxAdsorbtion_[satnumRegionIdx]; }
+
+    static const TabulatedFunction& plyadsAdsorbedPolymer(unsigned satnumRegionIdx)
+    { return params_.plyadsAdsorbedPolymer_[satnumRegionIdx]; }
+
+    static Scalar plymaxMaxConcentration(unsigned plmixnumRegionIdx)
+    { return params_.plymaxMaxConcentration_[plmixnumRegionIdx]; }
+
+    static Scalar plymixparToddLongstaff(unsigned plmixnumRegionIdx)
+    { return params_.plymixparToddLongstaff_[plmixnumRegionIdx]; }
+
+    static const typename BlackOilPolymerParams<Scalar>::PlyvmhCoefficients&
+    plyvmhCoefficients(unsigned plmixnumRegionIdx)
+    { return params_.plyvmhCoefficients_[plmixnumRegionIdx]; }
+
     static bool hasPlyshlog()
     { return params_.hasPlyshlog_; }
 
@@ -562,6 +603,7 @@ class BlackOilPolymerIntensiveQuantities<TypeTag, /*enablePolymerV=*/true>
     using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using Problem = GetPropType<TypeTag, Properties::Problem>;
 
     using PolymerModule = BlackOilPolymerModule<TypeTag, true>;
 
@@ -576,47 +618,49 @@ public:
      *        primary variables
      *
      */
-    void polymerPropertiesUpdate_(const ElementContext& elemCtx,
-                                  unsigned dofIdx,
-                                  unsigned timeIdx)
+    void polymerPropertiesUpdate_(const Problem& problem,
+                                  const PrimaryVariables& priVars,
+                                  const unsigned globalSpaceIdx,
+                                  const unsigned timeIdx)
     {
-        const auto linearizationType = elemCtx.linearizationType();
-        const PrimaryVariables& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
+        const auto linearizationType = problem.model().linearizer().getLinearizationType();
+        const unsigned satnumRegionIdx = problem.satnumRegionIndex(globalSpaceIdx);
+        const unsigned plmixnumRegionIdx = problem.plmixnumRegionIndex(globalSpaceIdx);
         polymerConcentration_ = priVars.makeEvaluation(polymerConcentrationIdx, timeIdx, linearizationType);
         if constexpr (enablePolymerMolarWeight) {
             polymerMoleWeight_ = priVars.makeEvaluation(polymerMoleWeightIdx, timeIdx, linearizationType);
         }
 
         // permeability reduction due to polymer
-        const Scalar& maxAdsorbtion = PolymerModule::plyrockMaxAdsorbtion(elemCtx, dofIdx, timeIdx);
-        const auto& plyadsAdsorbedPolymer = PolymerModule::plyadsAdsorbedPolymer(elemCtx, dofIdx, timeIdx);
+        const Scalar& maxAdsorbtion = PolymerModule::plyrockMaxAdsorbtion(satnumRegionIdx);
+        const auto& plyadsAdsorbedPolymer = PolymerModule::plyadsAdsorbedPolymer(satnumRegionIdx);
         polymerAdsorption_ = plyadsAdsorbedPolymer.eval(polymerConcentration_, /*extrapolate=*/true);
-        if (static_cast<int>(PolymerModule::plyrockAdsorbtionIndex(elemCtx, dofIdx, timeIdx)) ==
+        if (static_cast<int>(PolymerModule::plyrockAdsorbtionIndex(satnumRegionIdx)) ==
             BlackOilPolymerParams<Scalar>::NoDesorption)
         {
-            const auto maxPolymerAdsorption =
-                elemCtx.problem().maxPolymerAdsorption(elemCtx, dofIdx, timeIdx);
+            const auto maxPolymerAdsorption = problem.maxPolymerAdsorption(globalSpaceIdx);
             polymerAdsorption_ = std::max(Evaluation(maxPolymerAdsorption), polymerAdsorption_);
         }
 
         // compute resitanceFactor
         const Scalar& residualResistanceFactor =
-            PolymerModule::plyrockResidualResistanceFactor(elemCtx, dofIdx, timeIdx);
+            PolymerModule::plyrockResidualResistanceFactor(satnumRegionIdx);
         const Evaluation resistanceFactor = 1.0 + (residualResistanceFactor - 1.0) *
                                                    polymerAdsorption_ / maxAdsorbtion;
 
         // compute effective viscosities
         if constexpr (!enablePolymerMolarWeight) {
-            const Scalar cmax = PolymerModule::plymaxMaxConcentration(elemCtx, dofIdx, timeIdx);
+            const Scalar cmax = PolymerModule::plymaxMaxConcentration(plmixnumRegionIdx);
             const auto& fs = asImp_().fluidState_;
             const Evaluation& muWater = fs.viscosity(waterPhaseIdx);
-            const auto& viscosityMultiplier =
-                PolymerModule::plyviscViscosityMultiplierTable(elemCtx, dofIdx, timeIdx);
+            const auto& viscosityMultiplier = PolymerModule::plyviscViscosityMultiplierTable(
+                problem.pvtRegionIndex(globalSpaceIdx));
             const Evaluation viscosityMixture =
                 viscosityMultiplier.eval(polymerConcentration_, /*extrapolate=*/true) * muWater;
 
             // Do the Todd-Longstaff mixing
-            const Scalar plymixparToddLongstaff = PolymerModule::plymixparToddLongstaff(elemCtx, dofIdx, timeIdx);
+            const Scalar plymixparToddLongstaff
+                = PolymerModule::plymixparToddLongstaff(plmixnumRegionIdx);
             const Evaluation viscosityPolymer = viscosityMultiplier.eval(cmax, /*extrapolate=*/true) * muWater;
             const Evaluation viscosityPolymerEffective =
                 pow(viscosityMixture, plymixparToddLongstaff) * pow(viscosityPolymer, 1.0 - plymixparToddLongstaff);
@@ -630,7 +674,7 @@ public:
             polymerViscosityCorrection_ =  (muWater / waterViscosityCorrection_) / viscosityPolymerEffective;
         }
         else { // based on PLYVMH
-            const auto& plyvmhCoefficients = PolymerModule::plyvmhCoefficients(elemCtx, dofIdx, timeIdx);
+            const auto& plyvmhCoefficients = PolymerModule::plyvmhCoefficients(plmixnumRegionIdx);
             const Scalar k_mh = plyvmhCoefficients.k_mh;
             const Scalar a_mh = plyvmhCoefficients.a_mh;
             const Scalar gamma = plyvmhCoefficients.gamma;
@@ -648,8 +692,24 @@ public:
         asImp_().mobility_[waterPhaseIdx] *= waterViscosityCorrection_ / resistanceFactor;
 
         // update rock properties
-        polymerDeadPoreVolume_ = PolymerModule::plyrockDeadPoreVolume(elemCtx, dofIdx, timeIdx);
-        polymerRockDensity_ = PolymerModule::plyrockRockDensityFactor(elemCtx, dofIdx, timeIdx);
+        polymerDeadPoreVolume_ = PolymerModule::plyrockDeadPoreVolume(satnumRegionIdx);
+        polymerRockDensity_ = PolymerModule::plyrockRockDensityFactor(satnumRegionIdx);
+
+        // critical water saturation used in the shear factor calculations
+        if (PolymerModule::hasPlyshlog()) {
+            const auto& materialLawManager = problem.materialLawManager();
+            Swcr_ = materialLawManager.oilWaterScaledEpsInfoDrainage(globalSpaceIdx).Swcr;
+        }
+    }
+
+    void polymerPropertiesUpdate_(const ElementContext& elemCtx,
+                                  unsigned dofIdx,
+                                  unsigned timeIdx)
+    {
+        polymerPropertiesUpdate_(elemCtx.problem(),
+                                 elemCtx.primaryVars(dofIdx, timeIdx),
+                                 elemCtx.globalSpaceIndex(dofIdx, timeIdx),
+                                 timeIdx);
     }
 
     const Evaluation& polymerConcentration() const
@@ -682,6 +742,10 @@ public:
     const Evaluation& waterViscosityCorrection() const
     { return waterViscosityCorrection_; }
 
+    // critical water saturation (only set with PLYSHLOG)
+    Scalar Swcr() const
+    { return Swcr_; }
+
 protected:
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
@@ -694,6 +758,7 @@ protected:
     Evaluation polymerAdsorption_;
     Evaluation polymerViscosityCorrection_;
     Evaluation waterViscosityCorrection_;
+    Scalar Swcr_;
 };
 
 /*!
@@ -711,6 +776,7 @@ class BlackOilPolymerExtensiveQuantities<TypeTag, /*enablePolymerV=*/true>
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
@@ -756,48 +822,86 @@ public:
         const unsigned upIdx = extQuants.upstreamIndex(waterPhaseIdx);
         const unsigned interiorDofIdx = extQuants.interiorIndex();
         const unsigned exteriorDofIdx = extQuants.exteriorIndex();
-        const auto& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
         const auto& intQuantsIn = elemCtx.intensiveQuantities(interiorDofIdx, timeIdx);
         const auto& intQuantsEx = elemCtx.intensiveQuantities(exteriorDofIdx, timeIdx);
 
+        // only needed for SHRATE
+        Scalar trans = 0.0;
+        Scalar faceArea = 0.0;
+        Scalar dist = 0.0;
+        if (PolymerModule::hasShrate()) {
+            trans = elemCtx.problem().transmissibility(elemCtx, interiorDofIdx, exteriorDofIdx);
+            faceArea = elemCtx.stencil(timeIdx).interiorFace(scvfIdx).area();
+            dist = (elemCtx.pos(interiorDofIdx, timeIdx) - elemCtx.pos(exteriorDofIdx, timeIdx))
+                       .two_norm();
+        }
+
+        updateShearMultipliers(waterShearFactor_,
+                               polymerShearFactor_,
+                               extQuants.volumeFlux(waterPhaseIdx),
+                               intQuantsIn,
+                               intQuantsEx,
+                               upIdx == interiorDofIdx,
+                               trans,
+                               faceArea,
+                               dist);
+    }
+
+    /*!
+     * \brief Water and polymer shear factors over a face from the water velocity.
+     *
+     * The PVTNUM region and the critical water saturation are taken from the upstream cell.
+     *
+     * \param[out] waterShearFactor Shear factor the water flux is divided by
+     * \param[out] polymerShearFactor Shear factor the polymer flux is divided by
+     * \param waterVolumeFlux Water volume flux over the face
+     * \param intQuantsIn Intensive quantities of the interior cell
+     * \param intQuantsEx Intensive quantities of the exterior cell
+     * \param upIsIn True if the interior cell is upstream of the water flux
+     * \param trans Transmissibility of the face (only used with SHRATE)
+     * \param faceArea Area of the face (only used with SHRATE)
+     * \param dist Distance between the interior and exterior cell centers (only used with SHRATE)
+     */
+    static void updateShearMultipliers(Evaluation& waterShearFactor,
+                                       Evaluation& polymerShearFactor,
+                                       const Evaluation& waterVolumeFlux,
+                                       const IntensiveQuantities& intQuantsIn,
+                                       const IntensiveQuantities& intQuantsEx,
+                                       const bool upIsIn,
+                                       const Scalar trans,
+                                       const Scalar faceArea,
+                                       const Scalar dist)
+    {
+        const IntensiveQuantities& up = upIsIn ? intQuantsIn : intQuantsEx;
+
         // compute water velocity from flux
         const Evaluation poroAvg = intQuantsIn.porosity() * 0.5 + intQuantsEx.porosity() * 0.5;
-        const unsigned pvtnumRegionIdx = elemCtx.problem().pvtRegionIndex(elemCtx, scvfIdx, timeIdx);
+        const unsigned pvtnumRegionIdx = up.pvtRegionIndex();
         const Evaluation& Sw = up.fluidState().saturation(waterPhaseIdx);
-        const unsigned cellIdx = elemCtx.globalSpaceIndex(scvfIdx, timeIdx);
-        const auto& materialLawManager = elemCtx.problem().materialLawManager();
-        const auto& scaledDrainageInfo =
-                materialLawManager.oilWaterScaledEpsInfoDrainage(cellIdx);
-        const Scalar& Swcr = scaledDrainageInfo.Swcr;
 
         // guard against zero porosity and no mobile water
-        const Evaluation denom = max(poroAvg * (Sw - Swcr), 1e-12);
-        Evaluation waterVolumeVelocity = extQuants.volumeFlux(waterPhaseIdx) / denom;
+        const Evaluation denom = max(poroAvg * (Sw - up.Swcr()), 1e-12);
+        Evaluation waterVolumeVelocity = waterVolumeFlux / denom;
 
         // if shrate is specified. Compute shrate based on the water velocity
         if (PolymerModule::hasShrate()) {
             const Evaluation& relWater = up.relativePermeability(waterPhaseIdx);
-            const Scalar trans = elemCtx.problem().transmissibility(elemCtx, interiorDofIdx, exteriorDofIdx);
             if (trans > 0.0) {
-                const Scalar faceArea = elemCtx.stencil(timeIdx).interiorFace(scvfIdx).area();
-                const auto dist = elemCtx.pos(interiorDofIdx, timeIdx) -  elemCtx.pos(exteriorDofIdx, timeIdx);
                 // compute permeability from transmissibility.
-                const Scalar absPerm = trans / faceArea * dist.two_norm();
-                waterVolumeVelocity *=
-                    PolymerModule::shrate(pvtnumRegionIdx) * sqrt(poroAvg * Sw / (relWater * absPerm));
+                const Scalar absPerm = trans / faceArea * dist;
+                waterVolumeVelocity *= PolymerModule::shrate(pvtnumRegionIdx)
+                    * sqrt(poroAvg * Sw / (relWater * absPerm));
                 assert(isfinite(waterVolumeVelocity));
             }
         }
 
         // compute share factors for water and polymer
-        waterShearFactor_ =
-            PolymerModule::computeShearFactor(up.polymerConcentration(),
-                                              pvtnumRegionIdx,
-                                              waterVolumeVelocity);
-        polymerShearFactor_ =
-            PolymerModule::computeShearFactor(up.polymerConcentration(),
-                                              pvtnumRegionIdx,
-                                              waterVolumeVelocity * up.polymerViscosityCorrection());
+        waterShearFactor = PolymerModule::computeShearFactor(
+            up.polymerConcentration(), pvtnumRegionIdx, waterVolumeVelocity);
+        polymerShearFactor = PolymerModule::computeShearFactor(
+            up.polymerConcentration(),
+            pvtnumRegionIdx,
+            waterVolumeVelocity * up.polymerViscosityCorrection());
     }
 
     const Evaluation& polymerShearFactor() const

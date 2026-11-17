@@ -804,7 +804,6 @@ public:
     {
         // This is the version of update() that does not use any ElementContext.
         // It is limited by some modules that are not yet adapted to that.
-        static_assert(!enablePolymer);
         static_assert(!enableFoam);
         static_assert(!enableMICP);
         static_assert(!enableBrine);
@@ -822,7 +821,9 @@ public:
         if constexpr (enableSolvent) {
             asImp_().solventPvtUpdate_(problem, globalSpaceIdx, timeIdx);
         }
-
+        if constexpr (enablePolymer) {
+            asImp_().polymerPropertiesUpdate_(problem, priVars, globalSpaceIdx, timeIdx);
+        }
 
         // TODO: Here we should do the parts for other modules at the bottom of the other update() function.
     }
