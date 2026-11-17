@@ -93,7 +93,9 @@ opm_add_test(test_parallel_exception_sync
 # runs the binary of the entry above (EXE_TARGET, so no SOURCES), only its
 # test case LoneFailureAborts. An aborted run never exits with 0, so the test
 # passes when its output matches PASS_REGULAR_EXPRESSION instead, whatever
-# the exit code.
+# the exit code. It fails, whatever else the output says, when it matches
+# FAIL_REGULAR_EXPRESSION: the message of a rank that came back from its
+# wait instead of being ended by the abort.
 opm_add_test(test_parallel_exception_sync_abort
   EXE_TARGET
     test_parallel_exception_sync
@@ -108,6 +110,30 @@ set_tests_properties(parallel_exception_sync_abort
   PROPERTIES
   PASS_REGULAR_EXPRESSION
     "did not report a failure within 1 s"
+  FAIL_REGULAR_EXPRESSION
+    "The run should have been aborted"
+)
+
+# Rank 0 waits in the barrier for a failed time step while the other ranks
+# take the maximum at the end of a parallel try-catch region. Rank 0 must
+# abort with its message, as above, and no rank may come back from its wait:
+# the barrier and the maximum must not be matched with each other.
+opm_add_test(test_parallel_exception_sync_barrier_vs_region
+  EXE_TARGET
+    test_parallel_exception_sync
+  DRIVER_ARGS
+    -n 4
+  TEST_ARGS
+    --run_test=BarrierMeetsRegionEnd
+  PROCESSORS
+    4
+)
+set_tests_properties(parallel_exception_sync_barrier_vs_region
+  PROPERTIES
+  PASS_REGULAR_EXPRESSION
+    "did not report a failure within 1 s .when a time step failed"
+  FAIL_REGULAR_EXPRESSION
+    "The run should have been aborted"
 )
 
 opm_add_test(test_parallelwellinfo_mpi

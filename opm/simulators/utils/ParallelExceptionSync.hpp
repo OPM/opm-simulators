@@ -26,12 +26,18 @@
 // other ranks for a bounded time only, and abort the run with the exception's
 // message when they do not show up.
 //
-// The waiting is done with nonblocking collective calls on a communicator of
-// its own (a duplicate of the simulation's communicator). On that communicator
-// all ranks make the same calls in the same order, also when one rank has left
-// the order on the simulation's communicator. MPI does not allow a nonblocking
-// collective call to be matched by a blocking one, so the two kinds cannot
-// share a communicator here.
+// The waiting is done with nonblocking collective calls on communicators of
+// their own (duplicates of the simulation's communicator), one for each kind
+// of call: the barrier of abortIfNotAllRanksFailed() and the maximum of
+// maxOverRanksOrAbort(). MPI requires all ranks to make the collective calls
+// of a communicator in the same order. A rank that has thrown leaves that
+// order, so:
+// - the waiting cannot share the simulation's communicator, where the other
+//   ranks may be in blocking calls (MPI does not allow a nonblocking
+//   collective call to be matched by a blocking one), and
+// - the barrier and the maximum cannot share one communicator either: a rank
+//   that failed a time step alone waits in the barrier, while the other ranks
+//   may reach the end of a parallel try-catch region and take the maximum.
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
@@ -51,7 +57,7 @@ namespace Opm::detail {
 void enableParallelExceptionSync(const Parallel::Communication& comm,
                                  double timeout_seconds);
 
-/// Turn the safety net off and free its communicator.
+/// Turn the safety net off and free its communicators.
 void disableParallelExceptionSync();
 
 /// Whether the safety net is on for \c comm.
