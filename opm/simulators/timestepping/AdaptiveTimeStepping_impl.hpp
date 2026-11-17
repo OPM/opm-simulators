@@ -46,6 +46,7 @@
 #include <opm/models/utils/parametersystem.hpp>
 
 #include <opm/simulators/timestepping/EclTimeSteppingParams.hpp>
+#include <opm/simulators/utils/ParallelExceptionSync.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -1485,6 +1486,15 @@ runSubStep_()
     auto handleFailure = [this, &substep_report]
             (const std::string& failure_reason, const std::exception& e, bool log_exception = true)
     {
+        // A failed step is retried with a smaller time step by the loop in
+        // run(), which calls this function again. That is only safe when
+        // every rank has failed. A rank that failed alone must not start the
+        // next attempt: the other ranks are still in the collective calls of
+        // this one.
+        Opm::detail::abortIfNotAllRanksFailed(
+            solver_().model().simulator().vanguard().grid().comm(),
+            failure_reason + ": " + e.what(),
+            "when a time step failed");
         substep_report = solver_().failureReport();
         // Keep the exception text: it carries the actual reason (e.g. which
         // equation had a too-large residual), which otherwise only surfaces
