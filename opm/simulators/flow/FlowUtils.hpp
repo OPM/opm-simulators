@@ -24,6 +24,7 @@
 
 #include <functional>
 #include <set>
+#include <string>
 #include <string_view>
 
 namespace Opm { struct SimulatorReport; }
