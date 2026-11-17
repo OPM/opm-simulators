@@ -2509,7 +2509,8 @@ namespace Opm {
             for (auto wellID = 0*nw; wellID < nw; ++wellID) {
                 const Well& well = this->wells_ecl_[wellID];
                 auto& ws = this->wellState().well(wellID);
-                if (well.isInjector()) {
+                // Without WINJTEMP/WTEMP the injector takes the reservoir temperature below.
+                if (well.isInjector() && well.hasInjTemperature()) {
                     if (ws.status != WellStatus::STOP) {
                         this->wellState().well(wellID).temperature = well.inj_temperature();
                         continue;
