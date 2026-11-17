@@ -35,6 +35,7 @@
 #include <opm/simulators/flow/NlddReporting.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicit.hpp>
 #include <opm/simulators/flow/rescoup/ReservoirCouplingEnabled.hpp>
+#include <opm/simulators/utils/ParallelExceptionSync.hpp>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
@@ -57,6 +58,9 @@ struct EnableLoggingFalloutWarning { static constexpr bool value = false; };
 struct OutputInterval { static constexpr int value = 1; };
 // Stop after this report step; negative means run to the end of the schedule
 struct EndStep { static constexpr int value = -1; };
+// Seconds an MPI process that has failed waits for the other processes of
+// the run to report a failure too, before it aborts the run
+struct ParallelFailureTimeout { static constexpr int value = 120; };
 // Set global debug verbosity level
 struct DebugVerbosityLevel { static constexpr int value = 1; };
 } // namespace Opm::Parameters
@@ -126,6 +130,11 @@ namespace Opm {
             Parameters::Register<Parameters::EndStep>
                 ("Stop the simulation after this report step. "
                  "A negative value runs to the end of the schedule");
+            Parameters::Register<Parameters::ParallelFailureTimeout>
+                ("Seconds an MPI process that has failed waits for the other "
+                 "processes of the run to report a failure too. If they do not, "
+                 "the processes are out of step and the run is aborted. "
+                 "0 waits without a limit");
 
             // register the base parameters
             registerAllParameters_<TypeTag>(/*finalizeRegistration=*/false);
@@ -308,6 +317,7 @@ namespace Opm {
 
         void executeCleanup_() {
             // clean up
+            detail::disableParallelExceptionSync();
             mergeParallelLogFiles();
         }
 
@@ -320,6 +330,10 @@ namespace Opm {
             auto comm = FlowGenericVanguard::comm();
             mpi_rank_ = comm.rank();
             mpi_size_ = comm.size();
+
+            // All ranks are in step here, which the call below requires.
+            detail::enableParallelExceptionSync
+                (comm, Parameters::Get<Parameters::ParallelFailureTimeout>());
 
             setMaxThreads();
         }
