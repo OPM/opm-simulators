@@ -163,6 +163,50 @@ set_tests_properties(parallel_exception_sync_region_end
     "The run should have been aborted"
 )
 
+# The last rank alone ends the run with an exception and checks the other
+# ranks in checkAllMPIProcesses(), as FlowMain does. It must abort with the
+# message of its exception, although it is not rank 0.
+opm_add_test(test_parallel_exception_sync_last_rank
+  EXE_TARGET
+    test_parallel_exception_sync
+  DRIVER_ARGS
+    -n 4
+  TEST_ARGS
+    --run_test=LoneFailureOnLastRankAborts
+  PROCESSORS
+    4
+)
+set_tests_properties(parallel_exception_sync_last_rank
+  PROPERTIES
+  TIMEOUT 60
+  PASS_REGULAR_EXPRESSION
+    "within 1 s .when the run ended with an exception[^\n]*\n[^\n]*\nThe failure on rank 3 was: failure on the last rank only"
+  FAIL_REGULAR_EXPRESSION
+    "The run should have been aborted"
+)
+
+# Rank 0 ends the run with an exception while the other ranks failed a time
+# step and wait before they retry it. The two waits must not release each
+# other: the run must be aborted, by either side.
+opm_add_test(test_parallel_exception_sync_barrier_vs_run_end
+  EXE_TARGET
+    test_parallel_exception_sync
+  DRIVER_ARGS
+    -n 4
+  TEST_ARGS
+    --run_test=BarrierMeetsRunEnd
+  PROCESSORS
+    4
+)
+set_tests_properties(parallel_exception_sync_barrier_vs_run_end
+  PROPERTIES
+  TIMEOUT 60
+  PASS_REGULAR_EXPRESSION
+    "did not report a failure within 1 s .when (the run ended with an exception|a time step failed)"
+  FAIL_REGULAR_EXPRESSION
+    "The run should have been aborted"
+)
+
 opm_add_test(test_parallelwellinfo_mpi
   EXE_TARGET
     test_parallelwellinfo

@@ -32,7 +32,7 @@ namespace {
 #if HAVE_MPI
 // The state of the safety net in this process.
 //
-// The waiting is done on two duplicates of the simulation's communicator (see
+// The waiting is done on three duplicates of the simulation's communicator (see
 // the header for why), and they must be made once, at a point where all ranks
 // are in step. So they have to be kept between the calls: this struct holds
 // them, together with the time limit.
@@ -51,9 +51,11 @@ struct SyncState
     // The simulation's communicator, as given to enableParallelExceptionSync().
     MPI_Comm base_comm = MPI_COMM_NULL;
     // Our duplicates of it: one for the barrier of abortIfNotAllRanksFailed(),
-    // one for the maximum of maxOverRanksOrAbort(). Both are set, or both are
+    // one for the barrier of abortIfNotAllRanksEndedRun(), and one for the
+    // maximum of maxOverRanksOrAbort(). All are set, or all are
     // MPI_COMM_NULL, which means that the safety net is off.
     MPI_Comm barrier_comm = MPI_COMM_NULL;
+    MPI_Comm run_end_comm = MPI_COMM_NULL;
     MPI_Comm max_comm = MPI_COMM_NULL;
     // How long a rank that holds an exception waits for the other ranks.
     double timeout_seconds = 0.0;
@@ -147,12 +149,28 @@ void abortIfNotAllRanksFailed([[maybe_unused]] const Parallel::Communication& co
 #endif
 }
 
+void abortIfNotAllRanksEndedRun([[maybe_unused]] const Parallel::Communication& comm,
+                                [[maybe_unused]] const std::string& message)
+{
+#if HAVE_MPI
+    if (comm.size() > 1 && enabledFor(comm)) {
+        MPI_Request request = MPI_REQUEST_NULL;
+        MPI_Ibarrier(state().run_end_comm, &request);
+        waitOrAbort(request, /*bounded=*/true, comm.rank(), message,
+                    "when the run ended with an exception");
+    }
+#endif
+}
+
 void disableParallelExceptionSync()
 {
 #if HAVE_MPI
     auto& s = state();
     if (s.barrier_comm != MPI_COMM_NULL) {
         MPI_Comm_free(&s.barrier_comm);
+    }
+    if (s.run_end_comm != MPI_COMM_NULL) {
+        MPI_Comm_free(&s.run_end_comm);
     }
     if (s.max_comm != MPI_COMM_NULL) {
         MPI_Comm_free(&s.max_comm);
@@ -171,6 +189,7 @@ void enableParallelExceptionSync([[maybe_unused]] const Parallel::Communication&
         s.base_comm = comm;
         s.timeout_seconds = timeout_seconds;
         MPI_Comm_dup(comm, &s.barrier_comm);
+        MPI_Comm_dup(comm, &s.run_end_comm);
         MPI_Comm_dup(comm, &s.max_comm);
     }
 #endif
