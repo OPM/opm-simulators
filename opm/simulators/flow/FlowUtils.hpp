@@ -30,7 +30,7 @@ namespace Opm { struct SimulatorReport; }
 
 namespace Opm::detail {
 
-void checkAllMPIProcesses();
+void checkAllMPIProcesses(const std::string& message = {});
 
 void mergeParallelLogFiles(std::string_view output_dir,
                            std::string_view deck_filename,
