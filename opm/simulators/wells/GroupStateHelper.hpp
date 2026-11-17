@@ -41,6 +41,7 @@
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <algorithm>
+#include <exception>
 #include <map>
 #include <memory>
 #include <optional>
@@ -145,7 +146,10 @@ public:
         ~ScopedLoggerGuard()
         {
             if (helper_) {
-                if (do_mpi_gather_) {
+                // While an exception is unwinding the stack, this rank has left
+                // the order of collective calls that the other ranks follow, so
+                // the gather below could wait forever. Log locally instead.
+                if (do_mpi_gather_ && std::uncaught_exceptions() == 0) {
                     // 1. Gather messages across MPI ranks
                     DeferredLogger global = gatherDeferredLogger(logger_, helper_->comm());
 
