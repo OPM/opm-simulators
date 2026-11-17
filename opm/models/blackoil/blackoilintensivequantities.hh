@@ -806,10 +806,6 @@ public:
         // It is limited by some modules that are not yet adapted to that.
         static_assert(!enableExtbo);
         static_assert(!enablePolymer);
-        // the foam update scales the solvent mobility, so it must be called after the solvent
-        // update
-        static_assert(!(enableFoam && enableSolvent),
-                      "Foam with solvent must be checked before enabling.");
         static_assert(!enableMICP);
         static_assert(!enableBrine);
         static_assert(!enableDiffusion);
@@ -823,6 +819,7 @@ public:
         if constexpr (enableSolvent) {
             asImp_().solventPvtUpdate_(problem, globalSpaceIdx, timeIdx);
         }
+        // must come after the solvent update, since the foam update scales the solvent mobility
         if constexpr (enableFoam) {
             asImp_().foamPropertiesUpdate_(problem, priVars, globalSpaceIdx, timeIdx);
         }

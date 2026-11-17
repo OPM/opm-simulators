@@ -527,9 +527,17 @@ public:
             if (solventUpIdx == interiorDofIdx) {
                 SolventModule::template addSolventFluxes_<Evaluation>(
                     flux, solventVolumeFlux, *waterVolumeFlux, intQuantsIn);
+                if constexpr (enableFoam) {
+                    FoamModule::template addFoamSolventFluxes_<Evaluation>(
+                        flux, solventVolumeFlux, intQuantsIn);
+                }
             } else {
                 SolventModule::template addSolventFluxes_<Scalar>(
                     flux, solventVolumeFlux, *waterVolumeFlux, intQuantsEx);
+                if constexpr (enableFoam) {
+                    FoamModule::template addFoamSolventFluxes_<Scalar>(
+                        flux, solventVolumeFlux, intQuantsEx);
+                }
             }
         }
 
@@ -583,11 +591,6 @@ public:
         }
         // NB need to be tha last energy call since it does scaling
         // EnergyModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
-
-        // deal with foam transported by solvent (if present)
-        static_assert(
-            !(enableFoam && enableSolvent),
-            "Foam flux with SOLVENT transport phase must be implemented before enabling.");
 
         // deal with diffusion (if present). opm-models expects per area flux (added in the
         // tmpdiffusivity).
