@@ -32,6 +32,7 @@
 #include <opm/simulators/wells/RuntimePerforation.hpp>
 #include <opm/simulators/wells/WellIndexFracture.hpp>
 
+#include <array>
 #include <map>
 #include <memory>
 #include <optional>
@@ -398,6 +399,13 @@ protected:
                                            const WellState<Scalar, IndexTraits>& well_state) const;
 
     bool wellUnderGroupControl(const SingleWellState<Scalar, IndexTraits>& ws) const;
+
+    //! \brief Phases whose surface rate is targeted by the current production control.
+    //! \details Indexed by canonical phase index. Set for ORAT, WRAT, GRAT and LRAT,
+    //!          either as individual control or as the (possibly fallback) group target
+    //!          of a GRUP-controlled well. All false for injectors and other modes.
+    std::array<bool, 3>
+    rateControlledPhases(const SingleWellState<Scalar, IndexTraits>& ws) const;
 
     std::pair<bool,bool>
     computeWellPotentials(std::vector<Scalar>& well_potentials,

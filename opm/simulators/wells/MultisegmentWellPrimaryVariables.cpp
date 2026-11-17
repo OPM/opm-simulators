@@ -174,21 +174,24 @@ updateNewton(const BVectorWell& dwells,
              const Scalar relaxation_factor,
              const Scalar dFLimit,
              const bool stop_or_zero_rate_target,
-             const Scalar max_pressure_change)
+             const Scalar max_pressure_change,
+             const std::array<bool, 3>& controlled_phases)
 {
     const std::vector<std::array<Scalar, numWellEq>> old_primary_variables = value_;
+    // Additional damping of the top segment fraction updates (see relaxationFactorControlledFraction)
+    const Scalar top_fraction_damping =
+        relaxationFactorControlledFraction(dwells, relaxation_factor, dFLimit, controlled_phases);
 
     for (std::size_t seg = 0; seg < value_.size(); ++seg) {
+        const Scalar fraction_damping = (seg == 0) ? top_fraction_damping : Scalar{1.0};
         if (has_wfrac_variable) {
-            const int sign = dwells[seg][WFrac] > 0. ? 1 : -1;
-            const Scalar dx_limited = sign * std::min(std::abs(dwells[seg][WFrac]) * relaxation_factor, dFLimit);
-            value_[seg][WFrac] = old_primary_variables[seg][WFrac] - dx_limited;
+            const Scalar dx_limited = limitedFractionStep(dwells[seg][WFrac], relaxation_factor, dFLimit);
+            value_[seg][WFrac] = old_primary_variables[seg][WFrac] - fraction_damping * dx_limited;
         }
 
         if (has_gfrac_variable) {
-            const int sign = dwells[seg][GFrac] > 0. ? 1 : -1;
-            const Scalar dx_limited = sign * std::min(std::abs(dwells[seg][GFrac]) * relaxation_factor, dFLimit);
-            value_[seg][GFrac] = old_primary_variables[seg][GFrac] - dx_limited;
+            const Scalar dx_limited = limitedFractionStep(dwells[seg][GFrac], relaxation_factor, dFLimit);
+            value_[seg][GFrac] = old_primary_variables[seg][GFrac] - fraction_damping * dx_limited;
         }
 
         // handling the overshooting or undershooting of the fractions
@@ -555,6 +558,96 @@ processFractions(const int seg)
         const int gas_pos = FluidSystem::canonicalToActivePhaseIdx(FluidSystem::gasPhaseIdx);
         value_[seg][GFrac] = fractions[gas_pos];
     }
+}
+
+template<class FluidSystem, class Indices>
+typename MultisegmentWellPrimaryVariables<FluidSystem,Indices>::Scalar
+MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
+limitedFractionStep(const Scalar dx,
+                    const Scalar relaxation_factor,
+                    const Scalar dFLimit)
+{
+    const int sign = dx > 0. ? 1 : -1;
+    return sign * std::min(std::abs(dx) * relaxation_factor, dFLimit);
+}
+
+template<class FluidSystem, class Indices>
+typename MultisegmentWellPrimaryVariables<FluidSystem,Indices>::Scalar
+MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
+relaxationFactorControlledFraction(const BVectorWell& dwells,
+                                   const Scalar relaxation_factor,
+                                   const Scalar dFLimit,
+                                   const std::array<bool, 3>& controlled_phases) const
+{
+    // Under a phase rate control (ORAT/WRAT/GRAT/LRAT), a zero fraction of the
+    // controlled phase(s) in the top segment makes the control equation degenerate
+    // (singular Jacobian). Avoid jumping to zero by limiting the top segment fraction
+    // updates such that the controlled fraction is reduced by at most a factor 1/2.
+    if constexpr (!has_wfrac_variable && !has_gfrac_variable) {
+        return 1.0;
+    } else {
+        if (std::ranges::none_of(controlled_phases, [](const bool c) { return c; })) {
+            return 1.0;
+        }
+        constexpr int top_seg = 0;
+        Scalar wfrac_old = 0.0;
+        Scalar gfrac_old = 0.0;
+        Scalar wfrac_new = 0.0;
+        Scalar gfrac_new = 0.0;
+        if constexpr (has_wfrac_variable) {
+            wfrac_old = value_[top_seg][WFrac];
+            wfrac_new = wfrac_old - limitedFractionStep(dwells[top_seg][WFrac], relaxation_factor, dFLimit);
+        }
+        if constexpr (has_gfrac_variable) {
+            gfrac_old = value_[top_seg][GFrac];
+            gfrac_new = gfrac_old - limitedFractionStep(dwells[top_seg][GFrac], relaxation_factor, dFLimit);
+        }
+        const Scalar f_old = controlledFraction(controlled_phases, wfrac_old, gfrac_old);
+        const Scalar f_new = controlledFraction(controlled_phases, wfrac_new, gfrac_new);
+        constexpr Scalar min_retained = 0.5;
+        if (f_old > 0.0 && f_new < min_retained * f_old) {
+            // controlledFraction is linear, so this gives f = min_retained * f_old
+            return (1.0 - min_retained) * f_old / (f_old - f_new);
+        }
+        return 1.0;
+    }
+}
+
+template<class FluidSystem, class Indices>
+typename MultisegmentWellPrimaryVariables<FluidSystem,Indices>::Scalar
+MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
+controlledFraction(const std::array<bool, 3>& controlled_phases,
+                   const Scalar wfrac,
+                   const Scalar gfrac)
+{
+    // Phase fractions in terms of the fraction variables, consistent with processFractions().
+    const Scalar w = has_wfrac_variable ? wfrac : Scalar{0.0};
+    const Scalar g = has_gfrac_variable ? gfrac : Scalar{0.0};
+    Scalar oil = 0.0;
+    Scalar water = 0.0;
+    Scalar gas = 0.0;
+    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+        oil = 1.0 - w - g;
+        water = w;
+        gas = g;
+    } else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+        water = 1.0 - g;
+        gas = g;
+    } else if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+        gas = 1.0;
+    }
+
+    Scalar fraction = 0.0;
+    if (controlled_phases[FluidSystem::oilPhaseIdx]) {
+        fraction += oil;
+    }
+    if (controlled_phases[FluidSystem::waterPhaseIdx]) {
+        fraction += water;
+    }
+    if (controlled_phases[FluidSystem::gasPhaseIdx]) {
+        fraction += gas;
+    }
+    return fraction;
 }
 
 template<typename FluidSystem, typename Indices>
