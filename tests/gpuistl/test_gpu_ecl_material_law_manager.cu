@@ -149,10 +149,14 @@ const std::string letTablesString =
  * \param runspecExtra Extra RUNSPEC keywords (e.g. ENDSCALE).
  * \param propsTables  The saturation-function keywords (two tables each).
  * \param propsExtra   Extra PROPS keywords (e.g. STONE1, SWL).
+ * \param gridExtra    Extra GRID keywords (e.g. JFUNC).
+ * \param regionsExtra Extra REGIONS keywords (e.g. KRNUMX).
  */
 std::string makeDeckString(const std::string& runspecExtra,
                            const std::string& propsTables,
-                           const std::string& propsExtra)
+                           const std::string& propsExtra,
+                           const std::string& gridExtra = "",
+                           const std::string& regionsExtra = "")
 {
     return "RUNSPEC\n"
            "DIMENS\n"
@@ -176,11 +180,13 @@ std::string makeDeckString(const std::string& runspecExtra,
           "  4*8325 /\n"
           "PORO\n"
           "  4*0.3 /\n"
-          "PROPS\n"
+        + gridExtra
+        + "PROPS\n"
         + propsTables + propsExtra
         + "REGIONS\n"
           "SATNUM\n"
-          "  1 2 2 1 /\n";
+          "  1 2 2 1 /\n"
+        + regionsExtra;
 }
 
 const std::string defaultDeckString = makeDeckString("", tablesString, "");
@@ -509,7 +515,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SatnumRegionLookupMatchesCpu, Scalar, ScalarTypes)
 
     typename Types::GpuManagerBuf gpuManagerBuf(cpuManager, numCells);
     auto gpuManagerView = Opm::gpuistl::make_view(gpuManagerBuf);
-    BOOST_CHECK_EQUAL(gpuManagerBuf.materialLawParamsRegionCount(), 2u);
+    BOOST_CHECK_EQUAL(gpuManagerBuf.numMaterialLawRegions(), 2u);
 
     Opm::gpuistl::GpuBuffer<int> regions(numCells);
     satnumRegionKernel<<<1, 32>>>(gpuManagerView, regions.data(), numCells);
@@ -633,20 +639,12 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(RejectsNonPiecewiseLinearCurves, Scalar, ScalarTyp
                           messageContains("only supports piecewise-linear saturation curves"));
 }
 
-// With endpoint scaling, the Default params carry the cell's scaled Swl. When
-// it varies within one SATNUM region, the per-region GPU storage cannot
-// represent it.
-//
-// Note: GpuManager does not apply endpoint scaling or hysteresis at all; it
-// takes the unscaled piecewise-linear tables. A deck with ENDSCALE but the
-// same scaled Swl in all cells of a region is accepted, and gives wrong
-// values whenever other scaled endpoints (SWCR, SOWCR, KRW, ...) differ from
-// the unscaled tables, so the caller must reject such decks.
-BOOST_AUTO_TEST_CASE_TEMPLATE(RejectsSwlVaryingWithinRegion, Scalar, ScalarTypes)
+// The material law of TestTypes has no endpoint-scaling layer, so any
+// endpoint scaling must be rejected rather than silently ignored.
+BOOST_AUTO_TEST_CASE_TEMPLATE(RejectsEndpointScalingWithoutEpsLayer, Scalar, ScalarTypes)
 {
     using Types = TestTypes<Scalar>;
 
-    // Cells 0 and 3 are both in region 1 but get different SWL.
     typename Types::CpuManager cpuManager;
     const std::size_t numCells = initCpuManager(
         cpuManager,
@@ -655,5 +653,64 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(RejectsSwlVaryingWithinRegion, Scalar, ScalarTypes
 
     BOOST_CHECK_EXCEPTION(buildGpuManager<Types>(cpuManager, numCells),
                           std::logic_error,
-                          messageContains("vary within one SATNUM region"));
+                          messageContains("does not support endpoint scaling"));
+}
+
+namespace {
+
+struct UnsupportedOption {
+    const char* name;
+    std::string runspecExtra;
+    std::string propsExtra;
+    std::string gridExtra;
+    std::string regionsExtra;
+    const char* expectedMessage;
+};
+
+std::vector<UnsupportedOption> unsupportedOptions()
+{
+    const std::string endscale = "ENDSCALE\n/\n";
+    return {
+        {"hysteresis", "SATOPTS\n  HYSTER /\n", "EHYSTR\n  0.1 0 /\n", "", "",
+         "does not support hysteresis"},
+        {"directional relperms", "SATOPTS\n  DIRECT /\n", "", "", "KRNUMX\n  1 2 2 1 /\n",
+         "directional relative permeabilities"},
+        {"kr value scaling", endscale, "KRW\n  4*0.9 /\n", "", "",
+         "relative permeability value scaling"},
+        {"JFUNC", endscale, "",
+         "PERMX\n  4*100 /\nPERMY\n  4*100 /\nPERMZ\n  4*10 /\nJFUNC\n  WATER 22.0 /\n", "",
+         "(JFUNC)"},
+        {"ENKRVD", endscale,
+         "ENKRVD\n"
+         "  8000 1.0 1.0 1.0 0.9 0.9 0.9 0.9\n"
+         "  9000 1.0 1.0 1.0 0.9 0.9 0.9 0.9 /\n",
+         "", "", "(ENKRVD)"},
+        {"PPCWMAX", "", "PPCWMAX\n  100.0 NO /\n  100.0 NO /\n", "", "", "PPCWMAX"},
+    };
+}
+
+} // namespace
+
+// Each option the GPU manager does not implement is rejected with a message
+// that names it.
+BOOST_AUTO_TEST_CASE_TEMPLATE(RejectsUnsupportedOptions, Scalar, ScalarTypes)
+{
+    using Types = TestTypes<Scalar>;
+
+    for (const auto& option : unsupportedOptions()) {
+        BOOST_TEST_CONTEXT("Option: " << option.name)
+        {
+            typename Types::CpuManager cpuManager;
+            const std::size_t numCells
+                = initCpuManager(cpuManager,
+                                 makeDeckString(option.runspecExtra,
+                                                tablesString,
+                                                option.propsExtra,
+                                                option.gridExtra,
+                                                option.regionsExtra));
+            BOOST_CHECK_EXCEPTION(buildGpuManager<Types>(cpuManager, numCells),
+                                  std::logic_error,
+                                  messageContains(option.expectedMessage));
+        }
+    }
 }
