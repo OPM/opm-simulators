@@ -134,7 +134,8 @@ namespace Opm {
                 ("Seconds an MPI process that has failed waits for the other "
                  "processes of the run to report a failure too. If they do not, "
                  "the processes are out of step and the run is aborted. "
-                 "0 waits without a limit");
+                 "0 or a negative value turns the limit off, and the run "
+                 "may then hang instead");
 
             // register the base parameters
             registerAllParameters_<TypeTag>(/*finalizeRegistration=*/false);

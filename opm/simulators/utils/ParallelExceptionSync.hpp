@@ -54,8 +54,10 @@ namespace Opm::detail {
 /// Turn the safety net on for \c comm.
 ///
 /// Collective: all ranks of \c comm must call it, at a point where they are
-/// in step. Until it is called, and after disableParallelExceptionSync(), the
-/// functions below behave as plain blocking calls without a time limit.
+/// in step. Until it is called, and after disableParallelExceptionSync(),
+/// maxOverRanksOrAbort() is a plain blocking maximum without a time limit,
+/// and abortIfNotAllRanksFailed() and abortIfNotAllRanksEndedRun() do
+/// nothing.
 ///
 /// \param comm The communicator of the simulation.
 /// \param timeout_seconds How long a rank that holds an exception waits for
