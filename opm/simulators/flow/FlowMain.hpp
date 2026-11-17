@@ -229,6 +229,7 @@ namespace Opm {
         {
             SimulatorReport report = simulator_->finalize();
             runSimulatorAfterSim_(report);
+            detail::disableParallelExceptionSync();
             return report.success.exit_status;
         }
 
