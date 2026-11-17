@@ -807,7 +807,10 @@ public:
         static_assert(!enableSolvent);
         static_assert(!enableExtbo);
         static_assert(!enablePolymer);
-        static_assert(!enableFoam);
+        // the foam update scales the solvent mobility, so it must be called after the solvent
+        // update
+        static_assert(!(enableFoam && enableSolvent),
+                      "Foam with solvent must be checked before enabling.");
         static_assert(!enableMICP);
         static_assert(!enableBrine);
         static_assert(!enableDiffusion);
@@ -817,6 +820,10 @@ public:
         updateCommonPart<Args...>(problem, priVars, globalSpaceIdx, timeIdx);
         // Porosity requires separate calls so this can be instantiated with ReservoirProblem from the examples/ directory.
         updatePorosity(problem, priVars, globalSpaceIdx, timeIdx);
+
+        if constexpr (enableFoam) {
+            asImp_().foamPropertiesUpdate_(problem, priVars, globalSpaceIdx, timeIdx);
+        }
 
         // TODO: Here we should do the parts for solvent etc. at the bottom of the other update() function.
     }

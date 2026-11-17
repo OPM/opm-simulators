@@ -205,6 +205,8 @@ public:
         const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
         const unsigned inIdx = extQuants.interiorIndex();
 
+        flux[contiFoamEqIdx] = 0.0;
+
         // The effect of the mobility reduction factor is
         // incorporated in the mobility for the relevant phase,
         // so fluxes do not need modification here.
@@ -213,15 +215,11 @@ public:
                 const unsigned upIdx = extQuants.upstreamIndex(waterPhaseIdx);
                 const auto& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
                 if (upIdx == inIdx) {
-                    flux[contiFoamEqIdx] =
-                        extQuants.volumeFlux(waterPhaseIdx) *
-                        up.fluidState().invB(waterPhaseIdx) *
-                        up.foamConcentration();
+                    addFoamFluxes_<Evaluation>(
+                        flux, waterPhaseIdx, extQuants.volumeFlux(waterPhaseIdx), up);
                 } else {
-                    flux[contiFoamEqIdx] =
-                        extQuants.volumeFlux(waterPhaseIdx) *
-                        decay<Scalar>(up.fluidState().invB(waterPhaseIdx)) *
-                        decay<Scalar>(up.foamConcentration());
+                    addFoamFluxes_<Scalar>(
+                        flux, waterPhaseIdx, extQuants.volumeFlux(waterPhaseIdx), up);
                 }
                 break;
             }
@@ -229,15 +227,11 @@ public:
                 const unsigned upIdx = extQuants.upstreamIndex(gasPhaseIdx);
                 const auto& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
                 if (upIdx == inIdx) {
-                    flux[contiFoamEqIdx] =
-                        extQuants.volumeFlux(gasPhaseIdx) *
-                        up.fluidState().invB(gasPhaseIdx) *
-                        up.foamConcentration();
+                    addFoamFluxes_<Evaluation>(
+                        flux, gasPhaseIdx, extQuants.volumeFlux(gasPhaseIdx), up);
                 } else {
-                    flux[contiFoamEqIdx] =
-                        extQuants.volumeFlux(gasPhaseIdx) *
-                        decay<Scalar>(up.fluidState().invB(gasPhaseIdx)) *
-                        decay<Scalar>(up.foamConcentration());
+                    addFoamFluxes_<Scalar>(
+                        flux, gasPhaseIdx, extQuants.volumeFlux(gasPhaseIdx), up);
                 }
                 break;
             }
@@ -246,15 +240,9 @@ public:
                     const unsigned upIdx = extQuants.solventUpstreamIndex();
                     const auto& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
                     if (upIdx == inIdx) {
-                        flux[contiFoamEqIdx] =
-                            extQuants.solventVolumeFlux() *
-                            up.solventInverseFormationVolumeFactor() *
-                            up.foamConcentration();
+                        addFoamSolventFluxes_<Evaluation>(flux, extQuants.solventVolumeFlux(), up);
                     } else {
-                        flux[contiFoamEqIdx] =
-                            extQuants.solventVolumeFlux() *
-                            decay<Scalar>(up.solventInverseFormationVolumeFactor()) *
-                            decay<Scalar>(up.foamConcentration());
+                        addFoamSolventFluxes_<Scalar>(flux, extQuants.solventVolumeFlux(), up);
                     }
                 } else {
                     throw std::runtime_error("Foam transport phase is SOLVENT but SOLVENT is not activated.");
@@ -262,6 +250,53 @@ public:
                 break;
             default:
                 throw std::runtime_error("Foam transport phase must be GAS/WATER/SOLVENT.");
+        }
+    }
+
+    /*!
+     * \brief Add the foam flux carried by the water or gas phase over a face.
+     *
+     * Only the phase matching the foam transport phase contributes; other phases are ignored.
+     *
+     * \tparam UpEval Evaluation if upstream cell is the derivative cell, Scalar otherwise
+     * \param[in,out] flux Rate vector the foam flux is added to
+     * \param phaseIdx Phase of the volume flux
+     * \param volumeFlux Volume flux of the phase over the face
+     * \param up Intensive quantities of the upstream cell of the phase
+     */
+    template <class UpEval>
+    static void addFoamFluxes_(RateVector& flux,
+                               const unsigned phaseIdx,
+                               const Evaluation& volumeFlux,
+                               const IntensiveQuantities& up)
+    {
+        if ((phaseIdx == waterPhaseIdx && transportPhase() == Phase::WATER)
+            || (phaseIdx == gasPhaseIdx && transportPhase() == Phase::GAS)) {
+            flux[contiFoamEqIdx] += volumeFlux
+                * decay<UpEval>(up.fluidState().invB(phaseIdx))
+                * decay<UpEval>(up.foamConcentration());
+        }
+    }
+
+    /*!
+     * \brief Add the foam flux carried by the solvent over a face.
+     *
+     * Only contributes if the foam transport phase is SOLVENT.
+     *
+     * \tparam UpEval Evaluation if upstream cell is the derivative cell, Scalar otherwise
+     * \param[in,out] flux Rate vector the foam flux is added to
+     * \param solventVolumeFlux Volume flux of the solvent over the face
+     * \param up Intensive quantities of the upstream cell of the solvent
+     */
+    template <class UpEval>
+    static void addFoamSolventFluxes_(RateVector& flux,
+                                      const Evaluation& solventVolumeFlux,
+                                      const IntensiveQuantities& up)
+    {
+        if (transportPhase() == Phase::SOLVENT) {
+            flux[contiFoamEqIdx] += solventVolumeFlux
+                * decay<UpEval>(up.solventInverseFormationVolumeFactor())
+                * decay<UpEval>(up.foamConcentration());
         }
     }
 
@@ -342,6 +377,22 @@ public:
         return params_.foamCoefficients_[satnumRegionIdx];
     }
 
+    static Scalar foamRockDensity(unsigned satnumRegionIdx)
+    { return params_.foamRockDensity_[satnumRegionIdx]; }
+
+    static bool foamAllowDesorption(unsigned satnumRegionIdx)
+    { return params_.foamAllowDesorption_[satnumRegionIdx]; }
+
+    static const TabulatedFunction& adsorbedFoamTable(unsigned satnumRegionIdx)
+    { return params_.adsorbedFoamTable_[satnumRegionIdx]; }
+
+    static const TabulatedFunction& gasMobilityMultiplierTable(unsigned pvtnumRegionIdx)
+    { return params_.gasMobilityMultiplierTable_[pvtnumRegionIdx]; }
+
+    static const typename BlackOilFoamParams<Scalar>::FoamCoefficients&
+    foamCoefficients(unsigned satnumRegionIdx)
+    { return params_.foamCoefficients_[satnumRegionIdx]; }
+
     static Phase transportPhase()
     { return params_.transport_phase_; }
 
@@ -372,6 +423,7 @@ class BlackOilFoamIntensiveQuantities<TypeTag, /*enableFoam=*/true>
     using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using Problem = GetPropType<TypeTag, Properties::Problem>;
 
     using FoamModule = BlackOilFoamModule<TypeTag, true>;
 
@@ -388,12 +440,15 @@ public:
      *        primary variables
      *
      */
-    void foamPropertiesUpdate_(const ElementContext& elemCtx,
-                               unsigned dofIdx,
-                               unsigned timeIdx)
+    void foamPropertiesUpdate_(const Problem& problem,
+                               const PrimaryVariables& priVars,
+                               const unsigned globalSpaceIdx,
+                               const unsigned timeIdx)
     {
-        const PrimaryVariables& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
-        foamConcentration_ = priVars.makeEvaluation(foamConcentrationIdx, timeIdx);
+        const auto linearizationType = problem.model().linearizer().getLinearizationType();
+        const unsigned satnumRegionIdx = problem.satnumRegionIndex(globalSpaceIdx);
+        foamConcentration_
+            = priVars.makeEvaluation(foamConcentrationIdx, timeIdx, linearizationType);
         const auto& fs = asImp_().fluidState_;
 
         // Compute gas mobility reduction factor
@@ -402,7 +457,7 @@ public:
             // The functional model is used.
             // TODO: allow this model.
             // In order to do this we must allow transport to be in the water phase, not just the gas phase.
-            const auto& foamCoefficients = FoamModule::foamCoefficients(elemCtx, dofIdx, timeIdx);
+            const auto& foamCoefficients = FoamModule::foamCoefficients(satnumRegionIdx);
 
             const Scalar fm_mob = foamCoefficients.fm_mob;
 
@@ -434,7 +489,8 @@ public:
             // The tabular model is used.
             // Note that the current implementation only includes the effect of foam concentration (FOAMMOB),
             // and not the optional pressure dependence (FOAMMOBP) or shear dependence (FOAMMOBS).
-            const auto& gasMobilityMultiplier = FoamModule::gasMobilityMultiplierTable(elemCtx, dofIdx, timeIdx);
+            const auto& gasMobilityMultiplier
+                = FoamModule::gasMobilityMultiplierTable(problem.pvtRegionIndex(globalSpaceIdx));
             mobilityReductionFactor = gasMobilityMultiplier.eval(foamConcentration_, /* extrapolate = */ true);
         }
 
@@ -457,13 +513,23 @@ public:
                 throw std::runtime_error("Foam transport phase must be GAS/WATER/SOLVENT.");
         }
 
-        foamRockDensity_ = FoamModule::foamRockDensity(elemCtx, dofIdx, timeIdx);
+        foamRockDensity_ = FoamModule::foamRockDensity(satnumRegionIdx);
 
-        const auto& adsorbedFoamTable = FoamModule::adsorbedFoamTable(elemCtx, dofIdx, timeIdx);
+        const auto& adsorbedFoamTable = FoamModule::adsorbedFoamTable(satnumRegionIdx);
         foamAdsorbed_ = adsorbedFoamTable.eval(foamConcentration_, /*extrapolate=*/true);
-        if (!FoamModule::foamAllowDesorption(elemCtx, dofIdx, timeIdx)) {
+        if (!FoamModule::foamAllowDesorption(satnumRegionIdx)) {
             throw std::runtime_error("Foam module does not support the 'no desorption' option.");
         }
+    }
+
+    void foamPropertiesUpdate_(const ElementContext& elemCtx,
+                               unsigned dofIdx,
+                               unsigned timeIdx)
+    {
+        foamPropertiesUpdate_(elemCtx.problem(),
+                              elemCtx.primaryVars(dofIdx, timeIdx),
+                              elemCtx.globalSpaceIndex(dofIdx, timeIdx),
+                              timeIdx);
     }
 
     const Evaluation& foamConcentration() const
