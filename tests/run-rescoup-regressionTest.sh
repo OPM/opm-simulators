@@ -37,13 +37,15 @@ then
   echo -e "\t\t -d <path>     A directory under the root of the test data to copy together with the case directory, for"
   echo -e "\t\t               data files that several cases share. Its path relative to the root is kept in the copy."
   echo -e "\t\t               Can be given several times. A missing directory is skipped"
+  echo -e "\t\t -g <dir>      Sub-directory of the reference directory that holds the reference files, for"
+  echo -e "\t\t               several masters in one case directory that spawn the same slave decks"
   exit 1
 fi
 
 MASTER_PROCS=1
 OPTIND=1
 SHARED_DIRS=()
-while getopts "i:o:m:r:f:s:a:t:c:x:e:n:u:d:" OPT
+while getopts "i:o:m:r:f:s:a:t:c:x:e:n:u:d:g:" OPT
 do
   case "${OPT}" in
     i) INPUT_DATA_PATH=${OPTARG} ;;
@@ -60,6 +62,7 @@ do
     n) MASTER_PROCS=${OPTARG} ;;
     u) REF_EXE_NAME=${OPTARG} ;;
     d) SHARED_DIRS+=("${OPTARG}") ;;
+    g) REFERENCE_SUBDIR=${OPTARG} ;;
   esac
 done
 shift $(($OPTIND-1))
@@ -67,6 +70,7 @@ TEST_ARGS="$@"
 
 BASE_EXE_NAME=$(basename -- "${EXE_NAME}")
 REF_EXE_NAME=${REF_EXE_NAME:-${BASE_EXE_NAME}}
+REFERENCE_PATH=${INPUT_DATA_PATH}/opm-simulation-reference/${REF_EXE_NAME}${REFERENCE_SUBDIR:+/${REFERENCE_SUBDIR}}
 
 if [ ! -x "${EXE_NAME}" ]; then
     echo "ERROR: Simulator binary not found: ${EXE_NAME}"
@@ -145,11 +149,11 @@ ecode=0
 for name in ${RESULT_NAMES//,/ }
 do
   echo "=== Comparing ${name} ==="
-  ${COMPARE_ECL_COMMAND} ${ignore_extra_kw} ${type} ${INPUT_DATA_PATH}/opm-simulation-reference/${REF_EXE_NAME}/${name} ${RESULT_PATH}/${name} ${ABS_TOL} ${REL_TOL}
+  ${COMPARE_ECL_COMMAND} ${ignore_extra_kw} ${type} ${REFERENCE_PATH}/${name} ${RESULT_PATH}/${name} ${ABS_TOL} ${REL_TOL}
   if [ $? -ne 0 ]
   then
     ecode=1
-    ${COMPARE_ECL_COMMAND} ${ignore_extra_kw} ${type} -a ${INPUT_DATA_PATH}/opm-simulation-reference/${REF_EXE_NAME}/${name} ${RESULT_PATH}/${name} ${ABS_TOL} ${REL_TOL}
+    ${COMPARE_ECL_COMMAND} ${ignore_extra_kw} ${type} -a ${REFERENCE_PATH}/${name} ${RESULT_PATH}/${name} ${ABS_TOL} ${REL_TOL}
   fi
 done
 

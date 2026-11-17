@@ -378,6 +378,10 @@ endfunction()
 #                  order of slave_filenames
 #   - master_procs: number of processes of the master (optional, default 1)
 #   - mpiexec: MPI launcher (optional, default MPIEXEC_EXECUTABLE)
+#   - reference_subdir: sub-directory of the reference directory that holds
+#                       this test's reference files (optional). Needed when
+#                       several masters in one case directory spawn the same
+#                       slave decks, whose results then differ per master.
 #
 # Details:
 #   - This test class runs a reservoir coupling simulation, where the
@@ -385,7 +389,9 @@ endfunction()
 #     output to reference files. The reference files of all decks live in
 #     one directory, ${dir}/opm-simulation-reference/<simulator>, since a
 #     slave's results from a coupled run differ from those of its deck run
-#     on its own.
+#     on its own. When reference_subdir is given, they live in the
+#     sub-directory ${dir}/opm-simulation-reference/<simulator>/<reference_subdir>
+#     instead.
 function(add_test_compare_rescoup_simulation)
   set(oneValueArgs
     CASENAME
@@ -399,6 +405,7 @@ function(add_test_compare_rescoup_simulation)
     MASTER_DIR
     MASTER_PROCS
     MPIEXEC
+    REFERENCE_SUBDIR
   )
   # SHARED_DIRS: directories, relative to OPM_TESTS_ROOT, with data files that the case shares
   # with other cases.  They are copied next to the copy of the case directory.
@@ -437,6 +444,13 @@ function(add_test_compare_rescoup_simulation)
     set(PARAM_SIMULATOR ${PARAM_DEV_SIMULATOR})
   endif()
 
+  set(reference_subdir_arg)
+  set(reference_subdir_prop)
+  if(PARAM_REFERENCE_SUBDIR)
+    set(reference_subdir_arg -g ${PARAM_REFERENCE_SUBDIR})
+    set(reference_subdir_prop REFERENCE_SUBDIR ${PARAM_REFERENCE_SUBDIR})
+  endif()
+
   if(MPIEXEC_MAX_NUMPROCS GREATER_EQUAL mpi_procs)
     # Local computer system can run the master and all slave ranks at once.
     set(TEST_NAME compareRescoupFiles_${PARAM_SIMULATOR}+${PARAM_FILENAME})
@@ -461,6 +475,7 @@ function(add_test_compare_rescoup_simulation)
         -x ${PARAM_MPIEXEC}
         -n ${PARAM_MASTER_PROCS}
         -u ${reference_simulator}
+        ${reference_subdir_arg}
         ${shared_dir_args}
       TEST_ARGS
         ${PARAM_TEST_ARGS}
@@ -474,7 +489,8 @@ function(add_test_compare_rescoup_simulation)
                          SIMULATOR ${PARAM_SIMULATOR}
                          REFERENCE_SIMULATOR ${reference_simulator}
                          TESTNAME ${PARAM_CASENAME}
-                         PROCESSORS ${mpi_procs})
+                         PROCESSORS ${mpi_procs}
+                         ${reference_subdir_prop})
   endif()
 endfunction()
 
