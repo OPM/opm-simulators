@@ -29,6 +29,7 @@
 #include <opm/simulators/utils/gatherDeferredLogger.hpp>
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
+#include <opm/simulators/utils/ParallelExceptionSync.hpp>
 
 #include <string>
 #include <exception>
@@ -72,12 +73,37 @@
 
 namespace {
 
-void _throw(Opm::ExceptionType::ExcEnum exc_type,
-            const std::string& message,
-            Opm::Parallel::Communication comm)
+// Agree over all ranks on which exception to throw, if any.
+//
+// Used at the end of a parallel try-catch region, the code between
+// OPM_BEGIN_PARALLEL_TRY_CATCH and OPM_END_PARALLEL_TRY_CATCH (or its _LOG
+// variant).
+//
+// \param exc_type What this rank caught in the region: NONE if it caught
+//        nothing, else the type of its exception.
+// \return NONE if no rank caught anything. Otherwise the type with the
+//         largest enumerator value among the ranks. Which type wins does not
+//         matter; what matters is that every rank gets the same answer, so
+//         that all ranks throw the same exception.
+//
+// A rank that caught an exception waits for the other ranks for a bounded
+// time only, and aborts the run if they do not arrive: they are then stuck
+// in another collective call.
+Opm::ExceptionType::ExcEnum _globalExceptionType(Opm::ExceptionType::ExcEnum exc_type,
+                                                 const std::string& message,
+                                                 Opm::Parallel::Communication comm)
 {
-    auto global_exc = comm.max(exc_type);
+    return static_cast<Opm::ExceptionType::ExcEnum>(
+        Opm::detail::maxOverRanksOrAbort(comm,
+                                         static_cast<int>(exc_type),
+                                         exc_type != Opm::ExceptionType::NONE,
+                                         message,
+                                         "at the end of a parallel try-catch region"));
+}
 
+void _throwGlobal(Opm::ExceptionType::ExcEnum global_exc,
+                  const std::string& message)
+{
     switch (global_exc) {
     case Opm::ExceptionType::NONE:
         break;
@@ -97,6 +123,13 @@ void _throw(Opm::ExceptionType::ExcEnum exc_type,
     default:
         throw std::logic_error(message);
     }
+}
+
+void _throw(Opm::ExceptionType::ExcEnum exc_type,
+            const std::string& message,
+            Opm::Parallel::Communication comm)
+{
+    _throwGlobal(_globalExceptionType(exc_type, message, comm), message);
 }
 
 } // anonymous namespace
@@ -120,6 +153,9 @@ inline void logAndCheckForExceptionsAndThrow(Opm::DeferredLogger& deferred_logge
     if (exc_type != Opm::ExceptionType::NONE && comm.size() > 1) {
         deferred_logger.error("[Exception on rank " + std::to_string(comm.rank()) + "]: " + message);
     }
+    // Agree on the exception type before the (blocking) gather of the log
+    // messages, so that a rank that failed alone does not wait in the gather.
+    const auto global_exc = _globalExceptionType(exc_type, message, comm);
     Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(deferred_logger, comm);
 
     if (terminal_output) {
@@ -129,7 +165,7 @@ inline void logAndCheckForExceptionsAndThrow(Opm::DeferredLogger& deferred_logge
     // cleared from the global logger, but we must also clear them
     // from the local logger.
     deferred_logger.clearMessages();
-    _throw(exc_type, message, comm);
+    _throwGlobal(global_exc, message);
 }
 
 inline void logAndCheckForProblemsAndThrow(Opm::DeferredLogger& deferred_logger,
@@ -142,6 +178,9 @@ inline void logAndCheckForProblemsAndThrow(Opm::DeferredLogger& deferred_logger,
     if (exc_type != Opm::ExceptionType::NONE && comm.size() > 1) {
         deferred_logger.problem("[Exception on rank " + std::to_string(comm.rank()) + "]: " + message);
     }
+    // Agree on the exception type before the (blocking) gather of the log
+    // messages, so that a rank that failed alone does not wait in the gather.
+    const auto global_exc = _globalExceptionType(exc_type, message, comm);
     Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(deferred_logger, comm);
 
     if (terminal_output) {
@@ -151,7 +190,7 @@ inline void logAndCheckForProblemsAndThrow(Opm::DeferredLogger& deferred_logger,
     // cleared from the global logger, but we must also clear them
     // from the local logger.
     deferred_logger.clearMessages();
-    _throw(exc_type, message, comm);
+    _throwGlobal(global_exc, message);
 }
 /// \brief Macro to setup the try of a parallel try-catch
 ///
