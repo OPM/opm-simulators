@@ -22,7 +22,7 @@
  * \brief Compares the three-phase EclDefaultMaterial law evaluated on the GPU
  *        through EclMaterialLaw::GpuManager against the CPU
  *        EclMaterialLaw::Manager, for an SPE1-like deck with two SATNUM
- *        regions.
+ *        regions, with and without endpoint scaling.
  */
 
 #include <config.h>
@@ -43,6 +43,9 @@
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
 #include <opm/material/fluidmatrixinteractions/EclDefaultMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
+#include <opm/material/fluidmatrixinteractions/EclEpsTwoPhaseLaw.hpp>
+#include <opm/material/fluidmatrixinteractions/EclEpsTwoPhaseLawParams.hpp>
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawTwoPhaseTypes.hpp>
 #include <opm/material/fluidmatrixinteractions/EclMultiplexerMaterialParams.hpp>
@@ -60,11 +63,13 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <limits>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -191,6 +196,37 @@ std::string makeDeckString(const std::string& runspecExtra,
 
 const std::string defaultDeckString = makeDeckString("", tablesString, "");
 
+// Per-cell endpoints for the endpoint-scaling decks, chosen so that both cells
+// of each region differ. Cell 0 has SWCR = SWL, which makes the first
+// segment of the three-point oil-water krn scaling degenerate. Cell 2 has a
+// nonzero SGL. The values stay off the 0.05 grid of addPointsForCell, so the
+// grid does not hit the kinks at the scaled endpoints (see
+// markPointsOnKinks).
+const std::string endpointArrays =
+    "SWL\n   0.11  0.23  0.17  0.14 /\n"
+    "SWCR\n  0.11  0.31  0.26  0.21 /\n"
+    "SWU\n   0.99  0.98  0.96  0.965 /\n"
+    "SGL\n   0.0   0.0   0.015 0.0 /\n"
+    "SGCR\n  0.025 0.055 0.085 0.035 /\n"
+    "SGU\n   0.87  0.76  0.74  0.83 /\n"
+    "SOWCR\n 0.155 0.055 0.105 0.205 /\n"
+    "SOGCR\n 0.105 0.055 0.125 0.115 /\n";
+
+const std::string endscale = "ENDSCALE\n/\n";
+const std::string twoPointDeckString = makeDeckString(endscale, tablesString, endpointArrays);
+const std::string threePointDeckString
+    = makeDeckString(endscale, tablesString, endpointArrays + "SCALECRS\n  YES /\n");
+const std::string swatinitDeckString = makeDeckString(
+    endscale,
+    tablesString,
+    endpointArrays + "SCALECRS\n  YES /\nSWATINIT\n  0.3 0.4 0.5 0.5 /\n");
+// PCW and PCG enable capillary-pressure scaling without SWATINIT. Table 1
+// has zero Pc, which can only be scaled to zero.
+const std::string pcwPcgDeckString = makeDeckString(
+    endscale,
+    tablesString,
+    endpointArrays + "PCW\n  0.0 12.0 6.0 0.0 /\nPCG\n  0.0 4.0 2.0 0.0 /\n");
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -242,6 +278,41 @@ struct TestTypes {
 };
 
 /*!
+ * \brief As TestTypes, but the GPU two-phase laws have the endpoint-scaling
+ *        layer, with its default parameter type.
+ */
+template <class Scalar>
+struct EpsTestTypes : TestTypes<Scalar> {
+    using Base = TestTypes<Scalar>;
+    using Traits = typename Base::Traits;
+
+    using GasOilLaw = Opm::EclEpsTwoPhaseLaw<typename Base::GasOilLaw>;
+    using OilWaterLaw = Opm::EclEpsTwoPhaseLaw<typename Base::OilWaterLaw>;
+
+    using GpuManagerBuf = Opm::EclMaterialLaw::
+        GpuManager<Traits, GasOilLaw, OilWaterLaw, Opm::gpuistl::GpuBuffer>;
+    using GpuManagerView = Opm::EclMaterialLaw::
+        GpuManager<Traits, GasOilLaw, OilWaterLaw, Opm::gpuistl::GpuView>;
+    using GpuMaterialLaw = typename GpuManagerView::MaterialLaw;
+
+    static_assert(std::is_same_v<GpuMaterialLaw,
+                                 Opm::EclDefaultMaterial<Traits, GasOilLaw, OilWaterLaw>>,
+                  "GpuManager is expected to default to EclDefaultMaterial");
+};
+
+/*!
+ * \brief What materialLawParams() of one cell holds, as seen on the device.
+ */
+template <class Scalar>
+struct AssembledParams {
+    Opm::EclEpsScalingPoints<Scalar> gasOilScaled;
+    Opm::EclEpsScalingPoints<Scalar> oilWaterScaled;
+    Opm::EclEpsScalingPoints<Scalar> gasOilUnscaled;
+    Opm::EclEpsScalingPoints<Scalar> oilWaterUnscaled;
+    Scalar swl;
+};
+
+/*!
  * \brief Minimal fluid state: the three-phase material law only reads
  *        saturations.
  */
@@ -262,6 +333,8 @@ struct SaturationPoint {
     unsigned cell;
     Scalar sw;
     Scalar sg;
+    //! At a kink whose side depends on rounding: compare values only.
+    bool valueOnly = false;
 };
 
 template <class Evaluation, class Scalar>
@@ -348,6 +421,22 @@ __global__ void satnumRegionKernel(ManagerView manager, int* regions, std::size_
     }
 }
 
+template <class ManagerView, class Scalar>
+__global__ void assembledParamsKernel(ManagerView manager,
+                                      AssembledParams<Scalar>* out,
+                                      std::size_t numCells)
+{
+    const std::size_t i = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+    if (i < numCells) {
+        const auto params = manager.materialLawParams(static_cast<unsigned>(i));
+        out[i].gasOilScaled = params.gasOilParams().scaledPoints();
+        out[i].oilWaterScaled = params.oilWaterParams().scaledPoints();
+        out[i].gasOilUnscaled = params.gasOilParams().unscaledPoints();
+        out[i].oilWaterUnscaled = params.oilWaterParams().unscaledPoints();
+        out[i].swl = params.Swl();
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -365,10 +454,10 @@ constexpr Scalar tolerance()
 }
 
 template <class Scalar>
-bool isClose(Scalar a, Scalar b, double toleranceFactor = 1.0)
+bool isClose(Scalar a, Scalar b, double toleranceFactor = 1.0, Scalar absoluteSlack = 0)
 {
     const Scalar scale = std::max({Scalar(1), std::abs(a), std::abs(b)});
-    return std::abs(a - b) <= tolerance<Scalar>() * toleranceFactor * scale;
+    return std::abs(a - b) <= tolerance<Scalar>() * toleranceFactor * scale + absoluteSlack;
 }
 
 /*!
@@ -462,21 +551,38 @@ void addPointsForCell(std::vector<SaturationPoint<Scalar>>& points,
     addPoint<Scalar>(points, cell, swl, 1.0 - swl + 0.01);
 }
 
-template <class Evaluation>
+template <class Evaluation, class Scalar = typename Evaluation::ValueType>
 void checkPhaseValues(const std::array<Evaluation, numPhases>& cpu,
                       const std::array<Evaluation, numPhases>& gpu,
                       const char* quantity,
                       unsigned cell,
                       double sw,
                       double sg,
-                      double oilToleranceFactor = 1.0)
+                      double oilToleranceFactor = 1.0,
+                      bool compareDerivatives = true,
+                      bool saturationIsMapped = false)
 {
     for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
         const auto& c = cpu[phaseIdx];
         const auto& g = gpu[phaseIdx];
         const double factor = phaseIdx == oilPhaseIdx ? oilToleranceFactor : 1.0;
-        bool ok = isClose(c.value(), g.value(), factor);
-        for (int d = 0; d < Evaluation::numVars; ++d) {
+        // With endpoint scaling, the saturation goes through a linear map
+        // before the table lookup, which the device rounds differently (FMA).
+        // That error of a few ulps of the saturation is amplified by the
+        // slope of the curve. At a kink the CPU and the GPU may report
+        // different one-sided slopes, so the steeper one is used. Without
+        // the map there is no such error, and no slack is given.
+        Scalar slack = 0;
+        if (saturationIsMapped) {
+            constexpr int saturationUlps = 64;
+            Scalar slope = 0;
+            for (int d = 0; d < Evaluation::numVars; ++d) {
+                slope = std::max({slope, std::abs(c.derivative(d)), std::abs(g.derivative(d))});
+            }
+            slack = slope * saturationUlps * std::numeric_limits<Scalar>::epsilon();
+        }
+        bool ok = isClose(c.value(), g.value(), factor, slack);
+        for (int d = 0; compareDerivatives && d < Evaluation::numVars; ++d) {
             ok = ok && isClose(c.derivative(d), g.derivative(d), factor);
         }
         if (!ok) {
@@ -487,6 +593,327 @@ void checkPhaseValues(const std::array<Evaluation, numPhases>& cpu,
             BOOST_ERROR(msg.str());
         }
     }
+}
+
+template <class CpuManager>
+const auto& cpuDefaultParams(const CpuManager& cpuManager, unsigned cell)
+{
+    const auto& cpuParams = cpuManager.materialLawParams(cell);
+    BOOST_REQUIRE(cpuParams.approach() == Opm::EclMultiplexerApproach::Default);
+    return cpuParams.template getRealParams<Opm::EclMultiplexerApproach::Default>();
+}
+
+// The CPU traits enable hysteresis, so the endpoint-scaling parameters sit
+// below the hysteresis layer.
+template <class CpuManager>
+const auto& cpuGasOilEpsParams(const CpuManager& cpuManager, unsigned cell)
+{
+    return cpuDefaultParams(cpuManager, cell).gasOilParams().drainageParams();
+}
+
+template <class CpuManager>
+const auto& cpuOilWaterEpsParams(const CpuManager& cpuManager, unsigned cell)
+{
+    return cpuDefaultParams(cpuManager, cell).oilWaterParams().drainageParams();
+}
+
+/*!
+ * \brief The scaled endpoints of one cell, sorted: the kinks of its scaled
+ *        curves, in the saturation each two-phase law sees.
+ */
+struct ScaledKinks {
+    std::vector<double> oilWater; //!< in Sw
+    std::vector<double> gasOil;   //!< in 1 - Swl - Sg
+};
+
+template <class CpuManager>
+ScaledKinks scaledKinks(const CpuManager& cpuManager, unsigned cell)
+{
+    auto collect = [](const auto& scaledPoints) {
+        std::vector<double> values;
+        for (int i = 0; i < 3; ++i) {
+            values.push_back(scaledPoints.saturationPcPoints()[i]);
+            values.push_back(scaledPoints.saturationKrwPoints()[i]);
+            values.push_back(scaledPoints.saturationKrnPoints()[i]);
+        }
+        std::sort(values.begin(), values.end());
+        values.erase(std::unique(values.begin(), values.end()), values.end());
+        return values;
+    };
+    return {collect(cpuOilWaterEpsParams(cpuManager, cell).scaledPoints()),
+            collect(cpuGasOilEpsParams(cpuManager, cell).scaledPoints())};
+}
+
+/*!
+ * \brief Add points at the given kinks, on both sides of them, and inside
+ *        each interval between neighbours.
+ *
+ * The interior point is off-centre: the middle of a scaled interval maps to
+ * the middle of the unscaled one, which is often a table breakpoint.
+ */
+template <class Scalar>
+void addPointsAroundKinks(std::vector<SaturationPoint<Scalar>>& points,
+                          unsigned cell,
+                          const std::vector<double>& kinks,
+                          double otherSaturation,
+                          bool saturationIsWater,
+                          double swl)
+{
+    constexpr double offset = 1e-4;
+    auto add = [&](double value) {
+        if (saturationIsWater) {
+            addPoint<Scalar>(points, cell, value, otherSaturation);
+        } else {
+            addPoint<Scalar>(points, cell, swl, 1.0 - swl - value);
+        }
+    };
+
+    for (std::size_t i = 0; i < kinks.size(); ++i) {
+        add(kinks[i]);
+        add(kinks[i] - offset);
+        add(kinks[i] + offset);
+        if (i + 1 < kinks.size()) {
+            add(kinks[i] + 0.37 * (kinks[i + 1] - kinks[i]));
+        }
+    }
+}
+
+/*!
+ * \brief Saturation points at and around the scaled endpoints of one cell.
+ *
+ * Three-point scaling has kinks at the scaled critical saturations, which a
+ * sweep over the unscaled table breakpoints can miss.
+ */
+template <class Scalar>
+void addScaledEndpointPoints(std::vector<SaturationPoint<Scalar>>& points,
+                             const ScaledKinks& kinks,
+                             unsigned cell,
+                             double swl)
+{
+    for (const double sg : {0.0, 0.07}) {
+        addPointsAroundKinks(points, cell, kinks.oilWater, sg, /*saturationIsWater=*/true, swl);
+    }
+    addPointsAroundKinks(points, cell, kinks.gasOil, 0.0, /*saturationIsWater=*/false, swl);
+}
+
+/*!
+ * \brief Mark the points that lie on a kink of the scaled curves.
+ *
+ * The scaled-to-unscaled map rounds differently on the device (FMA
+ * contraction), so on a kink the CPU and the GPU may take different
+ * one-sided derivatives. Only the values are compared there. Sw below Swl
+ * is clamped to Swl, which is a kink too.
+ */
+template <class Scalar>
+void markPointsOnKinks(std::vector<SaturationPoint<Scalar>>& points,
+                       const std::vector<ScaledKinks>& kinks,
+                       const std::vector<double>& cellSwl)
+{
+    constexpr double distance = 1e-6;
+    auto near = [](double value, const std::vector<double>& candidates) {
+        return std::any_of(candidates.begin(), candidates.end(), [value](double k) {
+            return std::abs(value - k) < distance;
+        });
+    };
+    for (auto& p : points) {
+        const double swl = cellSwl[p.cell];
+        const double sw = std::max(static_cast<double>(p.sw), swl);
+        p.valueOnly = near(sw, kinks[p.cell].oilWater)
+            || near(1.0 - swl - static_cast<double>(p.sg), kinks[p.cell].gasOil);
+    }
+}
+
+/*!
+ * \brief Saturation points from the cell's unscaled tables (see
+ *        addPointsForCell), and the cells' Swl.
+ */
+template <class Scalar, class CpuManager>
+void addTablePoints(std::vector<SaturationPoint<Scalar>>& points,
+                    std::vector<double>& cellSwl,
+                    const CpuManager& cpuManager,
+                    std::size_t numCells)
+{
+    cellSwl.resize(numCells);
+    for (unsigned cell = 0; cell < numCells; ++cell) {
+        const double swl = cpuDefaultParams(cpuManager, cell).Swl();
+        cellSwl[cell] = swl;
+        if (cpuManager.satnumRegionIdx(cell) == 0) {
+            addPointsForCell(points, cell, swl, table1SwofSw, table1SgofSg);
+        } else {
+            addPointsForCell(points, cell, swl, table2SwofSw, table2SgofSg);
+        }
+    }
+}
+
+struct PcCoverage {
+    bool anyNonZeroPcow = false;
+    bool anyNonZeroPcgo = false;
+};
+
+/*!
+ * \brief Evaluate the material law at \p points on the GPU and compare with
+ *        the CPU manager, values and derivatives.
+ *
+ * \p saturationIsMapped: whether the law maps scaled to unscaled saturations
+ * (endpoint scaling active), which allows a slope-dependent value slack (see
+ * checkPhaseValues).
+ */
+template <class Types>
+PcCoverage compareWithCpu(const typename Types::CpuManager& cpuManager,
+                          const typename Types::GpuManagerView& gpuManagerView,
+                          const std::vector<SaturationPoint<typename Types::Traits::Scalar>>& points,
+                          const std::vector<double>& cellSwl,
+                          bool saturationIsMapped)
+{
+    using Scalar = typename Types::Traits::Scalar;
+    using Evaluation = typename Types::Evaluation;
+    using PhaseValues = typename Types::PhaseValues;
+
+    const std::size_t numPoints = points.size();
+    const Opm::gpuistl::GpuBuffer<SaturationPoint<Scalar>> gpuPoints(points);
+    Opm::gpuistl::GpuBuffer<PhaseValues> gpuKr(numPoints);
+    Opm::gpuistl::GpuBuffer<PhaseValues> gpuPc(numPoints);
+
+    constexpr unsigned threadsPerBlock = 128;
+    const unsigned numBlocks = static_cast<unsigned>((numPoints + threadsPerBlock - 1) / threadsPerBlock);
+    evaluateMaterialLawKernel<Types><<<numBlocks, threadsPerBlock>>>(
+        gpuManagerView, gpuPoints.data(), numPoints, gpuKr.data(), gpuPc.data());
+    OPM_GPU_SAFE_CALL(cudaGetLastError());
+    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
+
+    const auto hostKr = gpuKr.asStdVector();
+    const auto hostPc = gpuPc.asStdVector();
+
+    // Compare with the CPU multiplexer, i.e. the path flow uses.
+    PcCoverage coverage;
+    for (std::size_t i = 0; i < numPoints; ++i) {
+        const auto& p = points[i];
+        const auto fs = makeFluidState<Evaluation>(p);
+        const auto& cpuParams = cpuManager.materialLawParams(p.cell);
+
+        PhaseValues cpuKr;
+        PhaseValues cpuPc;
+        Types::CpuMaterialLaw::relativePermeabilities(cpuKr, cpuParams, fs);
+        Types::CpuMaterialLaw::capillaryPressures(cpuPc, cpuParams, fs);
+
+        checkPhaseValues(cpuKr, hostKr[i], "kr", p.cell, p.sw, p.sg,
+                         oilKrToleranceFactor(p.sw, p.sg, cellSwl[p.cell]), !p.valueOnly,
+                         saturationIsMapped);
+        checkPhaseValues(cpuPc, hostPc[i], "pc", p.cell, p.sw, p.sg, 1.0, !p.valueOnly,
+                         saturationIsMapped);
+
+        coverage.anyNonZeroPcow = coverage.anyNonZeroPcow || cpuPc[waterPhaseIdx].value() != 0;
+        coverage.anyNonZeroPcgo = coverage.anyNonZeroPcgo || cpuPc[gasPhaseIdx].value() != 0;
+    }
+    return coverage;
+}
+
+template <class Scalar>
+void checkSaturationPoints(const std::array<Scalar, 3>& cpu,
+                           const std::array<Scalar, 3>& gpu,
+                           const char* what,
+                           unsigned cell)
+{
+    for (int i = 0; i < 3; ++i) {
+        BOOST_TEST_INFO("cell " << cell << ", " << what << "[" << i << "]");
+        BOOST_CHECK_EQUAL(cpu[i], gpu[i]);
+    }
+}
+
+template <class Scalar>
+void checkScalingPoints(const Opm::EclEpsScalingPoints<Scalar>& cpu,
+                        const Opm::EclEpsScalingPoints<Scalar>& gpu,
+                        const Opm::EclEpsConfig& config,
+                        const char* system,
+                        unsigned cell)
+{
+    if (!config.enableSatScaling()) {
+        return;
+    }
+    BOOST_TEST_CONTEXT(system)
+    {
+        checkSaturationPoints(cpu.saturationPcPoints(), gpu.saturationPcPoints(), "pc", cell);
+        checkSaturationPoints(cpu.saturationKrwPoints(), gpu.saturationKrwPoints(), "krw", cell);
+        checkSaturationPoints(cpu.saturationKrnPoints(), gpu.saturationKrnPoints(), "krn", cell);
+        if (config.enablePcScaling()) {
+            BOOST_TEST_INFO("cell " << cell << ", maxPcnw");
+            BOOST_CHECK_EQUAL(cpu.maxPcnw(), gpu.maxPcnw());
+        }
+    }
+}
+
+/*!
+ * \brief Check the GPU manager built from \p cpuManager against it: the
+ *        layout, the assembled parameters of every cell, and the material
+ *        law at the table breakpoints and the scaled endpoints.
+ *
+ * The buffer manager is moved before the view is made, so pointers into a
+ * moved-from manager would show.
+ */
+template <class Types>
+PcCoverage checkEpsManagerMatchesCpu(const typename Types::CpuManager& cpuManager,
+                                     std::size_t numCells,
+                                     bool expectPerCellEndpoints)
+{
+    using Scalar = typename Types::Traits::Scalar;
+
+    BOOST_REQUIRE(!cpuManager.enableHysteresis());
+    BOOST_REQUIRE(cpuManager.satCurveIsAllPiecewiseLinear());
+
+    typename Types::GpuManagerBuf builtManager(cpuManager, numCells);
+    typename Types::GpuManagerBuf gpuManagerBuf(std::move(builtManager));
+    auto gpuManagerView = Opm::gpuistl::make_view(gpuManagerBuf);
+
+    BOOST_CHECK_EQUAL(gpuManagerBuf.hasPerCellEndpoints(), expectPerCellEndpoints);
+    BOOST_CHECK_EQUAL(gpuManagerBuf.numMaterialLawRegions(), 2u);
+
+    // SATNUM lookup.
+    Opm::gpuistl::GpuBuffer<int> regions(numCells);
+    satnumRegionKernel<<<1, 32>>>(gpuManagerView, regions.data(), numCells);
+    OPM_GPU_SAFE_CALL(cudaGetLastError());
+    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
+    const auto hostRegions = regions.asStdVector();
+    for (unsigned cell = 0; cell < numCells; ++cell) {
+        BOOST_CHECK_EQUAL(hostRegions[cell], cpuManager.satnumRegionIdx(cell));
+    }
+
+    // Assembled parameters, field by field. They are copies of the CPU
+    // values, so they must match exactly.
+    Opm::gpuistl::GpuBuffer<AssembledParams<Scalar>> assembled(numCells);
+    assembledParamsKernel<<<1, 32>>>(gpuManagerView, assembled.data(), numCells);
+    OPM_GPU_SAFE_CALL(cudaGetLastError());
+    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
+    const auto hostAssembled = assembled.asStdVector();
+    for (unsigned cell = 0; cell < numCells; ++cell) {
+        const auto& gpu = hostAssembled[cell];
+        const auto& cpuGasOil = cpuGasOilEpsParams(cpuManager, cell);
+        const auto& cpuOilWater = cpuOilWaterEpsParams(cpuManager, cell);
+        BOOST_TEST_INFO("cell " << cell);
+        BOOST_CHECK_EQUAL(gpu.swl, cpuDefaultParams(cpuManager, cell).Swl());
+        checkScalingPoints(cpuGasOil.scaledPoints(), gpu.gasOilScaled,
+                           cpuGasOil.config(), "gas-oil scaled", cell);
+        checkScalingPoints(cpuOilWater.scaledPoints(), gpu.oilWaterScaled,
+                           cpuOilWater.config(), "oil-water scaled", cell);
+        checkScalingPoints(cpuGasOil.unscaledPoints(), gpu.gasOilUnscaled,
+                           cpuGasOil.config(), "gas-oil unscaled", cell);
+        checkScalingPoints(cpuOilWater.unscaledPoints(), gpu.oilWaterUnscaled,
+                           cpuOilWater.config(), "oil-water unscaled", cell);
+    }
+
+    // The material law.
+    std::vector<SaturationPoint<Scalar>> points;
+    std::vector<double> cellSwl;
+    addTablePoints(points, cellSwl, cpuManager, numCells);
+    if (expectPerCellEndpoints) {
+        std::vector<ScaledKinks> kinks;
+        for (unsigned cell = 0; cell < numCells; ++cell) {
+            kinks.push_back(scaledKinks(cpuManager, cell));
+            addScaledEndpointPoints(points, kinks.back(), cell, cellSwl[cell]);
+        }
+        markPointsOnKinks(points, kinks, cellSwl);
+    }
+    return compareWithCpu<Types>(
+        cpuManager, gpuManagerView, points, cellSwl, /*saturationIsMapped=*/expectPerCellEndpoints);
 }
 
 } // namespace
@@ -524,8 +951,6 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SatnumRegionLookupMatchesCpu, Scalar, ScalarTypes)
 BOOST_AUTO_TEST_CASE_TEMPLATE(ThreePhaseRelpermAndPcMatchCpu, Scalar, ScalarTypes)
 {
     using Types = TestTypes<Scalar>;
-    using Evaluation = typename Types::Evaluation;
-    using PhaseValues = typename Types::PhaseValues;
 
     typename Types::CpuManager cpuManager;
     const std::size_t numCells = initCpuManager(cpuManager, defaultDeckString);
@@ -540,63 +965,20 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ThreePhaseRelpermAndPcMatchCpu, Scalar, ScalarType
     auto gpuManagerView = Opm::gpuistl::make_view(gpuManagerBuf);
 
     std::vector<SaturationPoint<Scalar>> points;
-    std::vector<double> cellSwl(numCells);
+    std::vector<double> cellSwl;
+    addTablePoints(points, cellSwl, cpuManager, numCells);
     for (unsigned cell = 0; cell < numCells; ++cell) {
-        const auto& cpuParams = cpuManager.materialLawParams(cell);
-        BOOST_REQUIRE(cpuParams.approach() == Opm::EclMultiplexerApproach::Default);
-        const double swl
-            = cpuParams.template getRealParams<Opm::EclMultiplexerApproach::Default>().Swl();
-        cellSwl[cell] = swl;
-
-        if (cpuManager.satnumRegionIdx(cell) == 0) {
-            BOOST_CHECK_CLOSE(swl, table1SwofSw.front(), 1e-4);
-            addPointsForCell(points, cell, swl, table1SwofSw, table1SgofSg);
-        } else {
-            BOOST_CHECK_CLOSE(swl, table2SwofSw.front(), 1e-4);
-            addPointsForCell(points, cell, swl, table2SwofSw, table2SgofSg);
-        }
+        const double tableSwl = cpuManager.satnumRegionIdx(cell) == 0 ? table1SwofSw.front()
+                                                                       : table2SwofSw.front();
+        BOOST_CHECK_CLOSE(cellSwl[cell], tableSwl, 1e-4);
     }
 
-    // Evaluate on the GPU.
-    const std::size_t numPoints = points.size();
-    const Opm::gpuistl::GpuBuffer<SaturationPoint<Scalar>> gpuPoints(points);
-    Opm::gpuistl::GpuBuffer<PhaseValues> gpuKr(numPoints);
-    Opm::gpuistl::GpuBuffer<PhaseValues> gpuPc(numPoints);
-
-    constexpr unsigned threadsPerBlock = 128;
-    const unsigned numBlocks = static_cast<unsigned>((numPoints + threadsPerBlock - 1) / threadsPerBlock);
-    evaluateMaterialLawKernel<Types><<<numBlocks, threadsPerBlock>>>(
-        gpuManagerView, gpuPoints.data(), numPoints, gpuKr.data(), gpuPc.data());
-    OPM_GPU_SAFE_CALL(cudaGetLastError());
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-
-    const auto hostKr = gpuKr.asStdVector();
-    const auto hostPc = gpuPc.asStdVector();
-
-    // Compare with the CPU multiplexer, i.e. the path flow uses.
-    bool anyNonZeroPcow = false;
-    bool anyNonZeroPcgo = false;
-    for (std::size_t i = 0; i < numPoints; ++i) {
-        const auto& p = points[i];
-        const auto fs = makeFluidState<Evaluation>(p);
-        const auto& cpuParams = cpuManager.materialLawParams(p.cell);
-
-        PhaseValues cpuKr;
-        PhaseValues cpuPc;
-        Types::CpuMaterialLaw::relativePermeabilities(cpuKr, cpuParams, fs);
-        Types::CpuMaterialLaw::capillaryPressures(cpuPc, cpuParams, fs);
-
-        checkPhaseValues(cpuKr, hostKr[i], "kr", p.cell, p.sw, p.sg,
-                         oilKrToleranceFactor(p.sw, p.sg, cellSwl[p.cell]));
-        checkPhaseValues(cpuPc, hostPc[i], "pc", p.cell, p.sw, p.sg);
-
-        anyNonZeroPcow = anyNonZeroPcow || cpuPc[waterPhaseIdx].value() != 0;
-        anyNonZeroPcgo = anyNonZeroPcgo || cpuPc[gasPhaseIdx].value() != 0;
-    }
+    const auto coverage = compareWithCpu<Types>(
+        cpuManager, gpuManagerView, points, cellSwl, /*saturationIsMapped=*/false);
 
     // Guard against a deck change that would leave the Pc paths untested.
-    BOOST_CHECK(anyNonZeroPcow);
-    BOOST_CHECK(anyNonZeroPcgo);
+    BOOST_CHECK(coverage.anyNonZeroPcow);
+    BOOST_CHECK(coverage.anyNonZeroPcgo);
 }
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(RejectsStone1, Scalar, ScalarTypes)
@@ -645,6 +1027,9 @@ namespace {
 
 struct UnsupportedOption {
     const char* name;
+    //! RUNSPEC keywords of the base deck, which the GPU manager accepts.
+    std::string baseRunspec;
+    //! The keywords that add the option to the base deck.
     std::string runspecExtra;
     std::string propsExtra;
     std::string gridExtra;
@@ -653,42 +1038,185 @@ struct UnsupportedOption {
 
 std::vector<UnsupportedOption> unsupportedOptions()
 {
-    const std::string endscale = "ENDSCALE\n/\n";
     return {
-        {"hysteresis", "SATOPTS\n  HYSTER /\n", "EHYSTR\n  0.1 0 /\n", "", ""},
-        {"directional relperms", "SATOPTS\n  DIRECT /\n", "", "", "KRNUMX\n  1 2 2 1 /\n"},
-        {"kr value scaling", endscale, "KRW\n  4*0.9 /\n", "", ""},
-        {"JFUNC", endscale, "",
+        {"hysteresis", "", "SATOPTS\n  HYSTER /\n", "EHYSTR\n  0.1 0 /\n", "", ""},
+        {"directional relperms", "", "SATOPTS\n  DIRECT /\n", "", "", "KRNUMX\n  1 2 2 1 /\n"},
+        {"kr value scaling", endscale, "", "KRW\n  4*0.9 /\n", "", ""},
+        {"JFUNC", endscale, "", "",
          "PERMX\n  4*100 /\nPERMY\n  4*100 /\nPERMZ\n  4*10 /\nJFUNC\n  WATER 22.0 /\n", ""},
-        {"ENKRVD", endscale,
+        {"ENKRVD", endscale, "",
          "ENKRVD\n"
          "  8000 1.0 1.0 1.0 0.9 0.9 0.9 0.9\n"
          "  9000 1.0 1.0 1.0 0.9 0.9 0.9 0.9 /\n",
          "", ""},
-        {"PPCWMAX", "", "PPCWMAX\n  100.0 NO /\n  100.0 NO /\n", "", ""},
+        {"PPCWMAX", "", "", "PPCWMAX\n  100.0 NO /\n  100.0 NO /\n", "", ""},
     };
 }
 
 } // namespace
 
-// Each option the GPU manager does not implement is rejected.
+// Each option the GPU manager does not implement is rejected. The law has the
+// endpoint-scaling layer, so the rejection of endpoint scaling without that
+// layer cannot fire, and each case depends on the check for its own option.
+// The base deck without the option is accepted, so the rejection is caused by
+// the option alone.
 BOOST_AUTO_TEST_CASE_TEMPLATE(RejectsUnsupportedOptions, Scalar, ScalarTypes)
 {
-    using Types = TestTypes<Scalar>;
+    using Types = EpsTestTypes<Scalar>;
 
     for (const auto& option : unsupportedOptions()) {
         BOOST_TEST_CONTEXT("Option: " << option.name)
         {
+            {
+                typename Types::CpuManager cpuManager;
+                const std::size_t numCells
+                    = initCpuManager(cpuManager, makeDeckString(option.baseRunspec, tablesString, ""));
+                BOOST_CHECK_NO_THROW(buildGpuManager<Types>(cpuManager, numCells));
+            }
+
             typename Types::CpuManager cpuManager;
             const std::size_t numCells
                 = initCpuManager(cpuManager,
-                                 makeDeckString(option.runspecExtra,
+                                 makeDeckString(option.baseRunspec + option.runspecExtra,
                                                 tablesString,
                                                 option.propsExtra,
                                                 option.gridExtra,
                                                 option.regionsExtra));
             BOOST_CHECK_THROW(buildGpuManager<Types>(cpuManager, numCells),
                               std::logic_error);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Endpoint scaling
+// ---------------------------------------------------------------------------
+
+// The EPS-capable GPU law matches the CPU on a deck without endpoint scaling.
+BOOST_AUTO_TEST_CASE_TEMPLATE(EpsLayerWithoutEndpointScalingMatchesCpu, Scalar, ScalarTypes)
+{
+    using Types = EpsTestTypes<Scalar>;
+
+    typename Types::CpuManager cpuManager;
+    const std::size_t numCells = initCpuManager(cpuManager, defaultDeckString);
+    BOOST_REQUIRE(!usesEndpointScaling(cpuManager));
+
+    const auto coverage
+        = checkEpsManagerMatchesCpu<Types>(cpuManager, numCells, /*expectPerCellEndpoints=*/false);
+    BOOST_CHECK(coverage.anyNonZeroPcow);
+    BOOST_CHECK(coverage.anyNonZeroPcgo);
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(TwoPointScalingMatchesCpu, Scalar, ScalarTypes)
+{
+    using Types = EpsTestTypes<Scalar>;
+
+    typename Types::CpuManager cpuManager;
+    const std::size_t numCells = initCpuManager(cpuManager, twoPointDeckString);
+    BOOST_REQUIRE(cpuManager.oilWaterConfig().enableSatScaling());
+    BOOST_REQUIRE(!cpuManager.oilWaterConfig().enableThreePointKrSatScaling());
+    BOOST_REQUIRE(!cpuManager.oilWaterConfig().enablePcScaling());
+
+    checkEpsManagerMatchesCpu<Types>(cpuManager, numCells, /*expectPerCellEndpoints=*/true);
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(ThreePointScalingMatchesCpu, Scalar, ScalarTypes)
+{
+    using Types = EpsTestTypes<Scalar>;
+
+    typename Types::CpuManager cpuManager;
+    const std::size_t numCells = initCpuManager(cpuManager, threePointDeckString);
+    BOOST_REQUIRE(cpuManager.oilWaterConfig().enableThreePointKrSatScaling());
+    BOOST_REQUIRE(cpuManager.gasOilConfig().enableThreePointKrSatScaling());
+
+    checkEpsManagerMatchesCpu<Types>(cpuManager, numCells, /*expectPerCellEndpoints=*/true);
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(SwatinitScalingMatchesCpu, Scalar, ScalarTypes)
+{
+    using Types = EpsTestTypes<Scalar>;
+
+    typename Types::CpuManager cpuManager;
+    const std::size_t numCells = initCpuManager(cpuManager, swatinitDeckString);
+    BOOST_REQUIRE(cpuManager.oilWaterConfig().enablePcScaling());
+    BOOST_REQUIRE_EQUAL(numCells, 4u);
+
+    // As the equilibration would, before the GPU manager is built. Both
+    // table 2 cells get a new maximum Pcow, each its own. Table 1 has zero
+    // Pcow, so cell 0 stays below applySwatinit's threshold, and cell 3 has
+    // pcow <= 0; neither changes.
+    struct SwatinitCall {
+        unsigned cell;
+        Scalar pcow;
+        Scalar sw;
+        bool changesMaxPcow;
+    };
+    const std::array<SwatinitCall, 4> calls{{
+        {0, Scalar(1.0e4), Scalar(0.3), false},
+        {1, Scalar(3.0e4), Scalar(0.4), true},
+        {2, Scalar(2.0e4), Scalar(0.5), true},
+        {3, Scalar(-1.0), Scalar(0.5), false},
+    }};
+    for (const auto& call : calls) {
+        const Scalar maxPcowBefore = cpuManager.oilWaterScaledEpsInfoDrainage(call.cell).maxPcow;
+        cpuManager.applySwatinit(call.cell, call.pcow, call.sw);
+        const Scalar maxPcowAfter = cpuManager.oilWaterScaledEpsInfoDrainage(call.cell).maxPcow;
+        BOOST_TEST_INFO("cell " << call.cell);
+        BOOST_CHECK_EQUAL(maxPcowAfter != maxPcowBefore, call.changesMaxPcow);
+    }
+    // The two cells of region 2 must differ, so the per-cell storage is needed.
+    BOOST_CHECK_NE(cpuManager.oilWaterScaledEpsInfoDrainage(1).maxPcow,
+                   cpuManager.oilWaterScaledEpsInfoDrainage(2).maxPcow);
+
+    const auto coverage
+        = checkEpsManagerMatchesCpu<Types>(cpuManager, numCells, /*expectPerCellEndpoints=*/true);
+    BOOST_CHECK(coverage.anyNonZeroPcow);
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(PcwPcgScalingMatchesCpu, Scalar, ScalarTypes)
+{
+    using Types = EpsTestTypes<Scalar>;
+
+    typename Types::CpuManager cpuManager;
+    const std::size_t numCells = initCpuManager(cpuManager, pcwPcgDeckString);
+    BOOST_REQUIRE(cpuManager.oilWaterConfig().enablePcScaling());
+    BOOST_REQUIRE(cpuManager.gasOilConfig().enablePcScaling());
+
+    const auto coverage
+        = checkEpsManagerMatchesCpu<Types>(cpuManager, numCells, /*expectPerCellEndpoints=*/true);
+    BOOST_CHECK(coverage.anyNonZeroPcow);
+    BOOST_CHECK(coverage.anyNonZeroPcgo);
+}
+
+// The device constructor of EclEpsTwoPhaseLawParams, used on the host with
+// the CPU effective law: it must give the same law as the setter-built
+// parameters it copies.
+BOOST_AUTO_TEST_CASE_TEMPLATE(EpsParamsDeviceConstructorMatchesSetters, Scalar, ScalarTypes)
+{
+    using Types = TestTypes<Scalar>;
+    using Law = typename Types::TwoPhaseTypes::OilWaterEpsLaw;
+    using Params = typename Law::Params;
+
+    typename Types::CpuManager cpuManager;
+    const std::size_t numCells = initCpuManager(cpuManager, threePointDeckString);
+
+    for (unsigned cell = 0; cell < numCells; ++cell) {
+        const Params& setterBuilt = cpuOilWaterEpsParams(cpuManager, cell);
+        const Params constructed(&setterBuilt.effectiveLawParams(),
+                                 &setterBuilt.unscaledPoints(),
+                                 setterBuilt.config(),
+                                 setterBuilt.scaledPoints());
+        for (int i = 0; i <= 50; ++i) {
+            const Scalar sw = Scalar(0.02 * i);
+            BOOST_TEST_CONTEXT("cell " << cell << ", Sw = " << sw)
+            {
+                BOOST_CHECK_EQUAL(Law::twoPhaseSatPcnw(constructed, sw),
+                                  Law::twoPhaseSatPcnw(setterBuilt, sw));
+                BOOST_CHECK_EQUAL(Law::twoPhaseSatKrw(constructed, sw),
+                                  Law::twoPhaseSatKrw(setterBuilt, sw));
+                BOOST_CHECK_EQUAL(Law::twoPhaseSatKrn(constructed, sw),
+                                  Law::twoPhaseSatKrn(setterBuilt, sw));
+            }
         }
     }
 }
