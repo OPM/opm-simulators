@@ -208,6 +208,30 @@ BOOST_AUTO_TEST_CASE(BarrierMeetsRegionEnd, * boost::unit_test::disabled())
     BOOST_ERROR("The run should have been aborted");
 }
 
+// Rank 0 throws inside a parallel try-catch region, while the other ranks
+// wait in a blocking collective call further down in the same region, on the
+// simulation's communicator. Rank 0 never makes that call, so the other ranks
+// never reach the end of the region. Rank 0 must abort at the end of the
+// region after its time limit, with the message of its exception. Disabled in
+// the normal run for the same reason as LoneFailureAborts, with a ctest entry
+// of its own.
+BOOST_AUTO_TEST_CASE(RegionEndFailureAborts, * boost::unit_test::disabled())
+{
+    const auto cc = comm();
+    BOOST_REQUIRE(cc.size() > 1);
+    const Enabled enabled{/*timeout_seconds=*/1.0};
+
+    OPM_BEGIN_PARALLEL_TRY_CATCH();
+    if (cc.rank() == 0) {
+        throw std::runtime_error("failure on rank 0 only");
+    }
+    // Without rank 0, this call never returns.
+    [[maybe_unused]] const int total = cc.sum(1);
+    OPM_END_PARALLEL_TRY_CATCH(/*prefix=*/"region: ", cc);
+
+    BOOST_ERROR("The run should have been aborted");
+}
+
 int main(int argc, char** argv)
 {
     Dune::MPIHelper::instance(argc, argv);

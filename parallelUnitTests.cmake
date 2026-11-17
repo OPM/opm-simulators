@@ -95,7 +95,9 @@ opm_add_test(test_parallel_exception_sync
 # passes when its output matches PASS_REGULAR_EXPRESSION instead, whatever
 # the exit code. It fails, whatever else the output says, when it matches
 # FAIL_REGULAR_EXPRESSION: the message of a rank that came back from its
-# wait instead of being ended by the abort.
+# wait instead of being ended by the abort. A rank that hangs instead of
+# aborting fails on the TIMEOUT, after a minute rather than after ctest's
+# default of 1500 s.
 opm_add_test(test_parallel_exception_sync_abort
   EXE_TARGET
     test_parallel_exception_sync
@@ -108,6 +110,7 @@ opm_add_test(test_parallel_exception_sync_abort
 )
 set_tests_properties(parallel_exception_sync_abort
   PROPERTIES
+  TIMEOUT 60
   PASS_REGULAR_EXPRESSION
     "did not report a failure within 1 s"
   FAIL_REGULAR_EXPRESSION
@@ -130,8 +133,32 @@ opm_add_test(test_parallel_exception_sync_barrier_vs_region
 )
 set_tests_properties(parallel_exception_sync_barrier_vs_region
   PROPERTIES
+  TIMEOUT 60
   PASS_REGULAR_EXPRESSION
     "did not report a failure within 1 s .when a time step failed"
+  FAIL_REGULAR_EXPRESSION
+    "The run should have been aborted"
+)
+
+# Rank 0 throws inside a parallel try-catch region while the other ranks wait
+# in a blocking collective call further down in the region. Rank 0 must abort
+# at the end of the region with the message of its exception. The pattern
+# covers three lines of that message: where rank 0 waited, and the exception.
+opm_add_test(test_parallel_exception_sync_region_end
+  EXE_TARGET
+    test_parallel_exception_sync
+  DRIVER_ARGS
+    -n 4
+  TEST_ARGS
+    --run_test=RegionEndFailureAborts
+  PROCESSORS
+    4
+)
+set_tests_properties(parallel_exception_sync_region_end
+  PROPERTIES
+  TIMEOUT 60
+  PASS_REGULAR_EXPRESSION
+    "within 1 s .at the end of a parallel try-catch region[^\n]*\n[^\n]*\nThe failure on rank 0 was: region: failure on rank 0 only"
   FAIL_REGULAR_EXPRESSION
     "The run should have been aborted"
 )
