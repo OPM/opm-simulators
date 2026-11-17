@@ -202,6 +202,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/utils/FullySupportedFlowKeywords.cpp
   opm/simulators/utils/ParallelFileMerger.cpp
   opm/simulators/utils/ParallelRegionsetVariableDescriptor.cpp
+  opm/simulators/utils/ParallelExceptionSync.cpp
   opm/simulators/utils/ParallelRegionVariableValues.cpp
   opm/simulators/utils/ParallelRestart.cpp
   opm/simulators/utils/PartiallySupportedFlowKeywords.cpp
@@ -1319,6 +1320,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/utils/DeferredLogger.hpp
   opm/simulators/utils/DeferredLoggingErrorHelpers.hpp
   opm/simulators/utils/ParallelEclipseState.hpp
+  opm/simulators/utils/ParallelExceptionSync.hpp
   opm/simulators/utils/ParallelFileMerger.hpp
   opm/simulators/utils/ParallelNLDDPartitioningZoltan.hpp
   opm/simulators/utils/ParallelRestart.hpp

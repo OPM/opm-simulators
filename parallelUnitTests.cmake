@@ -75,6 +75,41 @@ opm_add_test(test_wellsolverecovery
     2
 )
 
+opm_add_test(test_parallel_exception_sync
+  DEPENDS
+    opmsimulators
+  LIBRARIES
+    opmsimulators
+    Boost::unit_test_framework
+  SOURCES
+    tests/test_parallel_exception_sync.cpp
+  DRIVER_ARGS
+    -n 4
+  PROCESSORS
+    4
+)
+
+# One rank fails alone, and must abort the run with a message. This entry
+# runs the binary of the entry above (EXE_TARGET, so no SOURCES), only its
+# test case LoneFailureAborts. An aborted run never exits with 0, so the test
+# passes when its output matches PASS_REGULAR_EXPRESSION instead, whatever
+# the exit code.
+opm_add_test(test_parallel_exception_sync_abort
+  EXE_TARGET
+    test_parallel_exception_sync
+  DRIVER_ARGS
+    -n 4
+  TEST_ARGS
+    --run_test=LoneFailureAborts
+  PROCESSORS
+    4
+)
+set_tests_properties(parallel_exception_sync_abort
+  PROPERTIES
+  PASS_REGULAR_EXPRESSION
+    "did not report a failure within 1 s"
+)
+
 opm_add_test(test_parallelwellinfo_mpi
   EXE_TARGET
     test_parallelwellinfo
