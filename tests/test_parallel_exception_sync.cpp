@@ -22,6 +22,8 @@
 
 #include <boost/test/unit_test.hpp>
 
+#include <opm/simulators/flow/FlowGenericVanguard.hpp>
+#include <opm/simulators/flow/FlowUtils.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
@@ -30,6 +32,7 @@
 #include <dune/common/parallel/mpihelper.hh>
 
 #include <chrono>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -229,6 +232,59 @@ BOOST_AUTO_TEST_CASE(RegionEndFailureAborts, * boost::unit_test::disabled())
     [[maybe_unused]] const int total = cc.sum(1);
     OPM_END_PARALLEL_TRY_CATCH(/*prefix=*/"region: ", cc);
 
+    BOOST_ERROR("The run should have been aborted");
+}
+
+// The last rank alone ends the run with an exception, and checks the other
+// ranks in checkAllMPIProcesses(), as FlowMain does. The other ranks never
+// get there. The last rank must abort after its time limit, with the message
+// of its exception. On a rank other than 0 this needs the safety net: the
+// check without it sends one int to rank 0, and MPI reports a send that small
+// as complete as soon as it has taken the data, even if rank 0 never posts the
+// receive. Disabled in the normal run for the same reason as
+// LoneFailureAborts, with a ctest entry of its own.
+BOOST_AUTO_TEST_CASE(LoneFailureOnLastRankAborts, * boost::unit_test::disabled())
+{
+    const auto cc = comm();
+    BOOST_REQUIRE(cc.size() > 1);
+    Opm::FlowGenericVanguard::setCommunication(
+        std::make_unique<Opm::Parallel::Communication>(cc));
+    const Enabled enabled{/*timeout_seconds=*/1.0};
+
+    if (cc.rank() == cc.size() - 1) {
+        Opm::detail::checkAllMPIProcesses("failure on the last rank only");
+    }
+    else {
+        // Much longer than the time limit of 1 s, and than the 9 s of the
+        // check without the safety net. The abort ends this sleep early.
+        std::this_thread::sleep_for(std::chrono::seconds{20});
+    }
+    BOOST_ERROR("The run should have been aborted");
+}
+
+// Rank 0 ends the run with an exception and checks the other ranks in
+// checkAllMPIProcesses(), while the other ranks failed a time step and wait
+// in the barrier of abortIfNotAllRanksFailed() before they retry it. The two
+// waits must not be matched with each other: after them, rank 0 would stop
+// and the other ranks would go on, out of step. Both sides must abort after
+// the time limit instead. Disabled in the normal run for the same reason as
+// LoneFailureAborts, with a ctest entry of its own.
+BOOST_AUTO_TEST_CASE(BarrierMeetsRunEnd, * boost::unit_test::disabled())
+{
+    const auto cc = comm();
+    BOOST_REQUIRE(cc.size() > 1);
+    Opm::FlowGenericVanguard::setCommunication(
+        std::make_unique<Opm::Parallel::Communication>(cc));
+    const Enabled enabled{/*timeout_seconds=*/1.0};
+
+    if (cc.rank() == 0) {
+        Opm::detail::checkAllMPIProcesses("the run ended on rank 0");
+    }
+    else {
+        Opm::detail::abortIfNotAllRanksFailed(cc,
+                                              /*message=*/"the time step failed",
+                                              /*where=*/"when a time step failed");
+    }
     BOOST_ERROR("The run should have been aborted");
 }
 

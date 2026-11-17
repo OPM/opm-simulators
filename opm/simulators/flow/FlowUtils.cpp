@@ -43,6 +43,7 @@
 
 #include <opm/simulators/flow/ConvergenceOutputConfiguration.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
+#include <opm/simulators/utils/ParallelExceptionSync.hpp>
 #include <opm/simulators/utils/ParallelFileMerger.hpp>
 
 #if HAVE_MPI
@@ -105,6 +106,19 @@ void checkAllMPIProcesses([[maybe_unused]] const std::string& message)
 {
 #if HAVE_MPI
     const auto& comm = FlowGenericVanguard::comm();
+    if (comm.size() > 1 && parallelExceptionSyncEnabled(comm)) {
+        // Every rank that gets here holds an exception. This returns when all
+        // ranks are here, and otherwise aborts the run with the message after
+        // the time limit, on any rank. The check below, with messages from
+        // each rank to rank 0, cannot do that on ranks other than 0: a small
+        // message can be reported as sent as soon as MPI has copied it, before
+        // rank 0 receives it, and even if rank 0 never does.
+        abortIfNotAllRanksEndedRun(comm, message);
+        return;
+    }
+    // Without the safety net (a time limit of 0, or a failure before it is
+    // turned on), check with messages from each rank to rank 0 instead.
+    //
     // Say why before aborting, on std::cerr rather than OpmLog: this rank may
     // be any rank, and on ranks other than 0 OpmLog has no output by default.
     // And MPI_Abort() ends the process without flushing the log files, so the
