@@ -180,6 +180,34 @@ BOOST_AUTO_TEST_CASE(LoneFailureAborts, * boost::unit_test::disabled())
     BOOST_ERROR("The run should have been aborted");
 }
 
+// Rank 0 fails a time step alone and waits in the barrier of
+// abortIfNotAllRanksFailed(), while the other ranks go on and reach the end
+// of a parallel try-catch region, where maxOverRanksOrAbort() takes the
+// maximum. The two calls must not be matched with each other: rank 0 must
+// abort after its time limit, while the other ranks (which have no exception,
+// and so no time limit) wait until the abort ends them. Disabled in the normal
+// run for the same reason as LoneFailureAborts, with a ctest entry of its own.
+BOOST_AUTO_TEST_CASE(BarrierMeetsRegionEnd, * boost::unit_test::disabled())
+{
+    const auto cc = comm();
+    BOOST_REQUIRE(cc.size() > 1);
+    const Enabled enabled{/*timeout_seconds=*/1.0};
+
+    if (cc.rank() == 0) {
+        Opm::detail::abortIfNotAllRanksFailed(cc,
+                                              /*message=*/"the message of the exception",
+                                              /*where=*/"when a time step failed");
+    }
+    else {
+        Opm::detail::maxOverRanksOrAbort(cc,
+                                         /*value=*/0,
+                                         /*has_exception=*/false,
+                                         /*message=*/"",
+                                         /*where=*/"at the end of a region");
+    }
+    BOOST_ERROR("The run should have been aborted");
+}
+
 int main(int argc, char** argv)
 {
     Dune::MPIHelper::instance(argc, argv);
