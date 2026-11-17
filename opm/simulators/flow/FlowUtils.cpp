@@ -54,6 +54,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <string>
 #include <unistd.h>
 #include <vector>
@@ -100,10 +101,19 @@ void handleExtraConvergenceOutput(const SimulatorReport& report,
       report.fullReports(os);
     }
 }
-void checkAllMPIProcesses()
+void checkAllMPIProcesses([[maybe_unused]] const std::string& message)
 {
 #if HAVE_MPI
     const auto& comm = FlowGenericVanguard::comm();
+    // Say why before aborting, on std::cerr rather than OpmLog: this rank may
+    // be any rank, and on ranks other than 0 OpmLog has no output by default.
+    // And MPI_Abort() ends the process without flushing the log files, so the
+    // message of the exception would otherwise be lost.
+    const auto reportStuck = [&comm, &message]() {
+        std::cerr << "\nError: rank " << comm.rank() << " failed, and not all ranks of this "
+                  << "process group reported a failure. The run is aborted.\n"
+                  << "The failure on rank " << comm.rank() << " was: " << message << std::endl;
+    };
     if (comm.size() > 1)
     {
         // we try to prevent the abort here.
@@ -144,6 +154,7 @@ void checkAllMPIProcesses()
             }
             if (msgs != 0) {
                 // seems like some processes are stuck. Abort just to be save
+                reportStuck();
                 MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
             }
         }
@@ -172,6 +183,7 @@ void checkAllMPIProcesses()
                 }
             }
             if (!completed) {
+                reportStuck();
                 MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
             }
         }

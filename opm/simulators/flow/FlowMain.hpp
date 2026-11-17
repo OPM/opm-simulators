@@ -265,7 +265,7 @@ namespace Opm {
                         std::cout << message.str() << "\n";
                     }
                 }
-                detail::checkAllMPIProcesses();
+                detail::checkAllMPIProcesses(message.str());
                 return EXIT_FAILURE;
             };
 
