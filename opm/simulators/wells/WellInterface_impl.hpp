@@ -41,6 +41,7 @@
 #include <opm/simulators/wells/TargetCalculator.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellHelpers.hpp>
+#include <opm/simulators/wells/WellSolveRecovery.hpp>
 
 #include <dune/common/version.hh>
 
@@ -1425,7 +1426,8 @@ namespace Opm
             well_state.well(this->indexOfWell()).restoreIfDiverged(ws_before_zero_rate_solve, solve_threw);
         // A solve that did not converge can also return without having updated the state, for example when
         // it is out of iterations. The state can then still hold rates, which a stopped well must not have.
-        if (restored || !converged) {
+        // The reset contains collective operations, so all ranks of a distributed well must agree on it.
+        if (anyRank(this->parallelWellInfo().communication(), restored || !converged)) {
             this->resetStoppedWell(simulator, dt, groupStateHelper, well_state);
         }
     }

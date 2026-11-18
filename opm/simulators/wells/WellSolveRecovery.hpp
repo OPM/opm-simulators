@@ -25,6 +25,16 @@
 
 namespace Opm {
 
+//! \brief Whether a condition holds on any rank of the communicator.
+//!
+//! Used to take decisions that are followed by collective operations on all ranks of a well.
+//! All ranks of the communicator must call this function.
+template<class Communication>
+bool anyRank(const Communication& comm, const bool condition)
+{
+    return (comm.size() > 1) ? (comm.max(static_cast<int>(condition)) != 0) : condition;
+}
+
 //! \brief Run a solve of a well and recover from a numerical failure on all ranks of the well.
 //!
 //! A well can be distributed over several ranks, and the solve and the recovery contain collective
@@ -54,9 +64,7 @@ bool solveWithSharedRecovery(const Communication& comm, Solve&& solve, Recover&&
         reason = e.what();
     }
 
-    const bool failed = (comm.size() > 1)
-        ? (comm.max(static_cast<int>(failed_on_this_rank)) != 0)
-        : failed_on_this_rank;
+    const bool failed = anyRank(comm, failed_on_this_rank);
     if (failed) {
         std::forward<Recover>(recover)(failed_on_this_rank, std::as_const(reason));
     }

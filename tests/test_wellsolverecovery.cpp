@@ -89,6 +89,18 @@ std::pair<bool, Outcome> run(const Comm& comm, Solve&& solve)
 
 } // namespace
 
+BOOST_AUTO_TEST_CASE(AnyRankAgrees)
+{
+    const auto& comm = Dune::MPIHelper::getCommunication();
+    BOOST_REQUIRE_GE(comm.size(), 2);
+
+    BOOST_CHECK(!Opm::anyRank(comm, false));
+    BOOST_CHECK(Opm::anyRank(comm, true));
+    // true on one rank only is seen on all ranks
+    BOOST_CHECK(Opm::anyRank(comm, comm.rank() == 0));
+    BOOST_CHECK(Opm::anyRank(comm, comm.rank() == comm.size() - 1));
+}
+
 BOOST_AUTO_TEST_CASE(NoFailureOnAnyRank)
 {
     const auto& comm = Dune::MPIHelper::getCommunication();
