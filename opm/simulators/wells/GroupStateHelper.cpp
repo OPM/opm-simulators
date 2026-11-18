@@ -2100,10 +2100,23 @@ collectTargetedProductionGroups_() const
     return targeted;
 }
 
+template <typename Scalar, typename IndexTraits>
+Group::ProductionCMode
+GroupStateHelper<Scalar, IndexTraits>::
+getManifoldControlMode(const Group& manifold) const
+{
+    const auto cmode = this->groupState().production_control(manifold.name());
+    return cmode == Group::ProductionCMode::NONE
+        ? manifold.productionControls(this->summary_state_).cmode
+        : cmode;
+}
+
 // Called from updateNONEProductionGroups().
-// - For each sub-sea manifold group in the production network, follows the
-//   groups without a rate target of their own up to the one whose target the
-//   manifold's common THP honours, as getAutoChokeGroupProductionTargetRate() does.
+// - For each sub-sea manifold group in the production network, finds the group
+//   whose target the manifold's common THP honours by the control modes the
+//   THP solve takes it from: getManifoldControlMode() for the manifold, and
+//   above the manifold the current modes, as getAutoChokeGroupProductionTargetRate()
+//   does.
 template <typename Scalar, typename IndexTraits>
 std::unordered_set<std::string>
 GroupStateHelper<Scalar, IndexTraits>::
@@ -2114,6 +2127,7 @@ collectManifoldTargetGroups_() const
     if (!network.active()) {
         return targeted;
     }
+    const auto& group_state = this->groupState();
     const auto no_target = [](const Group::ProductionCMode cmode) {
         return cmode == Group::ProductionCMode::FLD || cmode == Group::ProductionCMode::NONE;
     };
@@ -2122,12 +2136,15 @@ collectManifoldTargetGroups_() const
             continue;
         }
         const Group* group = &this->schedule_.getGroup(node, this->report_step_);
-        while (no_target(group->productionControls(this->summary_state_).cmode)
-               && group->productionGroupControlAvailable())
-        {
-            group = &this->schedule_.getGroup(group->parent(), this->report_step_);
+        if (!no_target(this->getManifoldControlMode(*group))) {
+            targeted.insert(node);
+            continue;
         }
-        if (!no_target(group->productionControls(this->summary_state_).cmode)) {
+        do {
+            group = &this->schedule_.getGroup(group->parent(), this->report_step_);
+        } while (no_target(group_state.production_control(group->name()))
+                 && group->productionGroupControlAvailable());
+        if (!no_target(group_state.production_control(group->name()))) {
             targeted.insert(group->name());
         }
     }

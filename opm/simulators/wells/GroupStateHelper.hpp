@@ -313,6 +313,14 @@ public:
                                           const std::vector<Scalar>& resv_coeff,
                                           Scalar efficiencyFactor) const;
 
+    /// @brief Get the control mode a sub-sea manifold group follows.
+    /// @details Its wells are on THP control, so its current mode may have been reset
+    ///          to NONE; the mode set in GCONPROD then applies. FLD, also when a limit
+    ///          above has switched the group to it, follows the ancestors.
+    /// @param manifold The manifold group
+    /// @return The current control mode, or the one set in GCONPROD if that is NONE
+    Group::ProductionCMode getManifoldControlMode(const Group& manifold) const;
+
     GuideRate::RateVector getProductionGroupRateVector(const std::string& group_name) const;
 
     std::optional<GroupTarget> getWellGroupTargetInjector(const std::string& name,
@@ -681,6 +689,9 @@ private:
     /// The wells of a manifold group are on THP control, so no well targets
     /// the group whose target the manifold's common THP honours: the manifold
     /// group itself, or the ancestor passing a share of its target down to it.
+    /// The current control modes decide which, as a group scheduled as FLD
+    /// may have switched to one of its own limits, and one with a limit of
+    /// its own to FLD.
     ///
     /// @return Set of group names, the same on all ranks
     std::unordered_set<std::string> collectManifoldTargetGroups_() const;

@@ -250,7 +250,6 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
     }
 
     const auto& simulator = well_model_.simulator();
-    const auto& summary_state = simulator.vanguard().summaryState();
     const auto& comm = simulator.vanguard().grid().comm();
     const auto& group_state_helper = well_model_.groupStateHelper();
     auto& well_state = well_model_.wellState();
@@ -265,12 +264,7 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
             //TODO: Auto choke combined with RESV control is not supported
             std::vector<Scalar> resv_coeff(Indices::numPhases, 1.0);
 
-            // The group's wells are on THP control, so its current control mode
-            // may have been reset to NONE; the mode set in GCONPROD then applies.
-            auto cmode = group_state.production_control(nodeName);
-            if (cmode == Group::ProductionCMode::FLD || cmode == Group::ProductionCMode::NONE) {
-                cmode = group.productionControls(summary_state).cmode;
-            }
+            auto cmode = group_state_helper.getManifoldControlMode(group);
             Scalar target{0.0};
             if (cmode == Group::ProductionCMode::FLD || cmode == Group::ProductionCMode::NONE) {
                 // Target is set for an ancestor group. Target for autochoke group to be
