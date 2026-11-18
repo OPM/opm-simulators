@@ -1650,34 +1650,51 @@ updateSlaveGroupCmodesFromMaster()
     auto& slave = this->reservoirCouplingSlave();
     for (std::size_t i = 0; i < slave.numSlaveGroups(); ++i) {
         const auto& gname = slave.slaveGroupIdxToGroupName(i);
+        const auto& group = this->schedule_.getGroup(gname, this->report_step_);
         // Production cmode
+        bool use_master_cmode = false;
         if (slave.hasMasterProductionTarget(gname)) {
             auto [master_target, master_cmode] = slave.masterProductionTarget(gname);
             auto filter = this->getProductionFilterFlag_(gname, master_cmode);
             if (filter != FilterFlag::SLAV) {
                 this->groupState().production_control(gname, master_cmode);
+                use_master_cmode = true;
             }
-            else {
-                // The master's target is not used, and the group is controlled by
-                // its own GCONPROD. A rate type that GCONPROD has no limit for is
-                // then left over from an earlier target from the master, on a rate
-                // type with another flag. Give the group back its own control mode.
-                const auto& group = this->schedule_.getGroup(gname, this->report_step_);
-                const auto cmode = this->groupState().production_control(gname);
-                const bool is_rate_mode = cmode != Group::ProductionCMode::NONE
-                    && cmode != Group::ProductionCMode::FLD;
-                if (is_rate_mode && !group.has_control(cmode)) {
-                    this->groupState().production_control(gname, group.prod_cmode());
-                }
+        }
+        if (!use_master_cmode) {
+            // The master has no target for the group, or its target is not used,
+            // so the group is controlled by its own GCONPROD. A rate type that
+            // GCONPROD has no limit for is then left over from an earlier target
+            // from the master: one the master has withdrawn, or one on a rate type
+            // with another flag. Give the group back its own control mode.
+            const auto cmode = this->groupState().production_control(gname);
+            const bool is_rate_mode = cmode != Group::ProductionCMode::NONE
+                && cmode != Group::ProductionCMode::FLD;
+            if (is_rate_mode && !group.has_control(cmode)) {
+                this->groupState().production_control(gname, group.prod_cmode());
             }
         }
         // Injection cmode — check each phase
         for (const auto phase : {Phase::WATER, Phase::OIL, Phase::GAS}) {
-            if (slave.hasMasterInjectionTarget(gname, phase)) {
+            if (slave.hasMasterInjectionTarget(gname, phase)
+                && this->getInjectionFilterFlag_(gname, phase) != FilterFlag::SLAV)
+            {
                 auto [master_target, master_cmode] = slave.masterInjectionTarget(gname, phase);
-                auto filter = this->getInjectionFilterFlag_(gname, phase);
-                if (filter != FilterFlag::SLAV) {
-                    this->groupState().injection_control(gname, phase, master_cmode);
+                this->groupState().injection_control(gname, phase, master_cmode);
+            }
+            else if (this->groupState().has_injection_control(gname, phase)) {
+                // As for production: a control mode that the group's own GCONINJE
+                // has no control for is left over from an earlier target from the
+                // master. Give the group back the control mode of its own GCONINJE.
+                const auto cmode = this->groupState().injection_control(gname, phase);
+                const bool is_own_mode = cmode == Group::InjectionCMode::NONE
+                    || cmode == Group::InjectionCMode::FLD
+                    || group.has_control(phase, cmode);
+                if (!is_own_mode) {
+                    const auto own_cmode = group.hasInjectionControl(phase)
+                        ? group.injectionControls(phase, this->summary_state_).cmode
+                        : Group::InjectionCMode::NONE;
+                    this->groupState().injection_control(gname, phase, own_cmode);
                 }
             }
         }

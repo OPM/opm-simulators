@@ -417,6 +417,24 @@ receiveNumMasterGroupNodePressuresFromMaster()
 template <class Scalar>
 void
 ReservoirCouplingSlave<Scalar>::
+clearMasterInjectionTargets()
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->clearMasterInjectionTargets();
+}
+
+template <class Scalar>
+void
+ReservoirCouplingSlave<Scalar>::
+clearMasterProductionConstraints()
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->clearMasterProductionConstraints();
+}
+
+template <class Scalar>
+void
+ReservoirCouplingSlave<Scalar>::
 receiveProductionGroupConstraintsFromMaster(std::size_t num_targets)
 {
     assert(this->report_step_data_);
