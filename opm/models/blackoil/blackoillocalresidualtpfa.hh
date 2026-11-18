@@ -469,6 +469,10 @@ public:
                     BrineModule::template addBrineFluxes_<Evaluation, FluidState>(
                         flux, phaseIdx, darcyFlux, up.fluidState());
                 }
+                if constexpr (enableExtbo) {
+                    ExtboModule::template addExtboFluxes_<Evaluation>(
+                        flux, phaseIdx, darcyFlux, up);
+                }
             } else {
                 const auto& invB = getInvB_<FluidSystem, FluidState, Scalar>(
                     up.fluidState(), phaseIdx, pvtRegionIdx, fsys);
@@ -487,6 +491,9 @@ public:
                     BrineModule::template addBrineFluxes_<Scalar, FluidState>(
                         flux, phaseIdx, darcyFlux, up.fluidState());
                 }
+                if constexpr (enableExtbo) {
+                    ExtboModule::template addExtboFluxes_<Scalar>(flux, phaseIdx, darcyFlux, up);
+                }
             }
         }
 
@@ -495,12 +502,6 @@ public:
             !enableSolvent,
             "Relevant computeFlux() method must be implemented for this module before enabling.");
         // SolventModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
-
-        // deal with zFracton (if present)
-        static_assert(
-            !enableExtbo,
-            "Relevant computeFlux() method must be implemented for this module before enabling.");
-        // ExtboModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
         // deal with polymer (if present)
         static_assert(

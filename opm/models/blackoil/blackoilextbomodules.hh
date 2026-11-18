@@ -188,47 +188,65 @@ public:
                             unsigned timeIdx)
     {
         const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
+        const unsigned inIdx = extQuants.interiorIndex();
 
-        if constexpr (blackoilConserveSurfaceVolume) {
-            const unsigned inIdx = extQuants.interiorIndex();
+        flux[contiZfracEqIdx] = 0.0;
 
-            const unsigned upIdxGas = static_cast<unsigned>(extQuants.upstreamIndex(gasPhaseIdx));
-            const auto& upGas = elemCtx.intensiveQuantities(upIdxGas, timeIdx);
-            const auto& fsGas = upGas.fluidState();
-            if (upIdxGas == inIdx) {
-                flux[contiZfracEqIdx] =
-                    extQuants.volumeFlux(gasPhaseIdx) *
-                    upGas.yVolume() *
-                    fsGas.invB(gasPhaseIdx);
-            }
-            else {
-                flux[contiZfracEqIdx] =
-                        extQuants.volumeFlux(gasPhaseIdx) *
-                        decay<Scalar>(upGas.yVolume()) *
-                        decay<Scalar>(fsGas.invB(gasPhaseIdx));
-            }
-            if (FluidSystem::enableDissolvedGas()) { // account for dissolved z in oil phase
-                const unsigned upIdxOil = static_cast<unsigned>(extQuants.upstreamIndex(oilPhaseIdx));
-                const auto& upOil = elemCtx.intensiveQuantities(upIdxOil, timeIdx);
-                const auto& fsOil = upOil.fluidState();
-                if (upIdxOil == inIdx) {
-                    flux[contiZfracEqIdx] +=
-                        extQuants.volumeFlux(oilPhaseIdx) *
-                        upOil.xVolume() *
-                        fsOil.Rs() *
-                        fsOil.invB(oilPhaseIdx);
-                }
-                else {
-                    flux[contiZfracEqIdx] +=
-                        extQuants.volumeFlux(oilPhaseIdx) *
-                        decay<Scalar>(upOil.xVolume()) *
-                        decay<Scalar>(fsOil.Rs()) *
-                        decay<Scalar>(fsOil.invB(oilPhaseIdx));
-                }
+        const unsigned upIdxGas = static_cast<unsigned>(extQuants.upstreamIndex(gasPhaseIdx));
+        const auto& upGas = elemCtx.intensiveQuantities(upIdxGas, timeIdx);
+        if (upIdxGas == inIdx) {
+            addExtboFluxes_<Evaluation>(
+                flux, gasPhaseIdx, extQuants.volumeFlux(gasPhaseIdx), upGas);
+        } else {
+            addExtboFluxes_<Scalar>(flux, gasPhaseIdx, extQuants.volumeFlux(gasPhaseIdx), upGas);
+        }
+
+        if (FluidSystem::enableDissolvedGas()) { // account for dissolved z in oil phase
+            const unsigned upIdxOil = static_cast<unsigned>(extQuants.upstreamIndex(oilPhaseIdx));
+            const auto& upOil = elemCtx.intensiveQuantities(upIdxOil, timeIdx);
+            if (upIdxOil == inIdx) {
+                addExtboFluxes_<Evaluation>(
+                    flux, oilPhaseIdx, extQuants.volumeFlux(oilPhaseIdx), upOil);
+            } else {
+                addExtboFluxes_<Scalar>(
+                    flux, oilPhaseIdx, extQuants.volumeFlux(oilPhaseIdx), upOil);
             }
         }
-        else {
-            throw std::runtime_error("Only component conservation in terms of surface volumes is implemented. ");
+    }
+
+    /*!
+     * \brief Add the z-component flux carried by one phase over a face.
+     *
+     * The gas phase carries z as yVolume, and the oil phase as xVolume of the dissolved gas.
+     *
+     * \tparam UpEval Evaluation if upstream cell is the derivative cell, Scalar otherwise
+     * \param[in,out] flux Rate vector the z-component flux is added to
+     * \param phaseIdx Phase of the volume flux (other phases than gas and oil are ignored)
+     * \param volumeFlux Volume flux of the phase over the face
+     * \param up Intensive quantities of the upstream cell of the phase
+     */
+    template <class UpEval>
+    static void addExtboFluxes_(RateVector& flux,
+                                const unsigned phaseIdx,
+                                const Evaluation& volumeFlux,
+                                const IntensiveQuantities& up)
+    {
+        if constexpr (blackoilConserveSurfaceVolume) {
+            const auto& fs = up.fluidState();
+            if (phaseIdx == gasPhaseIdx) {
+                flux[contiZfracEqIdx] += volumeFlux
+                    * decay<UpEval>(up.yVolume())
+                    * decay<UpEval>(fs.invB(gasPhaseIdx));
+            } else if (phaseIdx == oilPhaseIdx && FluidSystem::enableDissolvedGas()) {
+                // account for dissolved z in oil phase
+                flux[contiZfracEqIdx] += volumeFlux
+                    * decay<UpEval>(up.xVolume())
+                    * decay<UpEval>(fs.Rs())
+                    * decay<UpEval>(fs.invB(oilPhaseIdx));
+            }
+        } else {
+            throw std::runtime_error(
+                "Only component conservation in terms of surface volumes is implemented. ");
         }
     }
 

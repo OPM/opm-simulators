@@ -805,7 +805,6 @@ public:
         // This is the version of update() that does not use any ElementContext.
         // It is limited by some modules that are not yet adapted to that.
         static_assert(!enableSolvent);
-        static_assert(!enableExtbo);
         static_assert(!enablePolymer);
         static_assert(!enableFoam);
         static_assert(!enableMICP);
@@ -817,6 +816,10 @@ public:
         updateCommonPart<Args...>(problem, priVars, globalSpaceIdx, timeIdx);
         // Porosity requires separate calls so this can be instantiated with ReservoirProblem from the examples/ directory.
         updatePorosity(problem, priVars, globalSpaceIdx, timeIdx);
+
+        if constexpr (enableExtbo) {
+            asImp_().zPvtUpdate_();
+        }
 
         // TODO: Here we should do the parts for solvent etc. at the bottom of the other update() function.
     }
