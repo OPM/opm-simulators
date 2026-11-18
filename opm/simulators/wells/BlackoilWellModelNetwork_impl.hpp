@@ -249,6 +249,12 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
                 Scalar group_rate(0.0);
                 Scalar rate(0.0);
                 for (auto& well : well_model_) {
+                    // The choke regulates the production of the group, so
+                    // an injector in the group takes no part in the rate
+                    // that is matched against the target.
+                    if (well->isInjector()) {
+                        continue;
+                    }
                     std::string well_name = well->name();
                     auto& ws = well_state.well(well_name);
                     if (group.hasWell(well_name)) {
