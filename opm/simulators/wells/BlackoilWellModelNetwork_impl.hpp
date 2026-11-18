@@ -113,11 +113,6 @@ update(const bool mandatory_network_balance,
         const double dt = well_model_.simulator().timeStepSize();
         // Calculate common THP for subsea manifold well group (item 3 of NODEPROP set to YES)
         const bool well_group_thp_updated = computeWellGroupThp(dt, deferred_logger);
-        if (well_group_thp_updated) {
-            // The network pressures must follow from the rates of the wells
-            // just solved against the new common THP.
-            well_model_.updateAndCommunicateGroupData(episodeIdx, /*update_wellgrouptarget*/ true);
-        }
         const int max_number_of_sub_iterations =
             well_model_.param().network_max_sub_iterations_;
         const Scalar network_pressure_update_damping_factor =
@@ -221,9 +216,11 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
     auto& group_state = well_model_.groupState();
 
     bool well_group_thp_updated = false;
+    bool has_manifold = false;
     for (const std::string& nodeName : network.node_names()) {
         const bool has_choke = network.node(nodeName).as_choke();
         if (has_choke) {
+            has_manifold = true;
             const Group& group = well_model_.schedule().getGroup(nodeName, reportStepIdx);
 
             //TODO: Auto choke combined with RESV control is not supported
@@ -460,6 +457,12 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
                 group_state.update_well_group_thp(nodeName, well_group_thp);
             }
         }
+    }
+    // The wells of the manifold groups were solved again, and may have
+    // stopped, reopened or changed rate also where the common THP did not
+    // change: the network pressures must follow from their new rates.
+    if (has_manifold) {
+        well_model_.updateAndCommunicateGroupData(reportStepIdx, /*update_wellgrouptarget*/ true);
     }
     return well_group_thp_updated;
 }
