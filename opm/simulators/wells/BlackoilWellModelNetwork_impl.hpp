@@ -42,7 +42,6 @@
 
 #include <fmt/format.h>
 
-#include <map>
 #include <optional>
 #include <string>
 #include <type_traits>
@@ -85,13 +84,14 @@ doPreStepRebalance(DeferredLogger& deferred_logger)
     // all ranks of the well recover, as the recovery contains collective operations. Other failures
     // are thrown after all wells are solved, so that the ranks of a well are not left waiting for
     // a rank that has stopped solving the wells.
-    // The states are kept to be able to restore them if a well fails.
-    std::map<int, std::remove_cvref_t<decltype(well_state.well(0))>> states_before_step;
+    // The state of the well that is solved is kept to be able to restore it if the well fails. The recovery
+    // is done before the next well is solved, so only one state is needed.
+    std::optional<std::remove_cvref_t<decltype(well_state.well(0))>> state_before_step;
     well_failed = solveWellsWithSharedRecovery(
         this->well_model_,
         [](const auto& well) -> const auto& { return well->parallelWellInfo().communication(); },
         [&](auto& well) {
-            states_before_step.insert_or_assign(well->indexOfWell(), well_state.well(well->indexOfWell()));
+            state_before_step = well_state.well(well->indexOfWell());
             well->solveEqAndUpdateWellState(well_model_.simulator(),
                                             well_model_.groupStateHelper(),
                                             well_state);
@@ -102,7 +102,7 @@ doPreStepRebalance(DeferredLogger& deferred_logger)
                                     fmt::format("Well {} failed during the initial (pre-step) network balance ({}). "
                                                 "The well is stopped and solved with zero rate.",
                                                 well->name(), cause));
-            well_state.well(well->indexOfWell()) = states_before_step.at(well->indexOfWell());
+            well_state.well(well->indexOfWell()) = state_before_step.value();
             try {
                 well->updatePrimaryVariables(well_model_.groupStateHelper());
             } catch (const NumericalProblem&) {
