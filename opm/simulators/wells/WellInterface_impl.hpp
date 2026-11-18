@@ -1429,6 +1429,13 @@ namespace Opm
         // The reset contains collective operations, so all ranks of a distributed well must agree on it.
         if (anyRank(this->parallelWellInfo().communication(), restored || !converged)) {
             this->resetStoppedWell(simulator, dt, groupStateHelper, well_state);
+        } else {
+            // A solve that converges in the first assembly returns before the well state is updated, so the
+            // state can still hold the rates from before the well was stopped. The rates of a stopped well
+            // are zero. The segment rates are kept, as they can hold valid flow within the well.
+            auto& ws = well_state.well(this->indexOfWell());
+            std::ranges::fill(ws.surface_rates, Scalar{0.0});
+            std::ranges::fill(ws.reservoir_rates, Scalar{0.0});
         }
     }
 
