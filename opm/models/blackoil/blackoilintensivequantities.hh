@@ -804,10 +804,8 @@ public:
     {
         // This is the version of update() that does not use any ElementContext.
         // It is limited by some modules that are not yet adapted to that.
-        static_assert(!enableSolvent);
         static_assert(!enableExtbo);
         static_assert(!enablePolymer);
-        static_assert(!enableFoam);
         static_assert(!enableMICP);
         static_assert(!enableBrine);
         static_assert(!enableDiffusion);
@@ -818,7 +816,15 @@ public:
         // Porosity requires separate calls so this can be instantiated with ReservoirProblem from the examples/ directory.
         updatePorosity(problem, priVars, globalSpaceIdx, timeIdx);
 
-        // TODO: Here we should do the parts for solvent etc. at the bottom of the other update() function.
+        if constexpr (enableSolvent) {
+            asImp_().solventPvtUpdate_(problem, globalSpaceIdx, timeIdx);
+        }
+        // must come after the solvent update, since the foam update scales the solvent mobility
+        if constexpr (enableFoam) {
+            asImp_().foamPropertiesUpdate_(problem, priVars, globalSpaceIdx, timeIdx);
+        }
+
+        // TODO: Here we should do the parts for extbo etc. at the bottom of the other update() function.
     }
 
     // This function updated the parts that are common to the IntensiveQuantities regardless of extensions used.
