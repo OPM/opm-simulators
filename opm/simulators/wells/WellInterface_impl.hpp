@@ -2611,12 +2611,13 @@ namespace Opm
         OPM_TIMEFUNCTION();
         auto& deferred_logger = groupStateHelper.deferredLogger();
         const auto& summary_state = simulator.vanguard().summaryState();
-        const auto& controls = this->well_ecl_.productionControls(summary_state);
+        const auto& ws = well_state.well(this->indexOfWell());
+        const auto controls = this->productionControlsWithWeldraw(summary_state, ws);
         const auto& pu = this->phaseUsage();
 
         // Inflow at a BHP, and the factor cutting it back to the well's rate
-        // limits keeping the phase fractions. Reservoir volume limits are not
-        // applied.
+        // limits, the WELDRAW and reservoir volume ones included, keeping the
+        // phase fractions.
         const auto inflow = [&](const Scalar bhp) {
             std::vector<Scalar> rates(this->number_of_phases_, 0.0);
             this->computeWellRatesWithBhp(simulator, bhp, rates, deferred_logger);
@@ -2638,6 +2639,12 @@ namespace Opm
             limit(Well::ProducerCMode::WRAT, controls.water_rate, water);
             limit(Well::ProducerCMode::GRAT, controls.gas_rate, produced(IndexTraits::gasPhaseIdx));
             limit(Well::ProducerCMode::LRAT, controls.liquid_rate, oil + water);
+            if (controls.hasControl(Well::ProducerCMode::RESV)) {
+                std::vector<Scalar> coeff(this->number_of_phases_, 1.0);
+                this->rateConverter().calcCoeff(/*fipreg*/ 0, this->pvtRegionIdx(), rates, coeff);
+                limit(Well::ProducerCMode::RESV, controls.resv_rate,
+                      -std::inner_product(rates.begin(), rates.end(), coeff.begin(), Scalar{0.0}));
+            }
             return std::pair{rates, scale};
         };
         const auto frates = [&inflow](const Scalar bhp) {
