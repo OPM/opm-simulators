@@ -1437,6 +1437,9 @@ namespace Opm
         auto& ws = well_state.well(this->indexOfWell());
         std::ranges::fill(ws.surface_rates, Scalar{0.0});
         std::ranges::fill(ws.segments.rates, Scalar{0.0});
+        // the reservoir rates are only calculated when the well state is updated, not in the assembly,
+        // and a restored snapshot would otherwise keep its reservoir rates in the group calculations
+        std::ranges::fill(ws.reservoir_rates, Scalar{0.0});
         // the primary variables, and thereby the assembly, should not come from the failed solve
         try {
             this->updatePrimaryVariables(groupStateHelper);
