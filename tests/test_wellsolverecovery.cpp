@@ -233,6 +233,99 @@ BOOST_AUTO_TEST_CASE(OtherExceptionTakesPrecedenceOverNumericalProblem)
     BOOST_CHECK_EQUAL(outcome.recoveries, 0);
 }
 
+namespace {
+
+// A well of the test: a well on one rank has the communicator of that rank, a distributed well the
+// communicator of all ranks.
+struct TestWell
+{
+    std::string name;
+    Dune::Communication<MPI_Comm> comm;
+};
+
+} // namespace
+
+BOOST_AUTO_TEST_CASE(FatalFailureOfLocalWellDoesNotStopCollectivesOfLaterWells)
+{
+    // Rank 0 has the wells A and B, rank 1 has only B. A is on rank 0 only and B is distributed over both
+    // ranks, and solving B contains a collective operation. If the failure of A made rank 0 leave the loop
+    // at once, rank 1 would wait for rank 0 in B, which would then never come.
+    const auto& world = Dune::MPIHelper::getCommunication();
+    BOOST_REQUIRE_GE(world.size(), 2);
+    if (world.rank() > 1) {
+        return;
+    }
+    const Dune::Communication<MPI_Comm> self(MPI_COMM_SELF);
+
+    std::vector<TestWell> wells;
+    if (world.rank() == 0) {
+        wells.push_back({"A", self});
+    }
+    wells.push_back({"B", world});
+
+    std::vector<std::string> solved;
+    int ranks_in_b = 0;
+    std::string what;
+    try {
+        Opm::solveWellsWithSharedRecovery(
+            wells,
+            [](const TestWell& well) -> const Dune::Communication<MPI_Comm>& { return well.comm; },
+            [&](TestWell& well) {
+                if (well.name == "A") {
+                    throw std::logic_error("A failed");
+                }
+                solved.push_back(well.name);
+                ranks_in_b = well.comm.sum(1);
+            },
+            [](TestWell&, const bool, const std::string&) {});
+        BOOST_CHECK_EQUAL(world.rank(), 1);
+    } catch (const std::exception& e) {
+        what = e.what();
+        BOOST_CHECK_EQUAL(world.rank(), 0);
+    }
+
+    // B was solved on both ranks, with both ranks in its collective operation
+    BOOST_CHECK_EQUAL(solved.size(), 1u);
+    BOOST_CHECK_EQUAL(ranks_in_b, 2);
+    // the failure of A is thrown after the loop, on rank 0 only
+    BOOST_CHECK_EQUAL(what, world.rank() == 0 ? "A failed" : "");
+}
+
+BOOST_AUTO_TEST_CASE(RecoveryOfLocalWellDoesNotDisturbLaterDistributedWell)
+{
+    // As above, but A fails with a numerical problem and recovers on its own, B is not affected.
+    const auto& world = Dune::MPIHelper::getCommunication();
+    BOOST_REQUIRE_GE(world.size(), 2);
+    if (world.rank() > 1) {
+        return;
+    }
+    const Dune::Communication<MPI_Comm> self(MPI_COMM_SELF);
+
+    std::vector<TestWell> wells;
+    if (world.rank() == 0) {
+        wells.push_back({"A", self});
+    }
+    wells.push_back({"B", world});
+
+    std::vector<std::string> recovered;
+    int ranks_in_b = 0;
+    const bool any = Opm::solveWellsWithSharedRecovery(
+        wells,
+        [](const TestWell& well) -> const Dune::Communication<MPI_Comm>& { return well.comm; },
+        [&](TestWell& well) {
+            if (well.name == "A") {
+                OPM_THROW(Opm::NumericalProblem, "singular matrix");
+            }
+            ranks_in_b = well.comm.sum(1);
+        },
+        [&](TestWell& well, const bool, const std::string&) { recovered.push_back(well.name); });
+
+    // only rank 0 has A. B ran on both ranks without recovery.
+    BOOST_CHECK_EQUAL(any, world.rank() == 0);
+    BOOST_CHECK_EQUAL(recovered.size(), world.rank() == 0 ? 1u : 0u);
+    BOOST_CHECK_EQUAL(ranks_in_b, 2);
+}
+
 BOOST_AUTO_TEST_CASE(SolveIsRepeatableAfterRecovery)
 {
     // A well is solved again in later iterations, so the helper keeps no state between calls.

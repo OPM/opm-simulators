@@ -92,6 +92,49 @@ bool solveWithSharedRecovery(const Communication& comm, Solve&& solve, Recover&&
     return false;
 }
 
+//! \brief Solve a list of wells, and recover from numerical failures, with the failures of the wells deferred.
+//!
+//! The ranks can have different lists of wells, for instance a well on one rank only and a well
+//! distributed over two ranks. The collective operations of a well must then be reached by all ranks
+//! of the well, also if an earlier well failed on this rank. An exception from the solve of a well is
+//! therefore kept until all wells have been solved, and then thrown. The first exception is thrown.
+//! The ranks that did not fail reach the end of the loop normally, so the code that handles the
+//! exception collectively, such as OPM_END_PARALLEL_TRY_CATCH, can follow the call.
+//!
+//! \param wells The wells of this rank, in the same order for the ranks of a well
+//! \param get_communication Called with a well, gives the communicator of the well
+//! \param solve Called with a well, solves it
+//! \param recover Called with a well, a bool and a string, as in solveWithSharedRecovery()
+//! \return Whether any well failed with a NumericalProblem on any of its ranks
+template<class Wells, class GetCommunication, class Solve, class Recover>
+bool solveWellsWithSharedRecovery(Wells&& wells,
+                                  GetCommunication&& get_communication,
+                                  Solve&& solve,
+                                  Recover&& recover)
+{
+    bool any_recovered = false;
+    std::exception_ptr deferred;
+    for (auto& well : wells) {
+        try {
+            const bool recovered = solveWithSharedRecovery(
+                get_communication(well),
+                [&]() { solve(well); },
+                [&](const bool failed_on_this_rank, const std::string& reason) {
+                    recover(well, failed_on_this_rank, reason);
+                });
+            any_recovered = any_recovered || recovered;
+        } catch (...) {
+            if (!deferred) {
+                deferred = std::current_exception();
+            }
+        }
+    }
+    if (deferred) {
+        std::rethrow_exception(deferred);
+    }
+    return any_recovered;
+}
+
 } // namespace Opm
 
 #endif // OPM_WELL_SOLVE_RECOVERY_HPP

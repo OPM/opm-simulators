@@ -42,8 +42,10 @@
 
 #include <fmt/format.h>
 
+#include <map>
 #include <optional>
 #include <string>
+#include <type_traits>
 
 namespace Opm {
 
@@ -76,41 +78,42 @@ doPreStepRebalance(DeferredLogger& deferred_logger)
 
     bool well_failed = false;
     OPM_BEGIN_PARALLEL_TRY_CATCH();
-    for (auto& well : this->well_model_) {
-        // The state is kept to be able to restore it if the well fails.
-        const auto ws_before_step = well_state.well(well->indexOfWell());
-        // A well that fails numerically should not make the whole time step fail. It is stopped
-        // and solved with zero rate, as is done for wells that can not be solved in the inner well
-        // iterations. The well is solved again, and can be reopened, in the Newton iterations of the
-        // time step. A well can be distributed over several ranks, so if it fails on one of them,
-        // all ranks of the well recover, as the recovery contains collective operations.
-        const bool failed = solveWithSharedRecovery(
-            well->parallelWellInfo().communication(),
-            [&]() {
-                well->solveEqAndUpdateWellState(well_model_.simulator(),
-                                                well_model_.groupStateHelper(),
-                                                well_state);
-            },
-            [&](const bool failed_on_this_rank, const std::string& reason) {
-                const auto cause = failed_on_this_rank ? reason : std::string{"it failed on another rank"};
-                deferred_logger.warning("PRESTEP_NETWORK_REBALANCE_WELL_FAILED",
-                                        fmt::format("Well {} failed during the initial (pre-step) network balance ({}). "
-                                                    "The well is stopped and solved with zero rate.",
-                                                    well->name(), cause));
-                well_state.well(well->indexOfWell()) = ws_before_step;
-                try {
-                    well->updatePrimaryVariables(well_model_.groupStateHelper());
-                } catch (const NumericalProblem&) {
-                    // The recovery must not fail the time step. The solve with zero rate below
-                    // handles a state that is not finite.
-                }
-                well->stopWellAndSolveWithZeroRate(well_model_.simulator(),
-                                                   dt,
-                                                   well_model_.groupStateHelper(),
-                                                   well_state);
-            });
-        well_failed = well_failed || failed;
-    }
+    // A well that fails numerically should not make the whole time step fail. It is stopped
+    // and solved with zero rate, as is done for wells that can not be solved in the inner well
+    // iterations. The well is solved again, and can be reopened, in the Newton iterations of the
+    // time step. A well can be distributed over several ranks, so if it fails on one of them,
+    // all ranks of the well recover, as the recovery contains collective operations. Other failures
+    // are thrown after all wells are solved, so that the ranks of a well are not left waiting for
+    // a rank that has stopped solving the wells.
+    // The states are kept to be able to restore them if a well fails.
+    std::map<int, std::remove_cvref_t<decltype(well_state.well(0))>> states_before_step;
+    well_failed = solveWellsWithSharedRecovery(
+        this->well_model_,
+        [](const auto& well) -> const auto& { return well->parallelWellInfo().communication(); },
+        [&](auto& well) {
+            states_before_step.insert_or_assign(well->indexOfWell(), well_state.well(well->indexOfWell()));
+            well->solveEqAndUpdateWellState(well_model_.simulator(),
+                                            well_model_.groupStateHelper(),
+                                            well_state);
+        },
+        [&](auto& well, const bool failed_on_this_rank, const std::string& reason) {
+            const auto cause = failed_on_this_rank ? reason : std::string{"it failed on another rank"};
+            deferred_logger.warning("PRESTEP_NETWORK_REBALANCE_WELL_FAILED",
+                                    fmt::format("Well {} failed during the initial (pre-step) network balance ({}). "
+                                                "The well is stopped and solved with zero rate.",
+                                                well->name(), cause));
+            well_state.well(well->indexOfWell()) = states_before_step.at(well->indexOfWell());
+            try {
+                well->updatePrimaryVariables(well_model_.groupStateHelper());
+            } catch (const NumericalProblem&) {
+                // The recovery must not fail the time step. The solve with zero rate below
+                // handles a state that is not finite.
+            }
+            well->stopWellAndSolveWithZeroRate(well_model_.simulator(),
+                                               dt,
+                                               well_model_.groupStateHelper(),
+                                               well_state);
+        });
     OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModelNetwork::doPreStepRebalance() failed: ",
                                 well_model_.simulator().vanguard().grid().comm());
 
