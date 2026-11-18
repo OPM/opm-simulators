@@ -681,6 +681,8 @@ private:
     /// The wells of a manifold group are on THP control, so no well targets
     /// the group whose target the manifold's common THP honours: the manifold
     /// group itself, or the ancestor passing a share of its target down to it.
+    /// The current control modes decide which, as a group scheduled as FLD
+    /// may have switched to one of its own limits.
     ///
     /// @return Set of group names, the same on all ranks
     std::unordered_set<std::string> collectManifoldTargetGroups_() const;

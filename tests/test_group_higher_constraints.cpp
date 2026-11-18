@@ -1261,4 +1261,48 @@ BOOST_AUTO_TEST_CASE(TestAutoChokeGroupTargetRateWithUnderperformance)
     checkAlgo(target_rate_metric, expected_target);
 }
 
+//! \brief Test updateNONEProductionGroups() for the sub-sea manifold group MANI
+//!
+//! No well targets a group: the wells of MANI are on THP control, WELL-B and WELL-C on
+//! individual control.  The group whose target the common THP of MANI honours keeps its
+//! control mode: MANI or PLAT once it has switched from FLD to an ORAT limit, FIELD while
+//! MANI follows its target through PLAT.
+BOOST_AUTO_TEST_CASE(TestAutoChokeGroupKeepsActiveControlMode)
+{
+    commonSetupForAllTests(
+        /*plat_has_guide_rate=*/true,
+        /*mani_control       =*/Opm::Group::ProductionCMode::ORAT,
+        /*well_a_control     =*/Opm::Well::ProducerCMode::THP,
+        /*well_a2_control    =*/Opm::Well::ProducerCMode::THP,
+        /*mani2_control      =*/Opm::Group::ProductionCMode::ORAT,
+        /*data_file          =*/"GROUP_HIGHER_CONSTRAINTS_NETWORK.DATA"
+    );
+
+    auto& gs = groupState();
+    auto& gsh = groupStateHelper();
+    BOOST_REQUIRE(maniGroup().as_choke());
+    BOOST_REQUIRE(maniGroup().productionControls(gsh.summaryState()).cmode
+                  == Opm::Group::ProductionCMode::FLD);
+
+    for (const auto* well : {"WELL-B", "WELL-C"}) {
+        wellState().well(well).production_cmode = Opm::Well::ProducerCMode::ORAT;
+    }
+    auto logger_guard = gsh.pushLogger();
+
+    gsh.updateNONEProductionGroups();
+    BOOST_CHECK(gs.production_control("MANI") == Opm::Group::ProductionCMode::ORAT);
+    BOOST_CHECK(gs.production_control("MANI-2") == Opm::Group::ProductionCMode::NONE);
+
+    gs.production_control("MANI", Opm::Group::ProductionCMode::FLD);
+    gs.production_control("PLAT", Opm::Group::ProductionCMode::ORAT);
+    gsh.updateNONEProductionGroups();
+    BOOST_CHECK(gs.production_control("PLAT") == Opm::Group::ProductionCMode::ORAT);
+
+    gs.production_control("PLAT", Opm::Group::ProductionCMode::FLD);
+    gs.production_control("FIELD", Opm::Group::ProductionCMode::ORAT);
+    gsh.updateNONEProductionGroups();
+    BOOST_CHECK(gs.production_control("MANI") == Opm::Group::ProductionCMode::FLD);
+    BOOST_CHECK(gs.production_control("FIELD") == Opm::Group::ProductionCMode::ORAT);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
