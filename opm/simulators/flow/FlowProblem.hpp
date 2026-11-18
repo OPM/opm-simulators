@@ -2995,6 +2995,11 @@ protected:
                 continue;
             }
 
+            // Nothing crosses a face with zero transmissibility, so it cannot leak.
+            if ((face.transmissibility == 0.0) && (face.thermalTransmissibility == 0.0)) {
+                continue;
+            }
+
             ++total;
             const auto area =
                 this->fluxBoundaryFaceAreaAt_(static_cast<unsigned>(face.interiorActiveCell),
