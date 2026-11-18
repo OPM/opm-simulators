@@ -29,6 +29,7 @@
 
 #include <dune/common/parallel/mpihelper.hh>
 
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -170,6 +171,66 @@ BOOST_AUTO_TEST_CASE(FailureOnAllRanks)
     BOOST_CHECK_EQUAL(outcome.recoveries, 1);
     BOOST_CHECK(outcome.failed_on_this_rank);
     BOOST_CHECK_EQUAL(outcome.ranks_in_recovery, comm.size());
+}
+
+BOOST_AUTO_TEST_CASE(OtherExceptionOnOneRankThrowsOnAllRanksWithoutRecovery)
+{
+    // An exception that is not a numerical problem is not recovered from. It must leave the function
+    // on every rank, not only on the rank where it was thrown, so the ranks do not wait for each other.
+    const auto& comm = Dune::MPIHelper::getCommunication();
+    BOOST_REQUIRE_GE(comm.size(), 2);
+
+    const bool throws_here = comm.rank() == comm.size() - 1;
+    Outcome outcome;
+    std::string what;
+    try {
+        Opm::solveWithSharedRecovery(
+            comm,
+            [&]() {
+                if (throws_here) {
+                    throw std::logic_error("out of memory");
+                }
+            },
+            [&](const bool, const std::string&) { ++outcome.recoveries; });
+        BOOST_ERROR("expected an exception on every rank");
+    } catch (const std::exception& e) {
+        what = e.what();
+    }
+
+    BOOST_CHECK_EQUAL(outcome.recoveries, 0);
+    if (throws_here) {
+        BOOST_CHECK_EQUAL(what, "out of memory");
+    } else {
+        BOOST_CHECK(what.find("another rank") != std::string::npos);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(OtherExceptionTakesPrecedenceOverNumericalProblem)
+{
+    // A numerical problem on one rank and another exception on another rank: no rank recovers.
+    const auto& comm = Dune::MPIHelper::getCommunication();
+    BOOST_REQUIRE_GE(comm.size(), 2);
+
+    Outcome outcome;
+    bool threw = false;
+    try {
+        Opm::solveWithSharedRecovery(
+            comm,
+            [&]() {
+                if (comm.rank() == 0) {
+                    OPM_THROW(Opm::NumericalProblem, "singular matrix");
+                }
+                if (comm.rank() == 1) {
+                    throw std::logic_error("out of memory");
+                }
+            },
+            [&](const bool, const std::string&) { ++outcome.recoveries; });
+    } catch (const std::exception&) {
+        threw = true;
+    }
+
+    BOOST_CHECK(threw);
+    BOOST_CHECK_EQUAL(outcome.recoveries, 0);
 }
 
 BOOST_AUTO_TEST_CASE(SolveIsRepeatableAfterRecovery)
