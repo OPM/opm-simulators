@@ -572,7 +572,10 @@ public:
     /// well equation assembly) evaluate the correct rate type.
     ///
     /// The update is skipped when the GRUPSLAV filter flag is SLAV, meaning
-    /// the slave ignores the master's control for that rate type.
+    /// the slave ignores the master's control for that rate type. A production
+    /// group that is then still on a rate type from an earlier master target,
+    /// which its own GCONPROD has no limit for, gets the control mode of its
+    /// own GCONPROD back.
     void updateSlaveGroupCmodesFromMaster();
 #endif
 

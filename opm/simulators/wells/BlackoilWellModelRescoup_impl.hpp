@@ -664,6 +664,25 @@ storeSlaveGroupProductionTargets()
     }
 }
 
+template<typename TypeTag>
+void
+BlackoilWellModelRescoup<TypeTag>::
+updateSlaveGroupCmodesAfterStateReset()
+{
+    // The master's group control modes are put into the slave groups by
+    // updateSlaveGroupCmodesFromMaster() in the first substep of a sync step, and
+    // that is not repeated when the substep is retried after a failure.  The modes
+    // restored by beginTimeStep() are then the old ones, while the master's new
+    // targets are still held, so put the control modes of the held targets back;
+    // otherwise the group targets cannot be used.  Without a retry the restored
+    // modes already match the held targets, except for a group that has switched to
+    // a rate limit of its own: it is put back on the master's target here, and
+    // switches again if that limit is still broken.  In the first substep of a sync
+    // step, beginTimeStep() sets the modes again later, after the slave has received
+    // the master's new targets.
+    this->groupStateHelper().updateSlaveGroupCmodesFromMaster();
+}
+
 // Private methods alphabetically
 // ------------------------------
 

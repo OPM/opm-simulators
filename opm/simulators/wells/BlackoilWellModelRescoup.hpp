@@ -288,6 +288,13 @@ public:
     ///   master has no limit of that type, the entry is erased.
     void storeSlaveGroupProductionTargets();
 
+    /// \brief Slave-side: give the slave groups the control modes of the master
+    ///   targets they hold, after beginTimeStep() has restored the well and group
+    ///   state committed after the previous time step.  The modes from the master
+    ///   are otherwise set only in the first substep of a sync step, so a retried
+    ///   substep would keep the old ones.
+    void updateSlaveGroupCmodesAfterStateReset();
+
 private:
     /// \brief The injection target in force for a slave group and phase, in SI:
     ///   the master's, the deck's, or the smaller of the two, as the GRUPSLAV

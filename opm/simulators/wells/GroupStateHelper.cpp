@@ -420,7 +420,9 @@ checkGroupProductionConstraints(const Group& group) const
     // has_control() returns false for all modes.
     // This means the loop below does nothing for such groups, which is correct:
     // this function checks for control mode switching (e.g. ORAT→WRAT),
-    // and RC slave groups have only one mode imposed by the master.
+    // and such a group has only one mode, the one imposed by the master.
+    // A slave group with limits of its own in GCONPROD is checked like any other
+    // group, against the limits combined with the master's by the GRUPSLAV flags.
     // The actual target enforcement happens in getProductionGroupTarget()
     // getProductionGroupTarget() via hasMasterProductionTarget().
     for (const auto cmode : {
@@ -535,14 +537,34 @@ getProductionGroupTarget(const Group& group) const
     {
         auto [master_target, master_cmode] =
             this->reservoirCouplingSlave().masterProductionTarget(group.name());
-        // Slave group's cmode should already be updated to the master cmode,
-        // see updateSlaveGroupCmodesFromMaster()
         if (cmode != master_cmode) {
-            OPM_DEFLOG_THROW(std::runtime_error,
-                "Group " + group.name()
-                + " cmode mismatch between slave and master",
-                this->deferredLogger());
+            // The group is controlled on another rate type than the master's target.
+            // This happens when the group has broken one of its rate limits and
+            // has switched to that rate type, see checkGroupProductionConstraints().
+            // That limit is then the target: the limit from the master, the one from
+            // the slave's own GCONPROD, or the smaller of the two, as the GRUPSLAV
+            // flag of that rate type says.
+            if (group.has_control(cmode)) {
+                // The slave's own value is the target an uncoupled group would get,
+                // which includes the adjustments from GCONSALE and GPMAINT.
+                return this->getEffectiveProductionLimit_(
+                    group.name(), cmode, this->getProductionGroupTargetForMode_(group, cmode));
+            }
+            const auto limit = this->getProductionGroupRateLimit(group, cmode);
+            if (!limit.has_value()) {
+                OPM_DEFLOG_THROW(std::logic_error,
+                    fmt::format("Slave group {} is controlled on {}, but has no limit "
+                                "for that rate type, neither from the master nor from "
+                                "its own GCONPROD. The target from the master is on {}.",
+                                group.name(),
+                                Group::ProductionCMode2String(cmode),
+                                Group::ProductionCMode2String(master_cmode)),
+                    this->deferredLogger());
+            }
+            return *limit;
         }
+        // The group is controlled on the rate type of the master's target, see
+        // updateSlaveGroupCmodesFromMaster()
         auto filter = this->getProductionFilterFlag_(group.name(), master_cmode);
         using FilterFlag = ReservoirCoupling::GrupSlav::FilterFlag;
         if (filter == FilterFlag::MAST) {
@@ -962,7 +984,8 @@ GroupStateHelper<Scalar, IndexTraits>::getWellGroupTargetProducer(const std::str
     // getProductionGroupTarget() returns the master-imposed target directly from
     // hasMasterProductionTarget() (received via MPI), not from
     // group.productionControls() which reads GCONPROD properties (which will be empty
-    // for such groups). This is correct since the group only has one mode imposed by the master.
+    // for such groups). This is correct since such a group only has one mode, imposed by the
+    // master. A slave group that has switched to a limit of its own gets that limit.
     Scalar orig_target = this->getProductionGroupTarget(group); // current cmode target
     if (target_group_cmode != current_group_cmode) {
         // translate orig_target to target_cmode using "previous" group rate fractions
@@ -1633,6 +1656,19 @@ updateSlaveGroupCmodesFromMaster()
             auto filter = this->getProductionFilterFlag_(gname, master_cmode);
             if (filter != FilterFlag::SLAV) {
                 this->groupState().production_control(gname, master_cmode);
+            }
+            else {
+                // The master's target is not used, and the group is controlled by
+                // its own GCONPROD. A rate type that GCONPROD has no limit for is
+                // then left over from an earlier target from the master, on a rate
+                // type with another flag. Give the group back its own control mode.
+                const auto& group = this->schedule_.getGroup(gname, this->report_step_);
+                const auto cmode = this->groupState().production_control(gname);
+                const bool is_rate_mode = cmode != Group::ProductionCMode::NONE
+                    && cmode != Group::ProductionCMode::FLD;
+                if (is_rate_mode && !group.has_control(cmode)) {
+                    this->groupState().production_control(gname, group.prod_cmode());
+                }
             }
         }
         // Injection cmode — check each phase
