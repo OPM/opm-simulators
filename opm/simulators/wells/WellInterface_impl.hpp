@@ -2551,12 +2551,13 @@ namespace Opm
         OPM_TIMEFUNCTION();
         auto& deferred_logger = groupStateHelper.deferredLogger();
         const auto& summary_state = simulator.vanguard().summaryState();
-        const auto& controls = this->well_ecl_.productionControls(summary_state);
+        const auto& ws = well_state.well(this->indexOfWell());
+        const auto controls = this->productionControlsWithWeldraw(summary_state, ws);
         const auto& pu = this->phaseUsage();
 
         // Inflow at a BHP, and the factor cutting it back to the well's rate
-        // limits keeping the phase fractions. Reservoir volume limits are not
-        // applied.
+        // limits, the WELDRAW one included, keeping the phase fractions.
+        // Reservoir volume limits are not applied.
         const auto inflow = [&](const Scalar bhp) {
             std::vector<Scalar> rates(this->number_of_phases_, 0.0);
             this->computeWellRatesWithBhp(simulator, bhp, rates, deferred_logger);
