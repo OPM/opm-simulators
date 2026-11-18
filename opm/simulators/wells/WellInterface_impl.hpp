@@ -1455,7 +1455,10 @@ namespace Opm
                                                  well_state, /*solving_with_zero_rate=*/true);
         } catch (const NumericalProblem&) {
             // The restored state can itself hold non-finite values, e.g. the BHP. The rates are
-            // already zero, so keep the cached equations and leave it to the next solve of the well.
+            // already zero. If updating the primary variables failed, the equations of the well are
+            // unchanged. If the assembly failed, they can be partial, as the assembly clears and refills
+            // them, and the stopped well then keeps stale connection rates. This is not recovered here,
+            // the next solve of the well rebuilds the equations.
         }
     }
 
