@@ -1406,8 +1406,9 @@ namespace Opm
         // keep the state to be able to restore it if the solve with zero rate fails badly
         const auto ws_before_zero_rate_solve = well_state.well(this->indexOfWell());
         bool solve_threw = false;
+        bool converged = false;
         try {
-            this->solveWellWithZeroRate(
+            converged = this->solveWellWithZeroRate(
                 simulator, dt, groupStateHelper, well_state
             );
         } catch (const std::exception& e) {
@@ -1420,7 +1421,11 @@ namespace Opm
         // A solve with zero rate that threw, or left a state that is not finite, can leave the well in a
         // diverged state. As the well is stopped it is still part of the reservoir equations and of the
         // convergence checks, so restore the state and make the well consistent with zero rates.
-        if (well_state.well(this->indexOfWell()).restoreIfDiverged(ws_before_zero_rate_solve, solve_threw)) {
+        const bool restored =
+            well_state.well(this->indexOfWell()).restoreIfDiverged(ws_before_zero_rate_solve, solve_threw);
+        // A solve that did not converge can also return without having updated the state, for example when
+        // it is out of iterations. The state can then still hold rates, which a stopped well must not have.
+        if (restored || !converged) {
             this->resetStoppedWell(simulator, dt, groupStateHelper, well_state);
         }
     }
