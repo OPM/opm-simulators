@@ -870,6 +870,7 @@ add_test_compareECLFiles(
 set(_network_manifold_tests
   NETWORK_MODEL5_STDW_AUTOCHK
   NETWORK_MODEL5_STDW_AUTOCHK_GROUPGUIDERATES
+  NETWORK_MODEL5_STDW_AUTOCHK_WITHVFP
 )
 
 add_multiple_tests(
