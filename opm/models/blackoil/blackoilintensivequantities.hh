@@ -804,7 +804,6 @@ public:
     {
         // This is the version of update() that does not use any ElementContext.
         // It is limited by some modules that are not yet adapted to that.
-        static_assert(!enableSolvent);
         static_assert(!enablePolymer);
         static_assert(!enableFoam);
         static_assert(!enableMICP);
@@ -820,8 +819,12 @@ public:
         if constexpr (enableExtbo) {
             asImp_().zPvtUpdate_();
         }
+        if constexpr (enableSolvent) {
+            asImp_().solventPvtUpdate_(problem, globalSpaceIdx, timeIdx);
+        }
 
-        // TODO: Here we should do the parts for solvent etc. at the bottom of the other update() function.
+
+        // TODO: Here we should do the parts for other modules at the bottom of the other update() function.
     }
 
     // This function updated the parts that are common to the IntensiveQuantities regardless of extensions used.

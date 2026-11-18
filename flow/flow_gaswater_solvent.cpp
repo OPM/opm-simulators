@@ -25,8 +25,10 @@
 #include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
 #include <opm/models/blackoil/blackoildiffusionmodule.hh>
 #include <opm/models/blackoil/blackoilenergymodules.hh>
+#include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
+#include <opm/models/discretization/common/tpfalinearizer.hh>
 
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicit.hpp>
@@ -47,6 +49,16 @@ struct EnableSolvent<TypeTag, TTag::FlowGasWaterSolventProblem>
 template<class TypeTag>
 struct EnergyModuleType<TypeTag, TTag::FlowGasWaterSolventProblem>
 { static constexpr EnergyModules value = EnergyModules::ConstantTemperature; };
+
+template <class TypeTag>
+struct Linearizer<TypeTag, TTag::FlowGasWaterSolventProblem> {
+    using type = TpfaLinearizer<TypeTag>;
+};
+
+template <class TypeTag>
+struct LocalResidual<TypeTag, TTag::FlowGasWaterSolventProblem> {
+    using type = BlackOilLocalResidualTPFA<TypeTag>;
+};
 
 //! The indices required by the model
 template<class TypeTag>
