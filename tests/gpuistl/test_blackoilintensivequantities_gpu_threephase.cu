@@ -24,14 +24,14 @@
  *        oil and dry gas (e.g. SPE1) or wet gas (e.g. Norne).
  *
  * The CPU simulator is set up with \c FlowProblemNohyst from an SPE1-like deck
- * whose gas-oil and oil-water contacts both lie inside the grid, and from a
- * variant of it with vaporized oil. The GPU side uses the TypeTags of
+ * whose gas-oil and oil-water contacts both lie inside the grid, from a
+ * variant of it with vaporized oil, and from variants with two- and
+ * three-point endpoint scaling and SWATINIT. The GPU side uses the TypeTags of
  * GpuFlowBlackoilNohystTypeTag.hpp, and every cell is compared, values and
  * derivatives.
  *
  * Also checks which configuration the production dispatcher for this TypeTag
- * chooses, and that it rejects decks outside them, among them a deck with
- * endpoint scaling, which the GPU material law manager rejects.
+ * chooses, and that it rejects decks outside them.
  */
 #include <config.h>
 
@@ -76,6 +76,7 @@
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <filesystem>
@@ -85,6 +86,7 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace Opm {
@@ -110,7 +112,9 @@ OPM_HOST_DEVICE double asDouble(const Value& value)
 }
 
 /// Compare two scalar-or-Evaluation quantities. Always compares the value
-/// part. When \p checkDerivatives is true and both operands are
+/// part: relative to \p tol percent of the smaller magnitude, as
+/// \c BOOST_CHECK_CLOSE, with an absolute floor for values that are zero on
+/// one side and round-off on the other. When \p checkDerivatives is true and both operands are
 /// `DenseAd::Evaluation`s, also checks every partial derivative with the
 /// supplied tolerance and increments \p derivativeComparisons by the number of
 /// partial derivatives compared. If \p checkDerivatives is true but the
@@ -124,7 +128,12 @@ void checkValueAndDerivatives(const CpuValue& cpuValue,
                               const char* label,
                               std::size_t& derivativeComparisons)
 {
-    BOOST_CHECK_CLOSE(asDouble(cpuValue), asDouble(gpuValue), tol);
+    constexpr double absoluteFloor = 1e-12;
+    const double cpu = asDouble(cpuValue);
+    const double gpu = asDouble(gpuValue);
+    BOOST_CHECK_MESSAGE(std::abs(cpu - gpu)
+                            <= 1e-2 * tol * std::min(std::abs(cpu), std::abs(gpu)) + absoluteFloor,
+                        label << " cpu=" << cpu << " gpu=" << gpu);
 
     if (!checkDerivatives) {
         return;
@@ -467,29 +476,227 @@ bool contains(std::string_view text, std::string_view part)
     return text.find(part) != std::string_view::npos;
 }
 
-/// The test deck with endpoint scaling: ENDSCALE in RUNSPEC and a SWL array,
-/// but no ENKRVD. SWL equals the connate water saturation of each cell's
-/// SATNUM table (0.15 and 0.20), so the scaled end-points equal the unscaled
-/// ones and pass the saturation function consistency checks.
-std::string deckWithEndpointScaling()
+/// \p keyword with the nine values of \p layer in each of the six layers.
+std::string sameInEachLayer(std::string_view keyword, std::string_view layer)
+{
+    std::string text = std::string(keyword) + "\n";
+    for (int k = 0; k < 6; ++k) {
+        text += " ";
+        text += layer;
+        text += "\n";
+    }
+    return text + "/\n";
+}
+
+void insertAfter(std::string& deck, std::string_view anchor, std::string_view text)
+{
+    const auto pos = deck.find(anchor);
+    BOOST_REQUIRE(pos != std::string::npos);
+    deck.insert(pos + anchor.size(), text);
+}
+
+/// Add ENDSCALE and per-cell saturation endpoints to \p deck. With
+/// \p threePointAndSwatinit, also add SCALECRS YES and SWATINIT.
+///
+/// The endpoints are the same in every layer. SATNUM is 1 1 2 in each row of
+/// a layer, so the two region 1 cells of a row, and the region 2 cells of
+/// different rows, have different endpoints. All cells pass the saturation
+/// function consistency checks, including those of three-point scaling. One
+/// cell has a nonzero SGL, and its SWU is below 1 - SGL. SGU is 1 - SWL, as
+/// in the tables, so the gas cap of the wet gas deck keeps cells without oil.
+///
+/// SWATINIT is set per layer, below every SWL in the top layer. Above the
+/// water-oil contact it gives each cell a new maximum Pcow in applySwatinit();
+/// in the water zone Pcow is zero and the maximum is unchanged.
+void addEndpointScaling(std::string& deck, bool threePointAndSwatinit)
+{
+    insertAfter(deck, "METRIC\n", "ENDSCALE\n/\n");
+    std::string props
+        = sameInEachLayer("SWL", "0.12 0.17 0.18  0.14 0.16 0.22  0.13 0.18 0.20")
+        + sameInEachLayer("SWCR", "0.16 0.20 0.24  0.18 0.19 0.28  0.15 0.23 0.25")
+        + sameInEachLayer("SWU", "1.0 0.98 1.0  0.97 0.97 1.0  1.0 0.99 0.98")
+        + sameInEachLayer("SGL", "0.0 0.0 0.0  0.0 0.01 0.0  0.0 0.0 0.0")
+        + sameInEachLayer("SGCR", "0.03 0.05 0.04  0.02 0.06 0.07  0.04 0.03 0.05")
+        + sameInEachLayer("SGU", "0.88 0.83 0.82  0.86 0.84 0.78  0.87 0.82 0.80")
+        + sameInEachLayer("SOWCR", "0.14 0.18 0.22  0.16 0.12 0.19  0.17 0.15 0.24")
+        + sameInEachLayer("SOGCR", "0.10 0.12 0.18  0.13 0.09 0.21  0.14 0.11 0.16");
+    if (threePointAndSwatinit) {
+        props += "SCALECRS\n YES /\n"
+                 "SWATINIT\n"
+                 " 9*0.10 9*0.22 9*0.30 9*0.45 9*0.75 9*1.0 /\n";
+    }
+    insertAfter(deck, "PROPS\n", props);
+}
+
+/// The test deck with two-point endpoint scaling.
+std::string deckWithTwoPointScaling()
 {
     std::string deck = deckString;
-    const auto insertAfter = [&deck](std::string_view anchor, std::string_view text) {
-        const auto pos = deck.find(anchor);
-        BOOST_REQUIRE(pos != std::string::npos);
-        deck.insert(pos + anchor.size(), text);
-    };
-    insertAfter("METRIC\n", "ENDSCALE\n/\n");
-    // Same layout as SATNUM: 1 1 2 repeated.
-    insertAfter("PROPS\n",
-                "SWL\n"
-                " 2*0.15 0.20 2*0.15 0.20 2*0.15 0.20\n"
-                " 2*0.15 0.20 2*0.15 0.20 2*0.15 0.20\n"
-                " 2*0.15 0.20 2*0.15 0.20 2*0.15 0.20\n"
-                " 2*0.15 0.20 2*0.15 0.20 2*0.15 0.20\n"
-                " 2*0.15 0.20 2*0.15 0.20 2*0.15 0.20\n"
-                " 2*0.15 0.20 2*0.15 0.20 2*0.15 0.20 /\n");
+    addEndpointScaling(deck, /*threePointAndSwatinit=*/false);
     return deck;
+}
+
+/// The test deck with three-point endpoint scaling and SWATINIT, the
+/// combination that Norne uses.
+std::string deckWithThreePointScalingAndSwatinit()
+{
+    std::string deck = deckString;
+    addEndpointScaling(deck, /*threePointAndSwatinit=*/true);
+    return deck;
+}
+
+/// The wet gas deck with vaporized oil, three-point endpoint scaling and
+/// SWATINIT.
+std::string deckWithWetGasAndThreePointScalingAndSwatinit()
+{
+    std::string deck = deckWithWetGas(/*vaporizedOil=*/true);
+    addEndpointScaling(deck, /*threePointAndSwatinit=*/true);
+    return deck;
+}
+
+/// Whether \p sw is strictly inside the scaled mobile water range of a cell
+/// with endpoints \p info, and \p sg inside its scaled mobile gas range.
+template <class EpsInfo>
+bool insideScaledWaterRange(const EpsInfo& info, double sw)
+{
+    return info.Swl < sw && sw < 1.0 - info.Sowcr;
+}
+
+template <class EpsInfo>
+bool insideScaledGasRange(const EpsInfo& info, double sg)
+{
+    return info.Sgcr < sg && sg < info.Sgu;
+}
+
+/// The water and gas saturations of \p priVars, read from the primary
+/// variables.
+template <class PrimaryVariables>
+std::pair<double, double> waterAndGasSaturation(const PrimaryVariables& priVars)
+{
+    using GasMeaning = typename PrimaryVariables::GasMeaning;
+    using WaterMeaning = typename PrimaryVariables::WaterMeaning;
+    using Indices = Opm::GetPropType<CpuTypeTag, Opm::Properties::Indices>;
+    const double sw = priVars.primaryVarsMeaningWater() == WaterMeaning::Sw
+        ? static_cast<double>(priVars[Indices::waterSwitchIdx])
+        : 0.0;
+    switch (priVars.primaryVarsMeaningGas()) {
+    case GasMeaning::Sg:
+        return {sw, static_cast<double>(priVars[Indices::compositionSwitchIdx])};
+    case GasMeaning::Rv:
+        return {sw, 1.0 - sw};
+    default:
+        return {sw, 0.0};
+    }
+}
+
+/// Make sure that some cell has its water saturation, and some cell its gas
+/// saturation, strictly inside the scaled mobile range, so that the
+/// comparison covers the scaled segments of the curves. Equilibration is
+/// used as it is if it already gives such cells. Otherwise one cell of each
+/// SATNUM region with the Sg meaning and gas is moved into both ranges.
+template <class PrimaryVariables, class MaterialLawManager>
+void ensureCellsInsideScaledRanges(std::vector<PrimaryVariables>& solution,
+                                   const MaterialLawManager& materialLawManager)
+{
+    bool waterCovered = false;
+    bool gasCovered = false;
+    for (std::size_t i = 0; i < solution.size(); ++i) {
+        const auto& info = materialLawManager.oilWaterScaledEpsInfoDrainage(i);
+        const auto [sw, sg] = waterAndGasSaturation(solution[i]);
+        waterCovered = waterCovered || insideScaledWaterRange(info, sw);
+        gasCovered = gasCovered || insideScaledGasRange(info, sg);
+    }
+    BOOST_TEST_MESSAGE("Equilibration gives a cell inside the scaled water range: "
+                       << waterCovered << ", gas range: " << gasCovered);
+    if (waterCovered && gasCovered) {
+        return;
+    }
+
+    using GasMeaning = typename PrimaryVariables::GasMeaning;
+    using WaterMeaning = typename PrimaryVariables::WaterMeaning;
+    using Indices = Opm::GetPropType<CpuTypeTag, Opm::Properties::Indices>;
+    constexpr int numRegions = 2;
+    std::vector<bool> moved(numRegions, false);
+    for (std::size_t i = 0; i < solution.size(); ++i) {
+        auto& priVars = solution[i];
+        const int region = materialLawManager.satnumRegionIdx(static_cast<unsigned>(i));
+        if (moved[region]
+            || priVars.primaryVarsMeaningGas() != GasMeaning::Sg
+            || priVars.primaryVarsMeaningWater() != WaterMeaning::Sw
+            || !(priVars[Indices::compositionSwitchIdx] > 0.0)) {
+            continue;
+        }
+        // Both saturations are set, even if only one range is missing: a
+        // gas-cap cell has Sg near Sgu, which leaves no room for a larger Sw.
+        // Sw + Sg stays below 1 for the endpoints of the test decks.
+        const auto& info = materialLawManager.oilWaterScaledEpsInfoDrainage(i);
+        priVars[Indices::waterSwitchIdx] = info.Swl + 0.25 * (1.0 - info.Sowcr - info.Swl);
+        priVars[Indices::compositionSwitchIdx] = 0.5 * (info.Sgcr + info.Sgu);
+        moved[region] = true;
+    }
+    for (int region = 0; region < numRegions; ++region) {
+        BOOST_TEST_INFO("SATNUM region " << region + 1);
+        BOOST_REQUIRE(moved[region]);
+    }
+}
+
+/// Whether the water saturation of a cell lies on its scaled maximum SWU,
+/// where the scaled curves end. Equilibration puts the cells of the water
+/// zone there. Mapping SWU back to the end of the table is a ratio that the
+/// CPU and the GPU may round to different sides of the end, which gives the
+/// same values but different one-sided derivatives. The lower endpoints map
+/// exactly and need no exception.
+template <class EpsInfo>
+bool onScaledMaximumWaterSaturation(const EpsInfo& info, double sw)
+{
+    return std::abs(sw - info.Swu) < 1e-10;
+}
+
+/// Check that \p deck exercises endpoint scaling, so that the GPU-CPU
+/// comparison cannot pass on unscaled curves: the scaled endpoints vary
+/// within a SATNUM region, some cells have water and gas saturations strictly
+/// inside their scaled ranges, and with Pc scaling, SWATINIT has changed the
+/// maximum Pcow of some cell.
+template <class MaterialLawManager, class IntensiveQuantities>
+void checkEndpointScalingCoverage(const MaterialLawManager& materialLawManager,
+                                  const std::vector<IntensiveQuantities>& intensiveQuantities)
+{
+    const std::size_t numCells = intensiveQuantities.size();
+    bool swlVariesWithinRegion = false;
+    bool maxPcowScaled = false;
+    std::size_t numSwInside = 0;
+    std::size_t numSgInside = 0;
+    for (std::size_t i = 0; i < numCells; ++i) {
+        const auto& info = materialLawManager.oilWaterScaledEpsInfoDrainage(i);
+        const int region = materialLawManager.satnumRegionIdx(static_cast<unsigned>(i));
+        for (std::size_t j = 0; j < i; ++j) {
+            if (materialLawManager.satnumRegionIdx(static_cast<unsigned>(j)) == region
+                && materialLawManager.oilWaterScaledEpsInfoDrainage(j).Swl != info.Swl) {
+                swlVariesWithinRegion = true;
+            }
+        }
+        if (info.maxPcow != materialLawManager.unscaledEpsInfo(region).maxPcow) {
+            maxPcowScaled = true;
+        }
+
+        const auto& fs = intensiveQuantities[i].fluidState();
+        const double sw = asDouble(fs.saturation(FluidSystem::waterPhaseIdx));
+        const double sg = asDouble(fs.saturation(FluidSystem::gasPhaseIdx));
+        if (insideScaledWaterRange(info, sw)) {
+            ++numSwInside;
+        }
+        if (insideScaledGasRange(info, sg)) {
+            ++numSgInside;
+        }
+    }
+    BOOST_TEST_MESSAGE("Endpoint scaling: Sw inside its scaled range in " << numSwInside
+                       << " cells, Sg in " << numSgInside << " cells");
+    BOOST_CHECK(swlVariesWithinRegion);
+    BOOST_CHECK_GT(numSwInside, 0u);
+    BOOST_CHECK_GT(numSgInside, 0u);
+    if (materialLawManager.oilWaterConfig().enablePcScaling()) {
+        BOOST_CHECK(maxPcowScaled);
+    }
 }
 
 } // namespace
@@ -505,6 +712,8 @@ void compareGpuWithCpu(const std::string& deck)
     const bool vaporizedOil = FluidSystem::enableVaporizedOil();
     BOOST_REQUIRE_EQUAL(vaporizedOil, PvtApproaches::gas == Opm::GasPvtApproach::WetGas);
     const auto& cpuProblem = sim->problem();
+    const auto& cpuMaterialLawManager = cpuProblem.materialLawManager();
+    const bool endpointScaling = cpuMaterialLawManager.oilWaterConfig().enableSatScaling();
 
     // GPU fluid system. The fluid state holds a pointer to it and is read back
     // on the host, so the view lives in managed memory.
@@ -530,6 +739,8 @@ void compareGpuWithCpu(const std::string& deck)
     GpuProblemBuffer gpuProblemBuffer(cpuProblem);
     auto gpuProblemView = Opm::gpuistl::make_view(gpuProblemBuffer);
     static_assert(std::is_same_v<decltype(gpuProblemView), GpuProblemView>);
+    BOOST_CHECK_EQUAL(gpuProblemBuffer.materialLawManager().hasPerCellEndpoints(),
+                      endpointScaling);
 
     const std::size_t numCells = cpuProblem.model().numGridDof();
     BOOST_REQUIRE_EQUAL(numCells, 54u);
@@ -537,8 +748,16 @@ void compareGpuWithCpu(const std::string& deck)
     // Primary variables
     using PrimaryVariablesCpu = Opm::GetPropType<CpuTypeTag, Opm::Properties::PrimaryVariables>;
     using PrimaryVariablesGpu = Opm::GetPropType<GpuTypeTag, Opm::Properties::PrimaryVariables>;
-    const auto& cpuSolution = cpuProblem.model().solution(/*timeIdx=*/0);
-    BOOST_REQUIRE_EQUAL(cpuSolution.size(), numCells);
+    const auto& initialSolution = cpuProblem.model().solution(/*timeIdx=*/0);
+    BOOST_REQUIRE_EQUAL(initialSolution.size(), numCells);
+    std::vector<PrimaryVariablesCpu> cpuSolution;
+    cpuSolution.reserve(numCells);
+    for (std::size_t i = 0; i < numCells; ++i) {
+        cpuSolution.push_back(initialSolution[i]);
+    }
+    if (endpointScaling) {
+        ensureCellsInsideScaledRanges(cpuSolution, cpuMaterialLawManager);
+    }
 
     // Check that the deck gives both the saturated and the undersaturated
     // branch of the oil, and with vaporized oil also gas-only cells.
@@ -612,6 +831,7 @@ void compareGpuWithCpu(const std::string& deck)
     // fluid system holds device pointers.
     constexpr double tol = 1e-6;
     constexpr bool checkDerivatives = true;
+    std::size_t numCellsOnScaledEndpoint = 0;
     constexpr unsigned phases[] = {FluidSystem::waterPhaseIdx,
                                    FluidSystem::oilPhaseIdx,
                                    FluidSystem::gasPhaseIdx};
@@ -624,23 +844,34 @@ void compareGpuWithCpu(const std::string& deck)
             const auto& cpuFs = cpuIQ.fluidState();
             const auto& gpuFs = gpuIQ.fluidState();
 
+            // At the end of the scaled curves, only the values of the
+            // saturation-dependent quantities are compared.
+            const bool onKink = endpointScaling
+                && onScaledMaximumWaterSaturation(
+                    cpuMaterialLawManager.oilWaterScaledEpsInfoDrainage(i),
+                    asDouble(cpuFs.saturation(FluidSystem::waterPhaseIdx)));
+            if (onKink) {
+                ++numCellsOnScaledEndpoint;
+            }
+            const bool checkPhaseDerivatives = checkDerivatives && !onKink;
+
             for (const unsigned p : phases) {
                 BOOST_TEST_CONTEXT("phase " << p)
                 {
                     checkValueAndDerivatives(cpuFs.saturation(p), gpuFs.saturation(p),
-                                             tol, checkDerivatives, "saturation",
+                                             tol, checkPhaseDerivatives, "saturation",
                                              derivativeComparisons);
                     checkValueAndDerivatives(cpuFs.pressure(p), gpuFs.pressure(p),
-                                             tol, checkDerivatives, "pressure",
+                                             tol, checkPhaseDerivatives, "pressure",
                                              derivativeComparisons);
                     checkValueAndDerivatives(cpuFs.density(p), gpuFs.density(p),
-                                             tol, checkDerivatives, "density",
+                                             tol, checkPhaseDerivatives, "density",
                                              derivativeComparisons);
                     checkValueAndDerivatives(cpuFs.invB(p), gpuFs.invB(p),
-                                             tol, checkDerivatives, "invB",
+                                             tol, checkPhaseDerivatives, "invB",
                                              derivativeComparisons);
                     checkValueAndDerivatives(cpuIQ.mobility(p), gpuIQ.mobility(p),
-                                             tol, checkDerivatives, "mobility",
+                                             tol, checkPhaseDerivatives, "mobility",
                                              derivativeComparisons);
                 }
             }
@@ -672,23 +903,38 @@ void compareGpuWithCpu(const std::string& deck)
         }
     }
     BOOST_REQUIRE_GT(derivativeComparisons, 0u);
+
+    if (endpointScaling) {
+        BOOST_TEST_MESSAGE("Cells at the scaled SWU, without phase derivative checks: "
+                           << numCellsOnScaledEndpoint << " of " << numCells);
+        checkEndpointScalingCoverage(cpuMaterialLawManager, cpuIntensiveQuantities);
+    }
 }
 
 } // namespace
 
-BOOST_AUTO_TEST_CASE(DispatcherRejectsEndpointScaling)
+BOOST_AUTO_TEST_CASE(DispatcherAcceptsEndpointScaling)
 {
-    // Control: the deck without endpoint scaling is accepted.
-    BOOST_CHECK_NO_THROW(runDispatcher(*makeSimulator(deckString)));
+    BOOST_CHECK(contains(runDispatcher(*makeSimulator(deckWithThreePointScalingAndSwatinit())),
+                         "dry gas"));
+    BOOST_CHECK(contains(
+        runDispatcher(*makeSimulator(deckWithWetGasAndThreePointScalingAndSwatinit())),
+        "wet gas"));
+}
 
-    // The material law of the GPU TypeTag has no endpoint-scaling layer, so
-    // the GPU material law manager rejects a deck that uses it.
-    const auto sim = makeSimulator(deckWithEndpointScaling());
-    BOOST_REQUIRE(sim->problem().materialLawManager().oilWaterConfig().enableSatScaling());
+BOOST_AUTO_TEST_CASE(DispatcherRejectsUnsupportedEndpointScaling)
+{
+    // The GPU material law manager rejects the options it does not implement.
+    // Each has its own case in test_gpu_ecl_material_law_manager; this one
+    // shows that the message reaches the user through the dispatcher.
+    std::string deck = deckWithTwoPointScaling();
+    insertAfter(deck, "PROPS\n", "KRW\n 54*0.9 /\n");
+    const auto sim = makeSimulator(deck);
     BOOST_CHECK_EXCEPTION(runDispatcher(*sim),
                           std::logic_error,
                           [](const std::logic_error& e) {
-                              return contains(e.what(), "endpoint scaling");
+                              BOOST_TEST_MESSAGE(e.what());
+                              return contains(e.what(), "relative permeability value scaling");
                           });
 }
 
@@ -729,4 +975,26 @@ BOOST_AUTO_TEST_CASE(ThreePhaseLiveOilWetGasGpuVsCpu)
 {
     compareGpuWithCpu<Opm::Properties::TTag::FlowBlackoilNohystWetGasGPU,
                       Opm::LiveOilWetGasPvtApproaches>(deckWithWetGas(true));
+}
+
+BOOST_AUTO_TEST_CASE(TwoPointScalingDryGasGpuVsCpu)
+{
+    compareGpuWithCpu<Opm::Properties::TTag::FlowBlackoilNohystGPU,
+                      Opm::LiveOilDryGasPvtApproaches>(deckWithTwoPointScaling());
+}
+
+// The simulator applies SWATINIT during equilibration, before the GPU problem
+// is built from it, as in flow. This is the in-process check that the GPU
+// material law manager is a snapshot taken after applySwatinit().
+BOOST_AUTO_TEST_CASE(ThreePointScalingAndSwatinitDryGasGpuVsCpu)
+{
+    compareGpuWithCpu<Opm::Properties::TTag::FlowBlackoilNohystGPU,
+                      Opm::LiveOilDryGasPvtApproaches>(deckWithThreePointScalingAndSwatinit());
+}
+
+BOOST_AUTO_TEST_CASE(ThreePointScalingAndSwatinitWetGasGpuVsCpu)
+{
+    compareGpuWithCpu<Opm::Properties::TTag::FlowBlackoilNohystWetGasGPU,
+                      Opm::LiveOilWetGasPvtApproaches>(
+        deckWithWetGasAndThreePointScalingAndSwatinit());
 }
