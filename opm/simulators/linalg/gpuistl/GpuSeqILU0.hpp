@@ -66,8 +66,8 @@ public:
     //! \param A The matrix to operate on.
     //! \param w The relaxation factor.
     //!
-    template <typename T = M, typename std::enable_if_t<is_gpu_matrix_v<T>, int> = 0>
-    GpuSeqILU0(const M& A, field_type w);
+    GpuSeqILU0(const M& A, field_type w)
+        requires (is_gpu_matrix_v<M>);
 
 
     //! \brief Constructor.
@@ -76,8 +76,8 @@ public:
     //! \param A The matrix to operate on.
     //! \param w The relaxation factor.
     //!
-    template <typename T = M, typename std::enable_if_t<!is_gpu_matrix_v<T>, int> = 0>
-    GpuSeqILU0(const M& A, field_type w);
+    GpuSeqILU0(const M& A, field_type w)
+        requires (!is_gpu_matrix_v<M>);
 
 
     //! \brief Prepare the preconditioner.
@@ -153,8 +153,8 @@ private:
 
 // Case where matrix is a CPU matrix as input
 template <class M, class X, class Y, int l>
-template <typename T, typename std::enable_if_t<!is_gpu_matrix_v<T>, int>>
 GpuSeqILU0<M, X, Y, l>::GpuSeqILU0(const M& A, field_type w)
+    requires (!is_gpu_matrix_v<M>)
     : m_underlyingMatrix(A)
     , m_w(w)
     , m_LU(GpuSparseMatrixWrapper<field_type, true>::fromMatrix(detail::makeMatrixWithNonzeroDiagonal(A)))
@@ -183,8 +183,8 @@ GpuSeqILU0<M, X, Y, l>::GpuSeqILU0(const M& A, field_type w)
 
 // Case where matrix is a GPU matrix as input
 template <class M, class X, class Y, int l>
-template <typename T, typename std::enable_if_t<is_gpu_matrix_v<T>, int>>
 GpuSeqILU0<M, X, Y, l>::GpuSeqILU0(const M& A, field_type w)
+    requires (is_gpu_matrix_v<M>)
     : m_underlyingMatrix(A)
     , m_w(w)
     , m_LU(A.getRowIndices(), A.getColumnIndices(), A.blockSize())

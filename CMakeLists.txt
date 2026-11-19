@@ -373,6 +373,7 @@ macro(opm-simulators_sources_hook)
       tests/gpuistl/test_blackoilintensivequantities_gpu.cu
       tests/gpuistl/test_blackoilintensivequantities_gpu_threephase.cu
       tests/gpuistl/test_gpu_ad.cu
+      tests/gpuistl/test_gpu_ecl_material_law_manager.cu
       tests/gpuistl/test_gpu_ecl_thermal_law_manager.cu
       tests/gpuistl/test_gpu_flow_problem_refresh.cu
       tests/gpuistl/test_gpu_linear_two_phase_material.cu
@@ -518,6 +519,7 @@ macro(opm-simulators_tests_hook)
                  cuVector_operations
                  deviceBlockOperations
                  gpu_ad
+                 gpu_ecl_material_law_manager
                  gpu_ecl_thermal_law_manager
                  gpu_flow_problem_refresh
                  gpu_linear_two_phase_material

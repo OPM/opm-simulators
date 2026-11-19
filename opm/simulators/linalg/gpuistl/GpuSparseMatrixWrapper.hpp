@@ -27,6 +27,7 @@
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrixGeneric.hpp>
 
+#include <concepts>
 #include <cstddef>
 #include <cuda.h>
 #include <cusparse.h>
@@ -189,9 +190,8 @@ public:
     }
 
     // Only participates in overload resolution when matrix_type == GpuSparseMatrix<T>
-    template <class M = matrix_type,
-              typename = std::enable_if_t<std::is_same_v<M, GpuSparseMatrix<T>>>>
     void setUpperTriangular()
+        requires std::same_as<matrix_type, GpuSparseMatrix<T>>
     {
         m_matrix->setUpperTriangular();
     }
@@ -199,9 +199,8 @@ public:
     /**
      * @brief setLowerTriangular sets the CuSparse flag that this is an lower diagonal (with non-unit diagonal) matrix.
      */
-    template <class M = matrix_type,
-              typename = std::enable_if_t<std::is_same_v<M, GpuSparseMatrix<T>>>>
     void setLowerTriangular()
+        requires std::same_as<matrix_type, GpuSparseMatrix<T>>
     {
         m_matrix->setLowerTriangular();
     }
@@ -209,9 +208,8 @@ public:
     /**
      * @brief setUnitDiagonal sets the CuSparse flag that this has unit diagional.
      */
-    template <class M = matrix_type,
-              typename = std::enable_if_t<std::is_same_v<M, GpuSparseMatrix<T>>>>
     void setUnitDiagonal()
+        requires std::same_as<matrix_type, GpuSparseMatrix<T>>
     {
         m_matrix->setUnitDiagonal();
     }
@@ -219,9 +217,8 @@ public:
     /**
      * @brief setNonUnitDiagonal sets the CuSparse flag that this has non-unit diagional.
      */
-    template <class M = matrix_type,
-              typename = std::enable_if_t<std::is_same_v<M, GpuSparseMatrix<T>>>>
     void setNonUnitDiagonal()
+        requires std::same_as<matrix_type, GpuSparseMatrix<T>>
     {
         m_matrix->setNonUnitDiagonal();
     }

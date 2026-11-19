@@ -236,6 +236,8 @@ public:
 
         // Defaulted threshold pressures are taken from the initial solution.
         this->thresholdPressures_.finishInit();
+
+        reportTwoPhaseEquilCells_();
     }
 
     /*!
@@ -478,6 +480,7 @@ protected:
             maxWater);
 
         initialFluidStates_ = std::move(initialState.fluidStates());
+        twoPhaseCheckRegions_ = std::move(initialState.twoPhaseCheckRegions());
         // The current flash has one pressure for all phases. Adapt the
         // independent equilibrium columns here, using the water column below
         // the contact. Once phase-pressure differences are supported by the
@@ -809,6 +812,28 @@ protected:
 
 private:
 
+    /// Warn about the type-1 EQUIL cells that the initial flash split into gas
+    /// and liquid.
+    void reportTwoPhaseEquilCells_()
+    {
+        if (!twoPhaseCheckRegions_.has_value()) {
+            return;
+        }
+
+        const auto liquidFraction = [this](const std::size_t cell) {
+            const auto& intQuants
+                = this->model().intensiveQuantities(static_cast<unsigned>(cell), /*timeIdx=*/0);
+            return getValue(intQuants.fluidState().L());
+        };
+        const auto& vanguard = this->simulator().vanguard();
+        EQUIL::Comp::reportTwoPhaseCells(*twoPhaseCheckRegions_,
+                                         vanguard.cellCenterDepths(),
+                                         liquidFraction,
+                                         vanguard.eclState().getInitConfig().getEquil().size(),
+                                         vanguard.gridView().comm());
+        twoPhaseCheckRegions_.reset();
+    }
+
     void handleSolventBC(const BCState::BCFace& /* bc */, RateVector& /* rate */) const override
     {
         throw std::logic_error("solvent is disabled for compositional modeling and you're trying to add solvent to BC");
@@ -835,6 +860,9 @@ private:
     }
 
     std::vector<InitialFluidState> initialFluidStates_;
+    /// Set by EQUIL until the initial flash has been checked, see
+    /// EQUIL::Comp::InitialStateComputer::twoPhaseCheckRegions().
+    std::optional<std::vector<int>> twoPhaseCheckRegions_;
 
     bool zmf_initialization_ {false};
 
