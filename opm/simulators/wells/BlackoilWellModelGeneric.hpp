@@ -533,9 +533,9 @@ protected:
     void assignWellTargets(data::Wells& wsrpt) const;
 
     /// Report WINJMULT injectivity multipliers (retained maximum for CIRR)
-    /// for wells lacking connection results, e.g., dynamically shut wells,
-    /// for restart output.  Other wells report the multipliers through
-    /// WellState::reportConnections().
+    /// for restart output also for shut wells, whose connection results
+    /// are incomplete.  Gathers the multipliers of distributed wells onto
+    /// the owning rank, so this is a collective operation.
     void assignInjMultipliers(data::Wells& wsrpt) const;
 
     /// Restore WINJMULT injectivity multipliers from restart file

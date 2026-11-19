@@ -321,6 +321,37 @@ add_test_compare_restarted_simulation(
     --enable-tuning=true
 )
 
+# WINJMULT: The irreversible (CIRR) injectivity multipliers must be
+# retained across a pressure decrease and the stopped (report step 4) and
+# shut (report step 5) intervals.
+if(USE_DEV_SIMULATOR_IN_TESTS)
+  set(winjmult_restart_sim flow_oilwater)
+else()
+  set(winjmult_restart_sim flow)
+endif()
+foreach(rst_step 4 5)
+  add_test_compare_restarted_simulation(
+    CASENAME
+      winjmult_cirr_shut_${rst_step}
+    FILENAME
+      WINJMULT_CIRR_SHUT
+    SIMULATOR
+      flow
+    DEV_SIMULATOR
+      flow_oilwater
+    TEST_NAME
+      compareRestartedSim_${winjmult_restart_sim}+WINJMULT_CIRR_SHUT_${rst_step}
+    ABS_TOL
+      ${abs_tol_restart}
+    REL_TOL
+      ${rel_tol_restart}
+    RESTART_STEP
+      ${rst_step}
+    DIR
+      winjmult
+  )
+endforeach()
+
 # The dynamic MSW data is not written to /read from the restart file
 # We therefore accept significant deviation in the results.
 # Note also that we use --sched-restart=true since some necessary

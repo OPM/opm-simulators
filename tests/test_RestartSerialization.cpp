@@ -35,6 +35,9 @@
 #include <opm/input/eclipse/EclipseState/WagHysteresisConfig.hpp>
 #include <opm/input/eclipse/Parser/Parser.hpp>
 #include <opm/input/eclipse/Python/Python.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
+#include <opm/output/data/Wells.hpp>
+#include <opm/output/eclipse/RestartValue.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclHysteresisTwoPhaseLawParams.hpp>
 #include <opm/material/thermal/EnergyModuleType.hpp>
@@ -368,6 +371,9 @@ public:
 
     using BlackoilWellModelGeneric<double, IndexTraits>::closeWellForRetry;
     using BlackoilWellModelGeneric<double, IndexTraits>::honorOpenRequest;
+    using BlackoilWellModelGeneric<double, IndexTraits>::assignInjMultipliers;
+
+    const auto& prevInjMultipliers() const { return prev_inj_multipliers_; }
 
     void setRollbackEnabled(bool value) { enable_state_rollback_ = value; }
 
@@ -516,6 +522,123 @@ COMPDAT
     state.open_completions("W1");
     well.updateCrossFlow(false);
     BOOST_CHECK(model.closedWellStatus(well) == Opm::WellStatus::SHUT);
+}
+
+BOOST_AUTO_TEST_CASE(RestoreInjMultipliersFromRestart)
+{
+    // The first connection is shut, so connection and perforation indices
+    // differ.  The connections have distinct, non-unit multipliers.
+    const auto deck = Opm::Parser{}.parseString(R"(
+RUNSPEC
+DIMENS
+ 1 1 4 /
+OIL
+WATER
+GRID
+DX
+ 4*100 /
+DY
+ 4*100 /
+DZ
+ 4*10 /
+TOPS
+ 4*1000 /
+PORO
+ 4*0.3 /
+PERMX
+ 4*100 /
+PERMY
+ 4*100 /
+PERMZ
+ 4*10 /
+SCHEDULE
+WELSPECS
+ 'W1' 'G1' 1 1 1* 'WATER' /
+/
+COMPDAT
+ 'W1' 1 1 1 1 'SHUT' 1* 1.0 0.2 /
+ 'W1' 1 1 2 4 'OPEN' 1* 1.0 0.2 /
+/
+WCONINJE
+ 'W1' 'WATER' 'OPEN' 'RATE' 100 /
+/
+WINJMULT
+ 'W1' 250 0.001 'CIRR' 1 1 3 /
+ 'W1' 260 0.002 'CIRR' 1 1 4 /
+/
+)");
+    Opm::EclipseState es{deck};
+    Opm::Schedule schedule{deck, es, std::make_shared<Opm::Python>()};
+    Opm::SummaryState summary;
+    Opm::PhaseUsage phaseUsage;
+    phaseUsage.initFromState(es);
+    Opm::Parallel::Communication comm;
+    Opm::BlackoilWellModelGasLiftGenericTest gaslift;
+    Opm::BlackoilWellModelGenericTest model{schedule, gaslift, summary, es, phaseUsage, comm, false};
+
+    // Restart file results in input order.  Global cell index == K.
+    const auto rst_mult = std::vector { 1.25, 1.75, 2.5, 3.5 };
+    auto rst_wells = Opm::data::Wells{};
+    rst_wells["W1"].rates
+        .set(Opm::data::Rates::opt::wat, 0.0)
+        .set(Opm::data::Rates::opt::oil, 0.0);
+    for (auto k = 0*rst_mult.size(); k < rst_mult.size(); ++k) {
+        auto& conn = rst_wells["W1"].connections.emplace_back();
+        conn.index = k;
+        conn.rates
+            .set(Opm::data::Rates::opt::wat, 0.0)
+            .set(Opm::data::Rates::opt::oil, 0.0);
+        conn.inj_mult = rst_mult[k];
+    }
+
+    model.initFromRestartFile(Opm::RestartValue { Opm::data::Solution{}, std::move(rst_wells),
+                                                  Opm::data::GroupAndNetworkValues{}, {} },
+                              std::make_unique<Opm::WellTestState>(),
+                              4, false);
+
+    // Perforations 0, 1, and 2 are connections 1, 2, and 3.
+    const auto expected = std::vector { 1.75, 2.5, 3.5 };
+
+    const auto& ws = model.wellState().well("W1");
+    BOOST_CHECK_EQUAL_COLLECTIONS(ws.perf_data.inj_mult.begin(), ws.perf_data.inj_mult.end(),
+                                  expected.begin(), expected.end());
+
+    const auto& retained = model.prevInjMultipliers().at("W1");
+    BOOST_CHECK_EQUAL_COLLECTIONS(retained.begin(), retained.end(),
+                                  expected.begin(), expected.end());
+
+    // Restart output, shut well with connections lacking multipliers.
+    {
+        auto wsrpt = Opm::data::Wells{};
+        for (auto k = 0; k < 4; ++k) {
+            wsrpt["W1"].connections.emplace_back().index = k;
+        }
+
+        model.assignInjMultipliers(wsrpt);
+
+        const auto& xcon = wsrpt["W1"].connections;
+        BOOST_REQUIRE_EQUAL(xcon.size(), std::size_t{4});
+        BOOST_CHECK_EQUAL(xcon[0].inj_mult, 1.0);
+        for (auto k = 1; k < 4; ++k) {
+            BOOST_CHECK_EQUAL(xcon[k].inj_mult, expected[k - 1]);
+        }
+    }
+
+    // Restart output, well without connection results.
+    {
+        auto wsrpt = Opm::data::Wells{};
+        wsrpt["W1"];
+
+        model.assignInjMultipliers(wsrpt);
+
+        const auto& xcon = wsrpt["W1"].connections;
+        BOOST_REQUIRE_EQUAL(xcon.size(), expected.size());
+        for (auto i = 0*xcon.size(); i < xcon.size(); ++i) {
+            BOOST_CHECK_EQUAL(xcon[i].index, i + 1);
+            BOOST_CHECK_EQUAL(xcon[i].inj_mult, expected[i]);
+            BOOST_CHECK_GT(xcon[i].trans_factor, 0.0);
+        }
+    }
 }
 
 template<class Grid, class GridView, class DofMapper, class Stencil, class FluidSystem, class Scalar>

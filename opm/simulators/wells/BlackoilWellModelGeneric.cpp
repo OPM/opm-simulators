@@ -2285,49 +2285,80 @@ template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelGeneric<Scalar, IndexTraits>::
 assignInjMultipliers(data::Wells& wsrpt) const
 {
-    for (auto w = 0*this->wells_ecl_.size(); w < this->wells_ecl_.size(); ++w) {
-        const auto& well = this->wells_ecl_[w];
+    for (const auto& well : this->wells_ecl_) {
         if (well.getInjMultMode() == Well::InjMultMode::NONE) {
             continue;
         }
 
-        const auto mult = this->prev_inj_multipliers_.find(well.name());
-        const auto xw = wsrpt.find(well.name());
-        if ((mult == this->prev_inj_multipliers_.end()) || (xw == wsrpt.end())) {
-            continue;
-        }
+        const auto& ws = this->wellState().well(well.name());
+        const auto& perf_data = ws.perf_data;
 
-        const auto& perf_data = this->well_perf_data_[w];
-        if (mult->second.size() != perf_data.size()) {
-            continue;
-        }
-
-        // Connection results normally carry the multiplier already (see
-        // WellState::reportConnections()).  Handle wells without connection
-        // results, e.g., dynamically shut wells, to retain the multiplier,
-        // notably the irreversible (CIRR) one, for restart output.
-        auto& xcon = xw->second.connections;
+        // Retained multipliers of the perforations on this rank.
+        auto local = std::vector<data::Connection>(perf_data.size());
         for (auto perf = 0*perf_data.size(); perf < perf_data.size(); ++perf) {
-            const auto& pd = perf_data[perf];
+            local[perf].index = perf_data.global_index[perf];
+            local[perf].lgr_grid = perf_data.grid_id[perf];
+            local[perf].inj_mult = perf_data.inj_mult[perf];
+        }
+
+        // Distributed wells: Collect all multipliers on the owning rank.
+        auto retained = std::vector<data::Connection>{};
+        const auto& pwinfo = ws.parallel_info.get();
+        if (pwinfo.communication().size() == 1) {
+            retained = std::move(local);
+        }
+        else {
+            this->wellState().gatherVectorsOnRoot(local, retained, pwinfo.communication());
+        }
+
+        if (! pwinfo.isOwner()) {
+            continue;
+        }
+
+        const auto xw = wsrpt.find(well.name());
+        if (xw == wsrpt.end()) {
+            continue;
+        }
+
+        // Connection results of open wells normally carry the multiplier
+        // already (see WellState::reportConnections()), but shut wells
+        // have either connections without multipliers, see
+        // assignShutConnections(), or no connections at all.
+        auto& xcon = xw->second.connections;
+        for (const auto& rc : retained) {
             const auto conn = std::ranges::find_if(xcon,
-                                                   [&pd](const data::Connection& c)
-                                                   {
-                                                       return (c.index == pd.global_index)
-                                                           && (c.lgr_grid == pd.grid_id);
-                                                   });
+                [&rc](const data::Connection& c)
+                { return (c.index == rc.index) && (c.lgr_grid == rc.lgr_grid); });
 
-            if ((conn == xcon.end()) && (mult->second[perf] != Scalar{1})) {
-                // Mirrors assignShutConnections().
-                const auto& ecl_conn = well.getConnections()[pd.ecl_index];
-
-                auto& xc = xcon.emplace_back();
-                xc.index = pd.global_index;
-                xc.lgr_grid = pd.grid_id;
-                xc.effective_Kh = ecl_conn.Kh();
-                xc.trans_factor = ecl_conn.CF();
-                xc.d_factor = ecl_conn.dFactor();
-                xc.inj_mult = mult->second[perf];
+            if (conn != xcon.end()) {
+                conn->inj_mult = rc.inj_mult;
+                continue;
             }
+
+            if (rc.inj_mult == 1.0) {
+                continue;
+            }
+
+            const auto& conns = well.getConnections();
+            const auto ecl_conn = std::ranges::find_if(conns,
+                [&rc](const Connection& c)
+                {
+                    return (c.global_index() == rc.index)
+                        && (c.get_lgr_level() == rc.lgr_grid);
+                });
+
+            if (ecl_conn == conns.end()) {
+                continue;
+            }
+
+            // Mirrors assignShutConnections().
+            auto& xc = xcon.emplace_back();
+            xc.index = rc.index;
+            xc.lgr_grid = rc.lgr_grid;
+            xc.effective_Kh = ecl_conn->Kh();
+            xc.trans_factor = ecl_conn->CF();
+            xc.d_factor = ecl_conn->dFactor();
+            xc.inj_mult = rc.inj_mult;
         }
     }
 }
