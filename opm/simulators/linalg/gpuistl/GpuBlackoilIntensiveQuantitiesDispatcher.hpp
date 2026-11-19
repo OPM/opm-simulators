@@ -80,7 +80,8 @@ struct GpuBlackoilIntensiveQuantitiesDispatcherSupport<
 
 /// Enable the dispatcher for the TypeTag that \c flow uses for black-oil decks
 /// without hysteresis. Only three-phase decks with live oil (PVTO), dry gas
-/// (PVDG) or wet gas (PVTG with VAPOIL), and PVTW water are accepted at run time.
+/// (PVDG) or wet gas (PVTG with VAPOIL), and PVTW water are accepted at run time,
+/// with or without endpoint scaling and SWATINIT.
 template <>
 struct GpuBlackoilIntensiveQuantitiesDispatcherSupport<
     Opm::Properties::TTag::FlowProblemNohyst> {

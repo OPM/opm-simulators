@@ -359,6 +359,13 @@ struct ImplFor final : GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::Imp
     explicit ImplFor(const Problem& cpuProblem)
     {
         // Build the GPU FlowProblem from the CPU FlowProblem (one-time setup).
+        // The GPU material law manager is a snapshot of the CPU manager, so
+        // every change to the scaled endpoints must come before this point:
+        // applySwatinit() during equilibration and applyRestartSwatInit() on
+        // restart. Both run in FlowProblemBlackoil::finishInit(), and the
+        // first update() comes from Model::applyInitialSolution(), after it.
+        // Hysteresis is the first state that will need a refresh after
+        // construction (see GpuFlowProblem::refreshMixingLimits()).
         problemBuf = std::make_unique<GpuFlowProblemBuf>(cpuProblem);
         problemView = ::Opm::gpuistl::make_view(*problemBuf);
 

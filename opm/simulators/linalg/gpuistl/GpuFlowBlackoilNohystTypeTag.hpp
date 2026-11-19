@@ -40,6 +40,8 @@
 
 #include <opm/common/utility/VectorWithDefaultAllocator.hpp>
 
+#include <opm/material/fluidmatrixinteractions/EclDefaultMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/EclEpsTwoPhaseLaw.hpp>
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawTwoPhaseTypes.hpp>
 #include <opm/material/fluidmatrixinteractions/GpuEclMaterialLawManager.hpp>
 #include <opm/material/fluidmatrixinteractions/PiecewiseLinearTwoPhaseMaterial.hpp>
@@ -77,11 +79,12 @@ struct FlowBlackoilNohystWetGasGPU {
 } // namespace TTag
 
 // -----------------------------------------------------------------------
-// MaterialLaw: EclDefaultMaterial with GpuView-backed piecewise-linear
-// two-phase laws. The traits are those of the CPU law (no hysteresis,
-// endpoint scaling enabled), so the GpuManager accepts the CPU manager.
-// The GPU manager does not apply endpoint scaling; decks that need it
-// must be rejected before reaching the GPU (see OPM/opm-simulators#7644).
+// MaterialLaw: EclDefaultMaterial over EclEpsTwoPhaseLaw over GpuView-backed
+// piecewise-linear two-phase laws. The traits are those of the CPU law, so
+// the GpuManager accepts the CPU manager. The GPU manager stores the scaled
+// endpoints per cell and applies endpoint scaling as the CPU law does; it
+// rejects the options it does not implement (GpuManager::validate). Decks
+// without endpoint scaling store no per-cell endpoints.
 // -----------------------------------------------------------------------
 template <class TypeTag>
 struct MaterialLaw<TypeTag, TTag::FlowBlackoilNohystGPU>
@@ -96,8 +99,10 @@ private:
         GasOilTraits, ::Opm::gpuistl::GpuView<const Scalar>>;
     using OilWaterParams = ::Opm::PiecewiseLinearTwoPhaseMaterialParams<
         OilWaterTraits, ::Opm::gpuistl::GpuView<const Scalar>>;
-    using GasOilLaw = ::Opm::PiecewiseLinearTwoPhaseMaterial<GasOilTraits, GasOilParams>;
-    using OilWaterLaw = ::Opm::PiecewiseLinearTwoPhaseMaterial<OilWaterTraits, OilWaterParams>;
+    using GasOilLaw = ::Opm::EclEpsTwoPhaseLaw<
+        ::Opm::PiecewiseLinearTwoPhaseMaterial<GasOilTraits, GasOilParams>>;
+    using OilWaterLaw = ::Opm::EclEpsTwoPhaseLaw<
+        ::Opm::PiecewiseLinearTwoPhaseMaterial<OilWaterTraits, OilWaterParams>>;
 
 public:
     using EclMaterialLawManager = ::Opm::EclMaterialLaw::GpuManager<
@@ -179,6 +184,22 @@ struct CheckFlowBlackoilNohystGpuTypeTags
                                      EclMaterialLawManager::MaterialLaw>);
     static_assert(std::is_same_v<typename GpuMaterialLaw::Traits,
                                  typename CpuMaterialLaw::Traits>);
+
+    using GpuMaterialLawManager =
+        typename GetProp<GpuTag, Properties::MaterialLaw>::EclMaterialLawManager;
+    using GpuGasOilLaw = typename GpuMaterialLawManager::GasOilLaw;
+    using GpuOilWaterLaw = typename GpuMaterialLawManager::OilWaterLaw;
+    static_assert(std::is_same_v<GpuMaterialLaw,
+                                 EclDefaultMaterial<typename GpuMaterialLaw::Traits,
+                                                    GpuGasOilLaw,
+                                                    GpuOilWaterLaw>>);
+    // Without the layer, the GPU manager would reject every deck with
+    // endpoint scaling that the CPU TypeTag runs.
+    static_assert(!getPropValue<CpuTag, Properties::EnableEndpointScaling>()
+                      || (EclMaterialLaw::detail::EpsLayer<GpuGasOilLaw>::present
+                          && EclMaterialLaw::detail::EpsLayer<GpuOilWaterLaw>::present),
+                  "the CPU TypeTag has endpoint scaling, so the GPU two-phase laws "
+                  "must be EclEpsTwoPhaseLaw");
 
     static_assert(std::is_same_v<GetPropType<GpuTag, Properties::Indices>,
                                  GetPropType<CpuTag, Properties::Indices>>);

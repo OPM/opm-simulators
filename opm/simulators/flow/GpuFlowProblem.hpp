@@ -118,7 +118,10 @@ namespace Opm {
  * (\c GpuBuffer / \c GpuView).
  *
  * The material law manager is held by value (so it is trivially copyable
- * into a CUDA kernel together with the rest of the problem state).
+ * into a CUDA kernel together with the rest of the problem state). It is a
+ * snapshot of the CPU manager at construction, so the problem must be built
+ * after the CPU problem has applied SWATINIT
+ * (\c FlowProblemBlackoil::finishInit()).
  *
  * \tparam ScalarT             Floating point type used for rock data.
  * \tparam MaterialLawManagerT GPU material law manager type (e.g.
