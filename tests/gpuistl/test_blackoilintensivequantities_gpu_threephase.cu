@@ -31,7 +31,7 @@
  *
  * Also checks which configuration the production dispatcher for this TypeTag
  * chooses, and that it rejects decks outside them, among them a deck with
- * endpoint scaling, which the GPU material law manager does not apply.
+ * endpoint scaling, which the GPU material law manager rejects.
  */
 #include <config.h>
 
@@ -681,8 +681,8 @@ BOOST_AUTO_TEST_CASE(DispatcherRejectsEndpointScaling)
     // Control: the deck without endpoint scaling is accepted.
     BOOST_CHECK_NO_THROW(runDispatcher(*makeSimulator(deckString)));
 
-    // The GPU material law manager ignores endpoint scaling, so a deck that
-    // uses it must be rejected instead of being evaluated with unscaled tables.
+    // The material law of the GPU TypeTag has no endpoint-scaling layer, so
+    // the GPU material law manager rejects a deck that uses it.
     const auto sim = makeSimulator(deckWithEndpointScaling());
     BOOST_REQUIRE(sim->problem().materialLawManager().oilWaterConfig().enableSatScaling());
     BOOST_CHECK_EXCEPTION(runDispatcher(*sim),

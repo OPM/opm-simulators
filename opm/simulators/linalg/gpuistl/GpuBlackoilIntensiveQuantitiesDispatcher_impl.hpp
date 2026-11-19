@@ -161,36 +161,18 @@ void rejectGeoModifier(const Problem& problem)
     }
 }
 
-/// The GPU material law manager evaluates piecewise-linear tables only, and
-/// applies neither endpoint scaling nor hysteresis (OPM/opm-simulators#7644).
-template <class MaterialLawManager>
-void rejectUnsupportedSaturationFunctions(const MaterialLawManager& materialLawManager)
-{
-    if (!materialLawManager.satCurveIsAllPiecewiseLinear()) {
-        OPM_THROW(std::logic_error,
-                  "GPU property evaluation requires piecewise-linear saturation tables");
-    }
-    // enableEndPointScaling() is only set by ENKRVD. ENDSCALE, including the
-    // capillary pressure scaling of SWATINIT, is enabled in the per-system
-    // endpoint scaling configurations.
-    const bool endPointScaling = materialLawManager.enableEndPointScaling()
-        || materialLawManager.gasOilConfig().enableSatScaling()
-        || materialLawManager.oilWaterConfig().enableSatScaling()
-        || materialLawManager.gasWaterConfig().enableSatScaling();
-    if (materialLawManager.enableHysteresis()
-        || endPointScaling
-        || materialLawManager.hasDirectionalRelperms()
-        || materialLawManager.hasDirectionalImbnum()) {
-        OPM_THROW(std::logic_error,
-                  "GPU property evaluation does not support hysteresis, endpoint scaling "
-                  "(ENDSCALE, ENKRVD, SWATINIT), or directional saturation functions");
-    }
-}
+/// The \c EclMaterialLaw::GpuManager of the material law of \p GpuTag. The
+/// configurations call its static, host-only \c validate() on the CPU
+/// manager. The converting constructor of the GPU manager runs the same check,
+/// but only once the GPU problem is being built; calling it from \c validate
+/// of the traits rejects the deck before anything is allocated on the GPU.
+template <class GpuTag>
+using GpuManagerFor = typename GetProp<GpuTag, Properties::MaterialLaw>::EclMaterialLawManager;
 
 /// Validation shared by the three-phase black-oil configurations of
 /// \c FlowProblemNohyst. The PVT approaches are checked by the facade, and
 /// VAPOIL by \c BlackoilNohystDispatcherTraits.
-template <class FluidSystem, class Problem>
+template <class GpuTag, class FluidSystem, class Problem>
 void validateBlackoilNohyst(const Problem& problem)
 {
     // The dispatcher assumes one entry per local grid DoF, and the overlap
@@ -225,7 +207,7 @@ void validateBlackoilNohyst(const Problem& problem)
                   "GPU property evaluation requires the default three-phase relative "
                   "permeability model; STONE1 and STONE2 are not supported");
     }
-    rejectUnsupportedSaturationFunctions(materialLawManager);
+    GpuManagerFor<GpuTag>::validate(materialLawManager);
 
     // Plain DRSDT is supported: the dispatcher refreshes the mixing limits on
     // every call. DRSDTCON needs the convective-mixing quantities, which the
@@ -285,7 +267,7 @@ struct BlackoilNohystDispatcherTraits
     {
         using FluidSystem = GetPropType<CpuTag, Properties::FluidSystem>;
         assertNoDiffusionOrDispersion<GpuTag>();
-        validateBlackoilNohyst<FluidSystem>(problem);
+        validateBlackoilNohyst<GpuTag, FluidSystem>(problem);
 
         // PVDG with VAPOIL is a valid CPU combination, but no deck uses it.
         // PVTG without VAPOIL is probably handled (Rv = 0 in every branch), but

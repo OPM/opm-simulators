@@ -77,7 +77,7 @@ struct GasWaterEnergyDispatcherTraits
             OPM_THROW(std::logic_error,
                       "GPU property evaluation requires water and gas without an active oil phase");
         }
-        dispatcher_detail::rejectUnsupportedSaturationFunctions(materialLawManager);
+        dispatcher_detail::GpuManagerFor<GpuTag>::validate(materialLawManager);
 
         const auto thermalLawManager = problem.thermalLawManager();
         if (thermalLawManager == nullptr) {
