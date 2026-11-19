@@ -1270,6 +1270,27 @@ if(CUDA_FOUND OR hip_FOUND)
     DIR
       gecon
   )
+  # Wet gas with vaporized oil, endpoint scaling (ENDSCALE with per-cell
+  # endpoints) and SWATINIT. Longer decks with these features, such as
+  # model2/6C_ENDSCALE_SCALECRS-YES_MODEL2, take different time steps in the
+  # two runs because of FMA contraction on the GPU, which compareECL cannot
+  # tolerate. Three-point scaling (SCALECRS) is covered by the GPU unit test.
+  add_test_compare_gpu_properties_simulation(
+    CASENAME
+      swatinit_01
+    FILENAME
+      SWATINIT-01
+    SIMULATOR
+      flow
+    DEV_SIMULATOR
+      flow_blackoil_nohyst
+    ABS_TOL
+      0.02
+    REL_TOL
+      8e-5
+    DIR
+      swatinit
+  )
 endif()
 
 
