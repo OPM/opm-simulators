@@ -49,6 +49,8 @@
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawTwoPhaseTypes.hpp>
 #include <opm/material/fluidmatrixinteractions/EclMultiplexerMaterialParams.hpp>
+#include <opm/material/fluidmatrixinteractions/EclTwoPhaseMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/EclTwoPhaseMaterialParams.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/material/fluidmatrixinteractions/PiecewiseLinearTwoPhaseMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/PiecewiseLinearTwoPhaseMaterialParams.hpp>
@@ -56,6 +58,7 @@
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 
 #include <opm/material/fluidmatrixinteractions/GpuEclMaterialLawManager.hpp>
 
@@ -298,6 +301,40 @@ struct EpsTestTypes : TestTypes<Scalar> {
     static_assert(std::is_same_v<GpuMaterialLaw,
                                  Opm::EclDefaultMaterial<Traits, GasOilLaw, OilWaterLaw>>,
                   "GpuManager is expected to default to EclDefaultMaterial");
+};
+
+/*!
+ * \brief The two-phase (gas-water) GPU manager, as flow's
+ *        GpuFlowGasWaterEnergyTypeTags builds it: EclTwoPhaseMaterial over
+ *        piecewise-linear laws, without endpoint-scaling layer.
+ */
+template <class Scalar>
+struct GasWaterTestTypes {
+    using Traits = typename TestTypes<Scalar>::Traits;
+    using CpuManager = Opm::EclMaterialLaw::Manager<Traits>;
+    using TwoPhaseTypes = Opm::EclMaterialLaw::TwoPhaseTypes<Traits>;
+
+    template <class TwoPhaseTraits>
+    using GpuLaw = Opm::PiecewiseLinearTwoPhaseMaterial<
+        TwoPhaseTraits,
+        Opm::PiecewiseLinearTwoPhaseMaterialParams<TwoPhaseTraits,
+                                                   Opm::gpuistl::GpuView<const Scalar>>>;
+    using GasOilLaw = GpuLaw<typename TwoPhaseTypes::GasOilTraits>;
+    using OilWaterLaw = GpuLaw<typename TwoPhaseTypes::OilWaterTraits>;
+    using GasWaterLaw = GpuLaw<typename TwoPhaseTypes::GasWaterTraits>;
+
+    using GpuMaterialLawParams = Opm::EclTwoPhaseMaterialParams<Traits,
+                                                                typename GasOilLaw::Params,
+                                                                typename OilWaterLaw::Params,
+                                                                typename GasWaterLaw::Params,
+                                                                Opm::gpuistl::ValueAsPointer>;
+    using GpuMaterialLaw = Opm::EclTwoPhaseMaterial<Traits,
+                                                    GasOilLaw,
+                                                    OilWaterLaw,
+                                                    GasWaterLaw,
+                                                    GpuMaterialLawParams>;
+    using GpuManagerBuf = Opm::EclMaterialLaw::
+        GpuManager<Traits, GasOilLaw, OilWaterLaw, Opm::gpuistl::GpuBuffer, GpuMaterialLaw>;
 };
 
 /*!
@@ -1086,6 +1123,81 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(RejectsUnsupportedOptions, Scalar, ScalarTypes)
                               std::logic_error);
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Two-phase (gas-water) path
+// ---------------------------------------------------------------------------
+
+namespace {
+
+/*!
+ * \brief A WATER+GAS deck, which the CPU manager runs with the GasWater
+ *        two-phase approach.
+ */
+std::string makeGasWaterDeckString(const std::string& runspecExtra, const std::string& propsExtra)
+{
+    return "RUNSPEC\n"
+           "DIMENS\n"
+           "  4 1 1 /\n"
+           "TABDIMS\n"
+           "  1 /\n"
+           "WATER\n"
+           "GAS\n"
+           "FIELD\n"
+        + runspecExtra
+        + "GRID\n"
+          "DX\n"
+          "  4*1000 /\n"
+          "DY\n"
+          "  4*1000 /\n"
+          "DZ\n"
+          "  4*20 /\n"
+          "TOPS\n"
+          "  4*8325 /\n"
+          "PORO\n"
+          "  4*0.3 /\n"
+          "PROPS\n"
+          "SWFN\n"
+          "  0.12  0.0  4.0\n"
+          "  0.5   0.3  1.0\n"
+          "  1.0   1.0  0.0 /\n"
+          "SGFN\n"
+          "  0.0   0.0  0.0\n"
+          "  0.5   0.3  0.0\n"
+          "  0.88  1.0  0.0 /\n"
+        + propsExtra;
+}
+
+} // namespace
+
+// The gas-water path is the one flow's GPU property evaluation uses. Its law
+// has no endpoint-scaling layer, so the manager itself must reject a deck
+// with ENDSCALE, whatever checks its caller makes.
+BOOST_AUTO_TEST_CASE_TEMPLATE(TwoPhaseRejectsEndpointScaling, Scalar, ScalarTypes)
+{
+    using Types = GasWaterTestTypes<Scalar>;
+
+    // Without endpoint scaling the deck is accepted, so the rejection below
+    // is caused by ENDSCALE alone.
+    {
+        typename Types::CpuManager cpuManager;
+        const std::size_t numCells = initCpuManager(cpuManager, makeGasWaterDeckString("", ""));
+        BOOST_REQUIRE(cpuManager.twoPhaseApproach() == Opm::EclTwoPhaseApproach::GasWater);
+        BOOST_REQUIRE(!usesEndpointScaling(cpuManager));
+        BOOST_CHECK_NO_THROW(buildGpuManager<Types>(cpuManager, numCells));
+    }
+
+    typename Types::CpuManager cpuManager;
+    const std::size_t numCells = initCpuManager(
+        cpuManager,
+        makeGasWaterDeckString("ENDSCALE\n/\n", "SWL\n  0.12 0.15 0.18 0.2 /\n"));
+    BOOST_REQUIRE(cpuManager.twoPhaseApproach() == Opm::EclTwoPhaseApproach::GasWater);
+    BOOST_REQUIRE(cpuManager.gasWaterConfig().enableSatScaling());
+    BOOST_REQUIRE(!cpuManager.enableEndPointScaling());
+
+    BOOST_CHECK_THROW(buildGpuManager<Types>(cpuManager, numCells),
+                      std::logic_error);
 }
 
 // ---------------------------------------------------------------------------
