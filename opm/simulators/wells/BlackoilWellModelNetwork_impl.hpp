@@ -75,7 +75,6 @@ doPreStepRebalance(DeferredLogger& deferred_logger)
         well_model_.getWellConvergence(well_model_.B_avg(), true).converged() &&
         !changed_well_group;
 
-    bool well_failed = false;
     OPM_BEGIN_PARALLEL_TRY_CATCH();
     // A well that fails numerically should not make the whole time step fail. It is stopped
     // and solved with zero rate, as is done for wells that can not be solved in the inner well
@@ -87,7 +86,7 @@ doPreStepRebalance(DeferredLogger& deferred_logger)
     // The state of the well that is solved is kept to be able to restore it if the well fails. The recovery
     // is done before the next well is solved, so only one state is needed.
     std::optional<std::remove_cvref_t<decltype(well_state.well(0))>> state_before_step;
-    well_failed = solveWellsWithSharedRecovery(
+    solveWellsWithSharedRecovery(
         this->well_model_,
         [](const auto& well) -> const auto& { return well->parallelWellInfo().communication(); },
         [&](auto& well) {
@@ -119,7 +118,7 @@ doPreStepRebalance(DeferredLogger& deferred_logger)
     OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModelNetwork::doPreStepRebalance() failed: ",
                                 well_model_.simulator().vanguard().grid().comm());
 
-    if (!converged || well_failed) {
+    if (!converged) {
         deferred_logger.warning("Initial (pre-step) network balance did not converge.");
     }
 }
