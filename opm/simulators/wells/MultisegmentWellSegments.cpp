@@ -704,6 +704,7 @@ void MultisegmentWellSegments<FluidSystem,Indices>::
 calculatePhaseState(const SegmentPvt& pvt,
                     const std::vector<EvalWell>& mix_s,
                     PhaseState& state,
+                    const bool continuous_zero_fractions,
                     DeferredLogger& deferred_logger) const
 {
     const int pvt_region_index = well_.pvtRegionIdx();
@@ -731,9 +732,10 @@ calculatePhaseState(const SegmentPvt& pvt,
 
     // gas phase
     if (gasActive) {
-        const bool oil_exist = oilActive && mix_s[oilActiveCompIdx] > 0.0;
-        if (oil_exist) {
-            if (mix_s[gasActiveCompIdx] > 0.0) {
+        const bool use_rv = oilActive && (continuous_zero_fractions || mix_s[oilActiveCompIdx] > 0.0);
+        if (use_rv) {
+            // Rv is the quotient oil/gas: its derivatives can overflow with zero oil and trace gas
+            if (mix_s[gasActiveCompIdx] > 0.0 && mix_s[oilActiveCompIdx] > 0.0) {
                 // with free gas present the stored Rv is the capped (possibly saturated)
                 // vaporization ratio needed here, and the stored inverse formation volume
                 // factor was evaluated with it on the undersaturated table
@@ -754,9 +756,9 @@ calculatePhaseState(const SegmentPvt& pvt,
 
     // oil phase
     if (oilActive) {
-        const bool gas_exist = gasActive && mix_s[gasActiveCompIdx] > 0.0;
-        if (gas_exist) {
-            if (mix_s[oilActiveCompIdx] > 0.0) {
+        const bool use_rs = gasActive && (continuous_zero_fractions || mix_s[gasActiveCompIdx] > 0.0);
+        if (use_rs) {
+            if (mix_s[gasActiveCompIdx] > 0.0 && mix_s[oilActiveCompIdx] > 0.0) {
                 state.rs = pvt.Rs;
                 state.b[oilActiveCompIdx] = pvt.invB[FluidSystem::oilPhaseIdx];
             } else {
@@ -802,6 +804,7 @@ MultisegmentWellSegments<FluidSystem,Indices>::
 computeVolumeRatio(const int seg,
                    const SegmentPvt& pvt,
                    const PrimaryVariables& primary_variables,
+                   const bool continuous_zero_fractions,
                    DeferredLogger& deferred_logger) const
 {
     const int num_quantities = well_.numConservationQuantities();
@@ -811,7 +814,7 @@ computeVolumeRatio(const int seg,
     }
 
     PhaseState state(num_quantities);
-    calculatePhaseState(pvt, mix_s, state, deferred_logger);
+    calculatePhaseState(pvt, mix_s, state, continuous_zero_fractions, deferred_logger);
     return state.vol_ratio;
 }
 
@@ -819,6 +822,7 @@ template<typename FluidSystem, typename Indices>
 void MultisegmentWellSegments<FluidSystem,Indices>::
 computeFluidProperties(const std::vector<SegmentPvt>& segment_pvt,
                        const PrimaryVariables& primary_variables,
+                       const bool continuous_zero_fractions,
                        DeferredLogger& deferred_logger)
 {
     const int num_quantities = well_.numConservationQuantities();
@@ -848,7 +852,7 @@ computeFluidProperties(const std::vector<SegmentPvt>& segment_pvt,
             mix_s[comp_idx] = primary_variables.surfaceVolumeFraction(seg, comp_idx);
         }
 
-        calculatePhaseState(pvt, mix_s, state, deferred_logger);
+        calculatePhaseState(pvt, mix_s, state, continuous_zero_fractions, deferred_logger);
         volume_ratios_[seg] = state.vol_ratio;
 
         std::ranges::fill(phase_densities_[seg], 0.0);
@@ -868,9 +872,9 @@ computeFluidProperties(const std::vector<SegmentPvt>& segment_pvt,
         if (gasActive) {
             // rvw is only for interface usage
             const EvalWell rvw{0.};
-            const bool oil_exist = oilActive && mix_s[oilActiveCompIdx] > 0.0;
+            const bool use_rv = oilActive && (continuous_zero_fractions || mix_s[oilActiveCompIdx] > 0.0);
             const EvalWell& b_g = state.b[gasActiveCompIdx];
-            if (oil_exist) {
+            if (use_rv) {
                 phase_viscosities_[seg][gasActiveCompIdx] = FluidSystem::gasPvt().viscosity(
                         pvt_region_index, temperature, seg_pressure, state.rv, rvw);
                 phase_densities_[seg][gasActiveCompIdx] = b_g * surface_densities_[gasActiveCompIdx]
@@ -884,9 +888,9 @@ computeFluidProperties(const std::vector<SegmentPvt>& segment_pvt,
 
         // oil phase
         if (oilActive) {
-            const bool gas_exist = gasActive && mix_s[gasActiveCompIdx] > 0.0;
+            const bool use_rs = gasActive && (continuous_zero_fractions || mix_s[gasActiveCompIdx] > 0.0);
             const EvalWell& b_o = state.b[oilActiveCompIdx];
-            if (gas_exist) {
+            if (use_rs) {
                 phase_viscosities_[seg][oilActiveCompIdx] = FluidSystem::oilPvt().viscosity(
                         pvt_region_index, temperature, seg_pressure, state.rs);
                 phase_densities_[seg][oilActiveCompIdx] = b_o * surface_densities_[oilActiveCompIdx]

@@ -77,12 +77,14 @@ public:
     //! volume ratios.
     void computeFluidProperties(const std::vector<SegmentPvt>& segment_pvt,
                                 const PrimaryVariables& primary_variables,
+                                const bool continuous_zero_fractions,
                                 DeferredLogger& deferred_logger);
 
     //! \brief Volume ratio of a segment from its PVT values and composition.
     EvalWell computeVolumeRatio(const int seg,
                                 const SegmentPvt& pvt,
                                 const PrimaryVariables& primary_variables,
+                                const bool continuous_zero_fractions,
                                 DeferredLogger& deferred_logger) const;
 
     //! \brief Update upwinding segments.
@@ -239,9 +241,12 @@ private:
     //!
     //! Reuses the PVT properties where they represent the requested composition, and
     //! evaluates the required saturated properties for single-phase cases.
+    //! With \p continuous_zero_fractions, a zero gas or oil fraction gives zero Rs and Rv
+    //! instead of saturated properties.
     void calculatePhaseState(const SegmentPvt& pvt,
                              const std::vector<EvalWell>& mix_s,
                              PhaseState& state,
+                             const bool continuous_zero_fractions,
                              DeferredLogger& deferred_logger) const;
 };
 
