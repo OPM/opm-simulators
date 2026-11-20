@@ -574,9 +574,11 @@ public:
     /// The update is skipped when the GRUPSLAV filter flag is SLAV, meaning
     /// the slave ignores the master's control for that rate type. A group
     /// without a master target that applies, which is still on a control mode
-    /// from an earlier master target that its own GCONPROD or GCONINJE has no
-    /// limit for, gets the control mode of its own GCONPROD or GCONINJE back.
-    /// This is how a target that the master withdraws is taken off the group.
+    /// from an earlier master target, gets the control mode of its own GCONPROD
+    /// or GCONINJE back. A mode counts as the group's own when its GCONPROD or
+    /// GCONINJE has a limit for it, or when GCONSALE set it: GRAT with a gas
+    /// target from the sales rate, or the gas injection mode SALE. This is how a
+    /// target that the master withdraws is taken off the group.
     void updateSlaveGroupCmodesFromMaster();
 #endif
 
@@ -866,6 +868,17 @@ private:
     Scalar getReservoirCouplingMasterGroupRate_(const Group& group,
                                                 const int phase_pos,
                                                 const ReservoirCoupling::RateKind kind) const;
+
+    /// @brief Whether a slave group has a production target of its own for a rate type.
+    ///
+    /// True when the group's GCONPROD has an active limit for the rate type, or
+    /// for GRAT when GCONSALE has given the group a gas target. Such a target
+    /// is what an uncoupled group would be controlled on.
+    ///
+    /// @param group The slave group
+    /// @param cmode The rate type
+    /// @return True if the group has a target of its own for @p cmode
+    bool hasOwnProductionTarget_(const Group& group, Group::ProductionCMode cmode) const;
 #endif  // RESERVOIR_COUPLING_ENABLED
 
     const WellState<Scalar, IndexTraits>* well_state_ {nullptr};

@@ -551,9 +551,9 @@ getProductionGroupTarget(const Group& group) const
             // That limit is then the target: the limit from the master, the one from
             // the slave's own GCONPROD, or the smaller of the two, as the GRUPSLAV
             // flag of that rate type says.
-            if (group.has_control(cmode)) {
+            if (this->hasOwnProductionTarget_(group, cmode)) {
                 // The slave's own value is the target an uncoupled group would get,
-                // which includes the adjustments from GCONSALE and GPMAINT.
+                // which includes a gas target set by GCONSALE.
                 return this->getEffectiveProductionLimit_(
                     group.name(), cmode, this->getProductionGroupTargetForMode_(group, cmode));
             }
@@ -578,9 +578,10 @@ getProductionGroupTarget(const Group& group) const
             return master_target;
         }
         if (filter == FilterFlag::BOTH) {
-            // Without a limit of its own for this rate type, the slave's GCONPROD
-            // item is zero, and must not take part in the minimum.
-            if (!group.has_control(cmode)) {
+            // Without an active limit of its own for this rate type, nor a gas
+            // target set by GCONSALE, the slave's GCONPROD item must not take part
+            // in the minimum: it is zero when defaulted.
+            if (!this->hasOwnProductionTarget_(group, cmode)) {
                 return master_target;
             }
             Scalar slave_target = this->getProductionGroupTargetForMode_(group, cmode);
@@ -1676,13 +1677,14 @@ updateSlaveGroupCmodesFromMaster()
         if (!use_master_cmode) {
             // The master has no target for the group, or its target is not used,
             // so the group is controlled by its own GCONPROD. A rate type that
-            // GCONPROD has no limit for is then left over from an earlier target
-            // from the master: one the master has withdrawn, or one on a rate type
-            // with another flag. Give the group back its own control mode.
+            // the group has no target of its own for is then left over from an
+            // earlier target from the master: one the master has withdrawn, or one
+            // on a rate type with another flag. Give the group back its own control
+            // mode.
             const auto cmode = this->groupState().production_control(gname);
             const bool is_rate_mode = cmode != Group::ProductionCMode::NONE
                 && cmode != Group::ProductionCMode::FLD;
-            if (is_rate_mode && !group.has_control(cmode)) {
+            if (is_rate_mode && !this->hasOwnProductionTarget_(group, cmode)) {
                 this->groupState().production_control(gname, group.prod_cmode());
             }
         }
@@ -1696,16 +1698,27 @@ updateSlaveGroupCmodesFromMaster()
             }
             else if (this->groupState().has_injection_control(gname, phase)) {
                 // As for production: a control mode that the group's own GCONINJE
-                // has no control for is left over from an earlier target from the
-                // master. Give the group back the control mode of its own GCONINJE.
+                // has no control for, and that is not the gas injection mode SALE
+                // set for a group with GCONSALE, is left over from an earlier target
+                // from the master. Give the group back the control mode of its own
+                // GCONINJE.
                 const auto cmode = this->groupState().injection_control(gname, phase);
+                const bool is_sale_mode = phase == Phase::GAS
+                    && cmode == Group::InjectionCMode::SALE
+                    && this->schedule_[this->report_step_].gconsale().has(gname);
                 const bool is_own_mode = cmode == Group::InjectionCMode::NONE
                     || cmode == Group::InjectionCMode::FLD
+                    || is_sale_mode
                     || group.has_control(phase, cmode);
                 if (!is_own_mode) {
-                    const auto own_cmode = group.hasInjectionControl(phase)
-                        ? group.injectionControls(phase, this->summary_state_).cmode
-                        : Group::InjectionCMode::NONE;
+                    // A group with GCONSALE gets the gas injection mode SALE, as in
+                    // setCmodeGroup().
+                    const bool has_gconsale = phase == Phase::GAS
+                        && this->schedule_[this->report_step_].gconsale().has(gname);
+                    const auto own_cmode = has_gconsale ? Group::InjectionCMode::SALE
+                        : group.hasInjectionControl(phase)
+                            ? group.injectionControls(phase, this->summary_state_).cmode
+                            : Group::InjectionCMode::NONE;
                     this->groupState().injection_control(gname, phase, own_cmode);
                 }
             }
@@ -2856,6 +2869,24 @@ getReservoirCouplingMasterGroupRate_(const Group& group,
     else {
         return 0.0;
     }
+}
+
+// Called from getProductionGroupTarget() and updateSlaveGroupCmodesFromMaster(), for a
+// reservoir coupling slave only.
+// - Returns whether a slave group has a production target of its own for the rate type.
+template <typename Scalar, typename IndexTraits>
+bool
+GroupStateHelper<Scalar, IndexTraits>::
+hasOwnProductionTarget_(const Group& group, const Group::ProductionCMode cmode) const
+{
+    if (group.has_control(cmode)) {
+        return true;
+    }
+    // GCONSALE can put a group on GRAT with a sales target, without a gas limit
+    // in GCONPROD, see BlackoilWellModelGeneric::checkGconsaleLimits().
+    return cmode == Group::ProductionCMode::GRAT
+        && this->groupState().has_grat_sales_target(group.name())
+        && this->groupState().grat_sales_target(group.name()) > 0;
 }
 #endif // RESERVOIR_COUPLING_ENABLED
 
