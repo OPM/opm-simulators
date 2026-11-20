@@ -720,8 +720,11 @@ effectiveSlaveGroupInjectionTarget_(const std::string& gname,
         return std::nullopt;
     }
     if (filter == FilterFlag::BOTH) {
+        // As in GroupStateHelper::getInjectionGroupTarget(): the deck's own rate
+        // takes part only when its GCONINJE gives one, since a defaulted rate
+        // item is zero.
         const auto& group = this->schedule().getGroup(gname, reportStepIdx);
-        if (group.hasInjectionControl(phase)) {
+        if (group.has_control(phase, Group::InjectionCMode::RATE)) {
             return std::min(master_target,
                             this->scheduleInjectionTarget_(gname, phase, reportStepIdx, summary_state));
         }

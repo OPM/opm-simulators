@@ -505,6 +505,13 @@ getInjectionGroupTarget(
             return master_target;
         }
         if (filter == FilterFlag::BOTH) {
+            // Without a control of its own for this phase and control mode, the
+            // slave's GCONINJE must not take part in the minimum: its item is zero
+            // when defaulted, and without a GCONINJE record for the phase there is
+            // no target to read at all.
+            if (!group.has_control(injection_phase, cmode)) {
+                return master_target;
+            }
             Scalar slave_target = this->getInjectionGroupTargetForMode_(
                 group, injection_phase, resv_coeff, cmode);
             return std::min(master_target, slave_target);
@@ -571,6 +578,11 @@ getProductionGroupTarget(const Group& group) const
             return master_target;
         }
         if (filter == FilterFlag::BOTH) {
+            // Without a limit of its own for this rate type, the slave's GCONPROD
+            // item is zero, and must not take part in the minimum.
+            if (!group.has_control(cmode)) {
+                return master_target;
+            }
             Scalar slave_target = this->getProductionGroupTargetForMode_(group, cmode);
             return std::min(master_target, slave_target);
         }
