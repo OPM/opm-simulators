@@ -1363,7 +1363,7 @@ namespace Opm
                 computeWellPotentials(simulator, well_state_copy, groupStateHelper, potentials);
             } catch (const std::exception& e) {
                 const std::string msg = fmt::format("well {}: computeWellPotentials() failed "
-                                                    "during attempt to recompute potentials for well: ",
+                                                    "during attempt to recompute potentials for well: {}",
                                                     this->name(), e.what());
                 deferred_logger.info(msg);
                 this->operability_status_.has_negative_potentials = true;
