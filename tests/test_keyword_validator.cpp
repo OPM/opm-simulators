@@ -834,6 +834,36 @@ GINJGAS
     BOOST_CHECK_EQUAL(errors.size(), 2);
 }
 
+BOOST_AUTO_TEST_CASE(gliftlim_accepts_only_zero_for_max_number_of_wells)
+{
+    // Item 2 is supported.  Item 3, a limit on the number of wells on
+    // artificial lift, is not, so only a defaulted item or 0 is accepted.
+    const auto validate = [](const std::string& item3)
+    {
+        const auto deck = Parser {}.parseString(R"(
+SCHEDULE
+GLIFTLIM
+  'FIELD' 50E4 )" + item3 + R"( /
+/
+)");
+        std::vector<ValidationError> errors;
+        flowKeywordValidator().validateDeckKeyword(deck["GLIFTLIM"].back(), errors);
+        return errors;
+    };
+
+    BOOST_CHECK(validate("").empty());
+    BOOST_CHECK(validate("1*").empty());
+    BOOST_CHECK(validate("0").empty());
+
+    for (const auto* invalid : {"2", "-1"}) {
+        const auto errors = validate(invalid);
+        BOOST_REQUIRE_EQUAL(errors.size(), 1);
+        BOOST_CHECK(errors.front().critical);
+        BOOST_CHECK(errors.front().item_number == std::optional<std::size_t>{3});
+        BOOST_CHECK(errors.front().item_value == std::optional<std::string>{invalid});
+    }
+}
+
 
 // PARACHOR is sized by TABDIMS, so a deck carrying it needs TABDIMS too.
 Deck compositionalPropsDeck(const std::string& props)
