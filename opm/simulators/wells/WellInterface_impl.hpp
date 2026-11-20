@@ -1407,9 +1407,8 @@ namespace Opm
         // keep the state to be able to restore it if the solve with zero rate fails badly
         const auto ws_before_zero_rate_solve = well_state.well(this->indexOfWell());
         bool solve_threw = false;
-        bool converged = false;
         try {
-            converged = this->solveWellWithZeroRate(
+            this->solveWellWithZeroRate(
                 simulator, dt, groupStateHelper, well_state
             );
         } catch (const std::exception& e) {
@@ -1424,18 +1423,20 @@ namespace Opm
         // convergence checks, so restore the state and make the well consistent with zero rates.
         const bool restored =
             well_state.well(this->indexOfWell()).restoreIfDiverged(ws_before_zero_rate_solve, solve_threw);
-        // A solve that did not converge can also return without having updated the state, for example when
-        // it is out of iterations. The state can then still hold rates, which a stopped well must not have.
         // The reset contains collective operations, so all ranks of a distributed well must agree on it.
-        if (anyRank(this->parallelWellInfo().communication(), restored || !converged)) {
+        if (anyRank(this->parallelWellInfo().communication(), restored)) {
             this->resetStoppedWell(simulator, dt, groupStateHelper, well_state);
         } else {
-            // A solve that converges in the first assembly returns before the well state is updated, so the
-            // state can still hold the rates from before the well was stopped. The rates of a stopped well
-            // are zero. The segment rates are kept, as they can hold valid flow within the well.
+            // A solve can return without having updated the well state, for example if it converges in the
+            // first assembly or is out of iterations, so the state can still hold the rates from before the
+            // well was stopped. The rates of a stopped well are zero. The top segment holds the rates of the
+            // well, so these are zeroed as well. The flow in the other segments is kept, as the state
+            // of a solve that did not converge is kept, and a converged solve can have valid flow within the well.
             auto& ws = well_state.well(this->indexOfWell());
             std::ranges::fill(ws.surface_rates, Scalar{0.0});
             std::ranges::fill(ws.reservoir_rates, Scalar{0.0});
+            const auto num_well_rates = std::min(ws.surface_rates.size(), ws.segments.rates.size());
+            std::fill_n(ws.segments.rates.begin(), num_well_rates, Scalar{0.0});
         }
     }
 
