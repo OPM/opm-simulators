@@ -1,0 +1,270 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#version 450
+#extension GL_ARB_gpu_shader_fp64 : require
+layout(local_size_x=64) in;
+layout(set=0,binding=0,std430) readonly buffer Rows { uint row[]; };
+layout(set=0,binding=1,std430) readonly buffer Cols { uint col[]; };
+layout(set=0,binding=2,std430) readonly buffer Values { double val[]; };
+// x, r, rhat, p, v, s, t, phat, shat, followed by inverse 3x3 blocks.
+layout(set=0,binding=3,std430) buffer Work { double w[]; };
+// rho, alpha, omega, beta, target squared, status, iterations; then partial sums.
+layout(set=0,binding=4,std430) buffer Scalars { double z[]; };
+#ifdef RESLAB_DILU
+layout(set=0,binding=5,std430) readonly buffer Levels { uint cells[]; };
+layout(set=0,binding=6,std430) readonly buffer PressureIndices { uint pi[]; };
+layout(set=0,binding=7,std430) buffer PressureData { double pd[]; };
+layout(push_constant) uniform Parameters { uint n; uint op; uint offset; uint count; } pc;
+#else
+layout(push_constant) uniform Parameters { uint n; uint op; } pc;
+#endif
+shared double sa[64];
+shared double sb[64];
+shared double sc[64];
+#ifdef RESLAB_SPECIALIZE
+// Remove unrelated kernels before register allocation in the native adapter.
+layout(constant_id=0) const uint kernelOperation=0;
+layout(constant_id=1) const bool mixedPreconditioner=false;
+layout(constant_id=2) const bool cooperativeSweeps=false;
+#endif
+bool bad(double x) { return isnan(x) || isinf(x); }
+void main() {
+    uint i=gl_GlobalInvocationID.x, l=gl_LocalInvocationID.x;
+    uint n=pc.n, groups=(n+63)/64;
+#ifdef RESLAB_SPECIALIZE
+    uint op=kernelOperation;
+#else
+    uint op=pc.op;
+#endif
+    // Native Flow adapter supports arbitrary iteration limits, including partial batches.
+    if(z[7]>0.0 && z[6]>=z[7]) return;
+    if(z[5]!=0.0 && !(z[5]==2.0 && (op==10 || op==11 || op==12))) return;
+#ifdef RESLAB_DILU
+    if(op>=21) {
+        uint m=pc.offset, size=pi[m], src=pc.count>=32 ? 14*n : (pc.count==1 ? 3*n : 5*n);
+        if(op==21) {
+            if(i<size) {
+                double b=0.0;
+                for(uint r=0;r<3;++r) b+=pd[pi[m+13]+3*i+r]*w[src+3*i+r];
+                pd[pi[m+5]+i]=b;pd[pi[m+6]+i]=0.0;
+            }
+        } else if(op==22 || op==27) {
+            if(i<size) {
+                double ax=0.0;
+                uint x=pi[m+(op==22 ? 6 : 7)],outx=pi[m+(op==22 ? 7 : 6)];
+                for(uint j=pi[pi[m+1]+i];j<pi[pi[m+1]+i+1];++j) ax+=pd[pi[m+3]+j]*pd[x+pi[pi[m+2]+j]];
+                pd[outx+i]=pd[x+i]+0.7*pd[pi[m+4]+i]*(pd[pi[m+5]+i]-ax);
+            }
+        } else if(op==23) {
+            uint child=pi[m+11];
+            if(i<pi[child]) {
+                double b=0.0;
+                for(uint k=pi[pi[m+9]+i];k<pi[pi[m+9]+i+1];++k) {
+                    uint r=pi[pi[m+10]+k];double ax=0.0;
+                    for(uint j=pi[pi[m+1]+r];j<pi[pi[m+1]+r+1];++j) ax+=pd[pi[m+3]+j]*pd[pi[m+6]+pi[pi[m+2]+j]];
+                    b+=pd[pi[m+5]+r]-ax;
+                }
+                pd[pi[child+5]+i]=b;pd[pi[child+6]+i]=0.0;
+            }
+        } else if(op==24) {
+            if(i<size) pd[pi[m+6]+i]+=pd[pi[pi[m+11]+6]+pi[pi[m+8]+i]];
+        } else if(op==25) {
+            if(i<size) {
+                double x=0.0;
+                for(uint j=0;j<size;++j) x+=pd[pi[m+12]+i*size+j]*pd[pi[m+5]+j];
+                pd[pi[m+6]+i]=x;
+            }
+        } else if(op==26) {
+            if(i<n) {
+                double ax=0.0;
+                for(uint j=row[i];j<row[i+1];++j) if(col[j]%3==1) ax+=val[j]*pd[pi[6]+col[j]/3];
+                w[14*n+i]=w[src+i]-ax;
+            }
+        } else if(op==28) {
+            if(i<n/3) {
+                uint dst=(pc.count%32==1 ? 7*n : 8*n);
+                if(pc.count>=32) for(uint r=0;r<3;++r) w[dst+3*i+r]+=w[16*n+3*i+r];
+                w[dst+3*i+1]+=pd[pi[6]+i];
+            }
+        } else if(op==29) {
+            if(i<n) {
+                uint dst=pc.count==1 ? 7*n : 8*n;
+                double ax=0.0;
+                for(uint j=row[i];j<row[i+1];++j) ax+=val[j]*w[dst+col[j]];
+                w[14*n+i]=w[src+i]-ax;
+                w[16*n+i]=w[dst+i];
+            }
+        }
+        return;
+    }
+    // Optional fixed Jacobi sweeps approximate the triangular applications.
+    // Read/write buffers alternate; every sweep has a host-recorded GPU barrier.
+    if(op>=17) {
+#ifdef RESLAB_SPECIALIZE
+        if(cooperativeSweeps) {
+            uint cell=i/8,lane=l%8,base=3*cell,k=pc.offset;
+            bool valid=cell<n/3,forward=op==17 || op==19;
+            uint dst=op<=18 ? 7*n : 8*n,src=pc.count==0 ? 14*n : (op<=18 ? 3*n : 5*n);
+            uint previous=forward ? (k%2==1 ? dst : 12*n) : (k%2==0 ? dst : 12*n);
+            uint outputBase=forward ? (k%2==0 ? dst : 12*n) : (k%2==0 ? 12*n : dst);
+            double tmp[3];
+            for(uint r=0;r<3;++r) {
+                tmp[r]=valid && forward && lane==0 ? w[src+base+r] : 0.0;
+                if(valid && !forward && k==0 && lane==0) w[13*n+base+r]=w[dst+base+r];
+                if(valid && (!forward || k>0)) for(uint j=row[base+r]+lane;j<row[base+r+1];j+=8) {
+                    if(forward && col[j]/3<cell) tmp[r]-=val[j]*w[previous+col[j]];
+                    if(!forward && col[j]/3>cell) tmp[r]+=val[j]*w[previous+col[j]];
+                }
+            }
+            sa[l]=tmp[0];sb[l]=tmp[1];sc[l]=tmp[2];barrier();
+            for(uint stride=4;stride>0;stride>>=1) {
+                if(lane<stride) {sa[l]+=sa[l+stride];sb[l]+=sb[l+stride];sc[l]+=sc[l+stride];}
+                barrier();
+            }
+            if(valid && lane==0) {
+                for(uint r=0;r<3;++r) {
+                    double v=w[9*n+9*cell+3*r]*sa[l]+w[9*n+9*cell+3*r+1]*sb[l]+w[9*n+9*cell+3*r+2]*sc[l];
+                    w[outputBase+base+r]=forward ? v : w[13*n+base+r]-v;
+                }
+            }
+            return;
+        }
+#endif
+        if(i>=n/3) return;
+        uint cell=i,base=3*i,dst=op<=18 ? 7*n : 8*n,k=pc.offset;
+        bool forward=op==17 || op==19;
+        uint src=pc.count==0 ? 14*n : (op<=18 ? 3*n : 5*n);
+        uint previous=forward ? (k%2==1 ? dst : 12*n) : (k%2==0 ? dst : 12*n);
+        uint outputBase=forward ? (k%2==0 ? dst : 12*n) : (k%2==0 ? 12*n : dst);
+#ifdef RESLAB_SPECIALIZE
+        if(mixedPreconditioner) {
+            float tmp[3],outv[3];
+            for(uint r=0;r<3;++r) {
+                tmp[r]=forward ? float(w[src+base+r]) : 0.0;
+                if(!forward && k==0) w[13*n+base+r]=w[dst+base+r];
+                if(!forward || k>0) for(uint j=row[base+r];j<row[base+r+1];++j) {
+                    if(forward && col[j]/3<cell) tmp[r]-=float(val[j])*float(w[previous+col[j]]);
+                    if(!forward && col[j]/3>cell) tmp[r]+=float(val[j])*float(w[previous+col[j]]);
+                }
+            }
+            for(uint r=0;r<3;++r) {
+                float v=0.0;
+                for(uint c=0;c<3;++c) v+=float(w[9*n+9*cell+3*r+c])*tmp[c];
+                outv[r]=forward ? v : float(w[13*n+base+r])-v;
+            }
+            for(uint r=0;r<3;++r) w[outputBase+base+r]=double(outv[r]);
+            return;
+        }
+#endif
+        double tmp[3],outv[3];
+        for(uint r=0;r<3;++r) {
+            tmp[r]=forward ? w[src+base+r] : 0.0;
+            if(!forward && k==0) w[13*n+base+r]=w[dst+base+r];
+            if(!forward || k>0) for(uint j=row[base+r];j<row[base+r+1];++j) {
+                if(forward && col[j]/3<cell) tmp[r]-=val[j]*w[previous+col[j]];
+                if(!forward && col[j]/3>cell) tmp[r]+=val[j]*w[previous+col[j]];
+            }
+        }
+        for(uint r=0;r<3;++r) {
+            double v=0.0;
+            for(uint c=0;c<3;++c) v+=w[9*n+9*cell+3*r+c]*tmp[c];
+            outv[r]=forward ? v : w[13*n+base+r]-v;
+        }
+        for(uint r=0;r<3;++r) w[outputBase+base+r]=outv[r];
+        return;
+    }
+    // One invocation owns all three components of a cell. Each level is a
+    // separate dispatch so triangular dependencies are satisfied without races.
+    if(op>=13) {
+        if(i>=pc.count) return;
+        uint cell=cells[pc.offset+i], base=3*cell;
+        uint src=op<=14 ? 3*n : 5*n, dst=op<=14 ? 7*n : 8*n;
+        bool forward=op==13 || op==15;
+        double tmp[3], outv[3];
+        for(uint r=0;r<3;++r) {
+            tmp[r]=forward ? w[src+base+r] : 0.0;
+            for(uint j=row[base+r];j<row[base+r+1];++j) {
+                if(forward && col[j]/3<cell) tmp[r]-=val[j]*w[dst+col[j]];
+                if(!forward && col[j]/3>cell) tmp[r]+=val[j]*w[dst+col[j]];
+            }
+        }
+        for(uint r=0;r<3;++r) {
+            double v=0.0;
+            for(uint c=0;c<3;++c) v+=w[9*n+9*cell+3*r+c]*tmp[c];
+            outv[r]=forward ? v : w[dst+base+r]-v;
+        }
+        for(uint r=0;r<3;++r) w[dst+base+r]=outv[r];
+        return;
+    }
+#endif
+    if(op==3 || op==8 || op==11 || op==4 || op==9 || op==12) {
+        double a=0.0,b=0.0,c=0.0;
+        if(op==4 || op==9 || op==12) {
+            for(uint j=l;j<groups;j+=64) {
+                a+=z[16+j]; b+=z[16+groups+j]; c+=z[16+2*groups+j];
+            }
+        } else if(i<n) {
+            if(op==3) a=w[2*n+i]*w[4*n+i];
+            if(op==8) {
+                a=w[6*n+i]*w[5*n+i]; b=w[6*n+i]*w[6*n+i];
+#ifdef RESLAB_SPECIALIZE
+                double originalS=w[5*n+i]*w[15*n+i];c=originalS*originalS;
+#else
+                c=w[5*n+i]*w[5*n+i];
+#endif
+            }
+            if(op==11) {
+                a=w[2*n+i]*w[n+i];
+#ifdef RESLAB_SPECIALIZE
+                double originalR=w[n+i]*w[15*n+i];b=originalR*originalR;
+#else
+                b=w[n+i]*w[n+i];
+#endif
+            }
+        }
+        sa[l]=a; sb[l]=b; sc[l]=c; barrier();
+        for(uint stride=32;stride>0;stride>>=1) {
+            if(l<stride) { sa[l]+=sa[l+stride]; sb[l]+=sb[l+stride]; sc[l]+=sc[l+stride]; }
+            barrier();
+        }
+        if(l==0) {
+            a=sa[0]; b=sb[0]; c=sc[0];
+            if(op==3 || op==8 || op==11) {
+                uint g=gl_WorkGroupID.x;
+                z[16+g]=a; z[16+groups+g]=b; z[16+2*groups+g]=c;
+            } else if(op==4) {
+                if(a==0.0 || bad(a)) z[5]=-1.0;
+                else { z[1]=z[0]/a; if(bad(z[1])) z[5]=-1.0; }
+            } else if(op==9) {
+                if(c<=z[4]) { z[2]=0.0; z[5]=2.0; }
+                else if(b==0.0 || bad(a) || bad(b)) z[5]=-1.0;
+                else { z[2]=a/b; if(z[2]==0.0 || bad(z[2])) z[5]=-1.0; }
+            } else {
+                z[6]+=1.0;
+                if(bad(a) || bad(b)) z[5]=-1.0;
+                else if(b<=z[4]) z[5]=1.0;
+                else if(a==0.0 || z[0]==0.0 || z[2]==0.0) z[5]=-1.0;
+                else { z[3]=(a/z[0])*(z[1]/z[2]); z[0]=a; if(bad(z[3])) z[5]=-1.0; }
+            }
+        }
+        return;
+    }
+    if(i>=n) return;
+    if(op==0) w[3*n+i]=w[n+i]+z[3]*(w[3*n+i]-z[2]*w[4*n+i]);
+    if(op==1 || op==6) {
+        uint block=i/3, r=i%3, src=op==1 ? 3*n : 5*n, dst=op==1 ? 7*n : 8*n;
+        double sum=0.0;
+        for(uint j=0;j<3;++j) sum+=w[9*n+9*block+3*r+j]*w[src+3*block+j];
+        w[dst+i]=sum;
+    }
+    if(op==2 || op==7) {
+        uint src=op==2 ? 7*n : 8*n, dst=op==2 ? 4*n : 6*n;
+        double sum=0.0;
+        for(uint j=row[i];j<row[i+1];++j) sum+=val[j]*w[src+col[j]];
+        w[dst+i]=sum;
+    }
+    if(op==5) w[5*n+i]=w[n+i]-z[1]*w[4*n+i];
+    if(op==10) {
+        w[i]+=z[1]*w[7*n+i]+z[2]*w[8*n+i];
+        w[n+i]=w[5*n+i]-z[2]*w[6*n+i];
+    }
+}
