@@ -313,6 +313,8 @@ namespace Dune
                         linsolver_ = std::make_shared<Dune::UMFPack<MatrixType>>(linearoperator_for_solver_->getmat(), verbosity, false);
                         direct_solver_ = true;
                     }
+#else
+                if (false) {
 #endif
 #if HAVE_CUDA
                 } else if (solver_type == "gpubicgstab") {
