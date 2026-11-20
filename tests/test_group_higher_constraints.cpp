@@ -1334,6 +1334,48 @@ BOOST_AUTO_TEST_CASE(TestAutoChokeGroupTargetRateBelowShareWithFldSibling)
     checkAlgo(metric_rate(target_rate_si), expected_target);
 }
 
+//! \brief Test getAutoChokeGroupProductionTargetRate() for a sub-sea manifold group without a
+//! guide rate share
+//!
+//! Without a guide rate of its own, MANI counts with the guide rates of its group controlled
+//! wells, and its wells are on THP control.  Next to MANI-2, under group control, MANI then has
+//! no share of FIELD's target, and follows no target: its choke is not closed.
+//!
+//! \code
+//!   FIELD (ORAT = 10000, GCW=4)
+//!   ├── PLAT (E=0.9, FLD, GUIDERATE=9500, GCW=3)
+//!   │   ├── MANI (E=0.8, FLD, NO GUIDERATE, GCW=2, as_choke)
+//!   │   │   ├── WELL-A (RATE=6000, POT=6000, THP)
+//!   │   │   └── WELL-A2 (RATE=4000, POT=4000, THP)
+//!   │   └── MANI-2 (E=0.75, FLD, GUIDERATE=1500, GCW=1)
+//!   │       └── WELL-B (RATE=2000, POT=2000, GRUP)
+//!   └── PLAT-2 (E=0.85, FLD, GUIDERATE=2550, GCW=1)
+//!       └── WELL-C (RATE=3000, POT=3000, GRUP)
+//! \endcode
+BOOST_AUTO_TEST_CASE(TestAutoChokeGroupTargetRateWithoutShare)
+{
+    commonSetupForAllTests(
+        /*plat_has_guide_rate=*/true,
+        /*mani_control       =*/Opm::Group::ProductionCMode::FLD,
+        /*well_a_control     =*/Opm::Well::ProducerCMode::THP,
+        /*well_a2_control    =*/Opm::Well::ProducerCMode::THP,
+        /*mani2_control      =*/Opm::Group::ProductionCMode::FLD,
+        /*data_file          =*/"GROUP_HIGHER_CONSTRAINTS_NETWORK.DATA"
+    );
+    BOOST_REQUIRE(maniGroup().as_choke());
+
+    auto& gsh = groupStateHelper();
+    BOOST_CHECK_EQUAL(gsh.groupControlledWells("MANI", "", /*is_production_group=*/true,
+                                               Opm::Phase::OIL), 2);
+    guideRate().erase("MANI");
+    BOOST_REQUIRE(!guideRate().has("MANI"));
+
+    auto [target_rate_si, control_mode] = gsh.getAutoChokeGroupProductionTargetRate(
+        maniGroup(), maniGroup(), resvCoeff(), /*efficiencyFactor=*/1.0);
+    BOOST_CHECK(control_mode == Opm::Group::ProductionCMode::NONE);
+    BOOST_CHECK_EQUAL(target_rate_si, 0.0);
+}
+
 //! \brief Test the share that decides whether a sub-sea manifold group is below it, through a
 //! group without a guide rate
 //!

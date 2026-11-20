@@ -1302,9 +1302,10 @@ namespace Opm
             checkWellOperability(simulator, well_state, groupStateHelper);
 
         // only use inner well iterations for the first newton iterations.
-        // A well kept stopped is not solved for, see keepStopped().
+        // A well kept stopped, or stopped behind a closed choke, is not solved
+        // for, see keepStopped() and stopBehindClosedChoke().
         const auto& iterCtx = simulator.problem().iterationContext();
-        if (!this->operability_status_.isKeptStopped()
+        if (!this->operability_status_.isHeldStopped()
             && iterCtx.shouldRunInnerWellIterations(this->param_.max_niter_inner_well_iter_)) {
             const auto& ws = well_state.well(this->indexOfWell());
             const bool nonzero_rate_original =
@@ -1383,9 +1384,9 @@ namespace Opm
         changed_to_stopped_this_step_ = false;
 
         const bool well_operable = this->operability_status_.isOperableAndSolvable();
-        if (!well_operable) {
+        if (!well_operable || this->operability_status_.stopped_behind_closed_choke) {
             this->stopWellAndSolveWithZeroRate(simulator, dt, groupStateHelper, well_state);
-            if (old_well_operable) {
+            if (old_well_operable && !this->operability_status_.stopped_behind_closed_choke) {
                 const std::string ctx = iterCtx.inLocalSolve() ? " (NLDD domain solve)" : "";
                 deferred_logger.debug(" well " + this->name() + " gets STOPPED during iteration" + ctx);
                 changed_to_stopped_this_step_ = true;
@@ -1526,7 +1527,7 @@ namespace Opm
             return;
         }
 
-        if (this->operability_status_.isKeptStopped()
+        if (this->operability_status_.isHeldStopped()
             || (this->wellIsStopped() && !changed_to_stopped_this_step_)) {
             return;
         }

@@ -696,8 +696,11 @@ getAutoChokeGroupProductionTargetRate(const Group& bottom_group,
 
     // The manifold counts at every level, also when it is below its share and
     // its wells do not count as group controlled.
+    bool has_share = true;
     auto localFraction = [&](const std::string& child) {
-        return fcalc.localFraction(child, bottom_group.name());
+        const Scalar fraction = fcalc.localFraction(child, bottom_group.name());
+        has_share = has_share && fraction > 0.0;
+        return fraction;
     };
 
     auto localReduction = [&](const std::string& group_name) {
@@ -732,6 +735,11 @@ getAutoChokeGroupProductionTargetRate(const Group& bottom_group,
                                                               localReduction,
                                                               localFraction,
                                                               addback);
+    // Without a guide rate share, e.g. without a guide rate of its own next to
+    // group controlled siblings, the manifold follows no target.
+    if (!has_share) {
+        return std::make_pair(Scalar(0.0), Group::ProductionCMode::NONE);
+    }
     // Avoid negative target rates coming from too large local reductions.
     const Scalar target_rate = std::max(Scalar(0.0), target / efficiencyFactor);
 

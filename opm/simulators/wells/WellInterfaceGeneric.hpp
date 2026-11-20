@@ -172,6 +172,32 @@ public:
 
     KeptStopped keptStopped() const { return this->operability_status_.kept_stopped; }
 
+    /// Stop the well while the choke of its sub-sea manifold is closed on a
+    /// zero target.  It is not solved for, as a well kept stopped, but stays
+    /// operable, so it is not closed at the end of the time step.
+    void stopBehindClosedChoke()
+    {
+        this->operability_status_.stopped_behind_closed_choke = true;
+        this->stopWell();
+    }
+
+    /// Reopen a well stopped behind a closed choke, unless it is kept stopped.
+    void reopenBehindChoke()
+    {
+        auto& status = this->operability_status_;
+        if (status.stopped_behind_closed_choke) {
+            status.stopped_behind_closed_choke = false;
+            if (!status.isKeptStopped()) {
+                this->openWell();
+            }
+        }
+    }
+
+    bool stoppedBehindClosedChoke() const
+    {
+        return this->operability_status_.stopped_behind_closed_choke;
+    }
+
     int currentStep() const { return this->current_step_; }
 
     int pvtRegionIdx() const { return pvtRegionIdx_; }
@@ -488,6 +514,12 @@ protected:
                 || kept_stopped == KeptStopped::Finally;
         }
 
+        // not solved for
+        bool isHeldStopped() const
+        {
+            return isKeptStopped() || stopped_behind_closed_choke;
+        }
+
         bool isOperableUnderBHPLimit() const
         {
             return operable_under_only_bhp_limit && obey_thp_limit_under_bhp_limit;
@@ -527,6 +559,7 @@ protected:
         bool use_vfpexplicit = false;
         // not cleared by resetOperability()
         KeptStopped kept_stopped = KeptStopped::No;
+        bool stopped_behind_closed_choke = false;
     };
 
     OperabilityStatus operability_status_;
