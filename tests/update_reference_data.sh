@@ -108,7 +108,7 @@ printf "  * %s\n" ${changed_tests} >> $MSGFILE
 cd $OPM_TESTS_ROOT
 if [ -n "$BRANCH_NAME" ]
 then
-  git checkout -b $BRANCH_NAME $BRANCH_BASE
+  git checkout -b $BRANCH_NAME $BRANCH_BASE || exit 1
 fi
 
 # ---------------------------------------------------------------------------
