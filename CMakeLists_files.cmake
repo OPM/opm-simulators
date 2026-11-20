@@ -1433,6 +1433,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/WellInterfaceIndices.hpp
   opm/simulators/wells/WellPerformanceEventTracker.hpp
   opm/simulators/wells/WellProdIndexCalculator.hpp
+  opm/simulators/wells/WellSolveRecovery.hpp
   opm/simulators/wells/WellState.hpp
   opm/simulators/wells/WellTest.hpp
   opm/simulators/wells/WellTracerRate.hpp

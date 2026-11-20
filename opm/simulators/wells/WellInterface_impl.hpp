@@ -41,6 +41,7 @@
 #include <opm/simulators/wells/TargetCalculator.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellHelpers.hpp>
+#include <opm/simulators/wells/WellSolveRecovery.hpp>
 
 #include <dune/common/version.hh>
 
@@ -1378,23 +1379,7 @@ namespace Opm
 
         const bool well_operable = this->operability_status_.isOperableAndSolvable();
         if (!well_operable) {
-            this->stopWell();
-            try {
-                this->solveWellWithZeroRate(
-                    simulator, dt, groupStateHelper, well_state
-                );
-            } catch (const std::exception& e) {
-                const std::string msg = fmt::format("well {}: solveWellWithZeroRate() failed "
-                                                    "during attempt to solve with zero rate for well: ",
-                                                    this->name(), e.what());
-                deferred_logger.info(msg);
-                // we set the rate to zero to make sure the well dont contribute to the group rate
-                auto& ws = well_state.well(this->indexOfWell());
-                const int np = well_state.numPhases();
-                for (int p = 0; p < np; ++p) {
-                    ws.surface_rates[p] = Scalar{0.0};
-                }
-            }
+            this->stopWellAndSolveWithZeroRate(simulator, dt, groupStateHelper, well_state);
             if (old_well_operable) {
                 const std::string ctx = iterCtx.inLocalSolve() ? " (NLDD domain solve)" : "";
                 deferred_logger.debug(" well " + this->name() + " gets STOPPED during iteration" + ctx);
@@ -1407,6 +1392,81 @@ namespace Opm
                 deferred_logger.debug(" well " + this->name() + " gets REVIVED during iteration" + ctx);
                 this->changed_to_open_this_step_ = true;
             }
+        }
+    }
+
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    stopWellAndSolveWithZeroRate(const Simulator& simulator,
+                                 const double dt,
+                                 const GroupStateHelperType& groupStateHelper,
+                                 WellStateType& well_state)
+    {
+        this->stopWell();
+        // keep the state to be able to restore it if the solve with zero rate fails badly
+        const auto ws_before_zero_rate_solve = well_state.well(this->indexOfWell());
+        bool solve_threw = false;
+        try {
+            this->solveWellWithZeroRate(
+                simulator, dt, groupStateHelper, well_state
+            );
+        } catch (const std::exception& e) {
+            solve_threw = true;
+            const std::string msg = fmt::format("well {}: solveWellWithZeroRate() failed "
+                                                "during attempt to solve with zero rate for well: {}",
+                                                this->name(), e.what());
+            groupStateHelper.deferredLogger().info(msg);
+        }
+        // A solve with zero rate that threw, or left a state that is not finite, can leave the well in a
+        // diverged state. As the well is stopped it is still part of the reservoir equations and of the
+        // convergence checks, so restore the state and make the well consistent with zero rates.
+        const bool restored =
+            well_state.well(this->indexOfWell()).restoreIfDiverged(ws_before_zero_rate_solve, solve_threw);
+        // The reset contains collective operations, so all ranks of a distributed well must agree on it.
+        if (anyRank(this->parallelWellInfo().communication(), restored)) {
+            this->resetStoppedWell(simulator, dt, groupStateHelper, well_state);
+        } else {
+            // A solve can return without having updated the well state, for example if it converges in the
+            // first assembly or is out of iterations, so the state can still hold the rates from before the
+            // well was stopped. The rates of a stopped well are zero. The top segment holds the rates of the
+            // well, so these are zeroed as well. The flow in the other segments is kept, as the state
+            // of a solve that did not converge is kept, and a converged solve can have valid flow within the well.
+            auto& ws = well_state.well(this->indexOfWell());
+            std::ranges::fill(ws.surface_rates, Scalar{0.0});
+            std::ranges::fill(ws.reservoir_rates, Scalar{0.0});
+            const auto num_well_rates = std::min(ws.surface_rates.size(), ws.segments.rates.size());
+            std::fill_n(ws.segments.rates.begin(), num_well_rates, Scalar{0.0});
+        }
+    }
+
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    resetStoppedWell(const Simulator& simulator,
+                     const double dt,
+                     const GroupStateHelperType& groupStateHelper,
+                     WellStateType& well_state)
+    {
+        // no flow in the well, so that the well does not contribute to the group rates
+        auto& ws = well_state.well(this->indexOfWell());
+        std::ranges::fill(ws.surface_rates, Scalar{0.0});
+        std::ranges::fill(ws.segments.rates, Scalar{0.0});
+        // the reservoir rates are only calculated when the well state is updated, not in the assembly,
+        // and a restored snapshot would otherwise keep its reservoir rates in the group calculations
+        std::ranges::fill(ws.reservoir_rates, Scalar{0.0});
+        // the primary variables, and thereby the assembly, should not come from the failed solve
+        try {
+            this->updatePrimaryVariables(groupStateHelper);
+            this->assembleWellEqWithoutIteration(simulator, groupStateHelper, dt,
+                                                 Well::InjectionControls(0), Well::ProductionControls(0),
+                                                 well_state, /*solving_with_zero_rate=*/true);
+        } catch (const NumericalProblem&) {
+            // The restored state can itself hold non-finite values, e.g. the BHP. The rates are
+            // already zero. If updating the primary variables failed, the equations of the well are
+            // unchanged. If the assembly failed, they can be partial, as the assembly clears and refills
+            // them, and the stopped well then keeps stale connection rates. This is not recovered here,
+            // the next solve of the well rebuilds the equations.
         }
     }
 

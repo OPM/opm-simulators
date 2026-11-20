@@ -388,6 +388,30 @@ public:
                                      WellStateType& well_state,
                                      DeferredLogger& deferred_logger) const;
 
+    //! \brief Stop the well and solve it with zero rate.
+    //!
+    //! Used for wells that can not be solved. Afterwards the surface and reservoir rates of the
+    //! well are zero, so that the well does not contribute to the group rates. For a multisegment
+    //! well the rates of the top segment are zero as well, the flow in the other segments is kept.
+    //! If the solve threw, or left a state that is not finite, the state from before the solve is
+    //! restored and the well is reset with resetStoppedWell(). A stopped well is still part of the
+    //! reservoir equations through its connections.
+    void stopWellAndSolveWithZeroRate(const Simulator& simulator,
+                                      const double dt,
+                                      const GroupStateHelperType& groupStateHelper,
+                                      WellStateType& well_state);
+
+    //! \brief Make a stopped well consistent after the solve with zero rate failed.
+    //!
+    //! Sets the surface, segment and reservoir rates of the well to zero, updates the primary variables from the well
+    //! state and assembles the well equations of the stopped well. The residuals,
+    //! connection rates and linearization that are used in the convergence check and
+    //! in the reservoir equations are then consistent with the well state.
+    void resetStoppedWell(const Simulator& simulator,
+                          const double dt,
+                          const GroupStateHelperType& groupStateHelper,
+                          WellStateType& well_state);
+
     void solveWellEquation(const Simulator& simulator,
                            const GroupStateHelperType& groupStateHelper,
                            WellStateType& well_state);
