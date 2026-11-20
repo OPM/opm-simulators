@@ -1136,6 +1136,10 @@ BOOST_AUTO_TEST_CASE(TestAutoChokeGroupProductionTargetRate)
 //! local_reduction_level=0 < ii=1), avoiding double-counting of reductions that were
 //! already propagated into FIELD's reduction via case 1.
 //!
+//! FIELD's reduction then includes MANI's own rate.  That rate is added back, so that
+//! MANI's target does not shrink as MANI produces more: otherwise a manifold whose
+//! target follows from its own rate settles at a fraction of what it could deliver.
+//!
 //! \code
 //!   FIELD (ORAT = 10000, GCW=1)
 //!   ├── PLAT (E=0.9, FLD, GUIDERATE=9500, GCW=0)
@@ -1232,26 +1236,110 @@ BOOST_AUTO_TEST_CASE(TestAutoChokeGroupTargetRateWithUnderperformance)
     // chain = [FIELD, PLAT, MANI], efficiencyFactor = E_MANI * E_PLAT = 0.72
     // local_reduction_level = 0 (PLAT has guide rate but GCW=0 → doesn't qualify)
     //
+    // MANI GCW=0 → add back MANI's own rate at the local reduction level,
+    // weighted by the efficiencies down to it: 0.72 * 5000 = 3600
+    //
     // ii=0 (FIELD):
     //   local_reduction_level(0) >= ii(0) → true → apply reduction
     //   reduction(FIELD) = 4950
-    //   target = 10000 - 4950 = 5050
+    //   target = 10000 - 4950 + 3600 = 8650
     //   localFraction("PLAT") = 1.0  (PLAT GCW=0 → excluded from sum,
     //     but PLAT-2 is the only active sibling → num_active=1 → return 1.0)
-    //   target = 5050 * 1.0 = 5050
+    //   target = 8650 * 1.0 = 8650
     //
     // ii=1 (PLAT):
     //   local_reduction_level(0) >= ii(1) → false → skip reduction
     //   (PLAT's reduction was already propagated into FIELD's via case 1)
     //   localFraction("MANI") = 1.0  (MANI GCW=0, MANI-2 ORAT → num_active=0,
     //     total=0, potentials=0 → return 1.0)
-    //   target = 5050 * 1.0 = 5050
+    //   target = 8650 * 1.0 = 8650
     //
-    // Final: max(0, 5050 / 0.72) ≈ 7013.89
+    // Final: max(0, 8650 / 0.72) ≈ 12013.89
     //
     const double target_rate_metric = metric_rate(target_rate_si);
-    const double expected_target = 5050.0 / 0.72;  // ≈ 7013.89
+    const double expected_target = (5050.0 + 0.72 * maniTotalRateMetric()) / 0.72;  // ≈ 12013.89
     checkAlgo(target_rate_metric, expected_target);
+}
+
+//! \brief Test updateNONEProductionGroups() for the sub-sea manifold group MANI
+//!
+//! No well targets a group: the wells of MANI are on THP control, WELL-B and WELL-C on
+//! individual control.  The group whose target the common THP of MANI honours keeps its
+//! control mode: MANI or PLAT once it has switched from FLD to an ORAT limit, FIELD while
+//! MANI follows its target through PLAT.
+BOOST_AUTO_TEST_CASE(TestAutoChokeGroupKeepsActiveControlMode)
+{
+    commonSetupForAllTests(
+        /*plat_has_guide_rate=*/true,
+        /*mani_control       =*/Opm::Group::ProductionCMode::ORAT,
+        /*well_a_control     =*/Opm::Well::ProducerCMode::THP,
+        /*well_a2_control    =*/Opm::Well::ProducerCMode::THP,
+        /*mani2_control      =*/Opm::Group::ProductionCMode::ORAT,
+        /*data_file          =*/"GROUP_HIGHER_CONSTRAINTS_NETWORK.DATA"
+    );
+
+    auto& gs = groupState();
+    auto& gsh = groupStateHelper();
+    BOOST_REQUIRE(maniGroup().as_choke());
+    BOOST_REQUIRE(maniGroup().productionControls(gsh.summaryState()).cmode
+                  == Opm::Group::ProductionCMode::FLD);
+
+    for (const auto* well : {"WELL-B", "WELL-C"}) {
+        wellState().well(well).production_cmode = Opm::Well::ProducerCMode::ORAT;
+    }
+    auto logger_guard = gsh.pushLogger();
+
+    gsh.updateNONEProductionGroups();
+    BOOST_CHECK(gs.production_control("MANI") == Opm::Group::ProductionCMode::ORAT);
+    BOOST_CHECK(gs.production_control("MANI-2") == Opm::Group::ProductionCMode::NONE);
+
+    gs.production_control("MANI", Opm::Group::ProductionCMode::FLD);
+    gs.production_control("PLAT", Opm::Group::ProductionCMode::ORAT);
+    gsh.updateNONEProductionGroups();
+    BOOST_CHECK(gs.production_control("PLAT") == Opm::Group::ProductionCMode::ORAT);
+
+    gs.production_control("PLAT", Opm::Group::ProductionCMode::FLD);
+    gs.production_control("FIELD", Opm::Group::ProductionCMode::ORAT);
+    gsh.updateNONEProductionGroups();
+    BOOST_CHECK(gs.production_control("MANI") == Opm::Group::ProductionCMode::FLD);
+    BOOST_CHECK(gs.production_control("FIELD") == Opm::Group::ProductionCMode::ORAT);
+}
+
+//! \brief Test getManifoldControlMode() and updateNONEProductionGroups() for a sub-sea
+//! manifold group with an ORAT limit of its own that a limit above has switched to FLD
+//!
+//! The common THP of MANI then follows the target of PLAT, which keeps its control mode.
+//! Once reset to NONE, MANI follows its own ORAT limit again.
+BOOST_AUTO_TEST_CASE(TestAutoChokeGroupSwitchedToFldFollowsAncestor)
+{
+    commonSetupForAllTests(
+        /*plat_has_guide_rate=*/true,
+        /*mani_control       =*/Opm::Group::ProductionCMode::FLD,
+        /*well_a_control     =*/Opm::Well::ProducerCMode::THP,
+        /*well_a2_control    =*/Opm::Well::ProducerCMode::THP,
+        /*mani2_control      =*/Opm::Group::ProductionCMode::FLD,
+        /*data_file          =*/"GROUP_HIGHER_CONSTRAINTS_NETWORK_MANI_ORAT.DATA"
+    );
+
+    auto& gs = groupState();
+    auto& gsh = groupStateHelper();
+    BOOST_REQUIRE(maniGroup().as_choke());
+    BOOST_REQUIRE(maniGroup().productionControls(gsh.summaryState()).cmode
+                  == Opm::Group::ProductionCMode::ORAT);
+
+    for (const auto* well : {"WELL-B", "WELL-C"}) {
+        wellState().well(well).production_cmode = Opm::Well::ProducerCMode::ORAT;
+    }
+    auto logger_guard = gsh.pushLogger();
+
+    gs.production_control("PLAT", Opm::Group::ProductionCMode::ORAT);
+    BOOST_CHECK(gsh.getManifoldControlMode(maniGroup()) == Opm::Group::ProductionCMode::FLD);
+    gsh.updateNONEProductionGroups();
+    BOOST_CHECK(gs.production_control("MANI") == Opm::Group::ProductionCMode::FLD);
+    BOOST_CHECK(gs.production_control("PLAT") == Opm::Group::ProductionCMode::ORAT);
+
+    gs.production_control("MANI", Opm::Group::ProductionCMode::NONE);
+    BOOST_CHECK(gsh.getManifoldControlMode(maniGroup()) == Opm::Group::ProductionCMode::ORAT);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

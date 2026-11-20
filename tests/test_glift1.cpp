@@ -40,6 +40,8 @@
 #include <opm/simulators/wells/BlackoilWellModelGasLift.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
+#include <algorithm>
+#include <numeric>
 #include <optional>
 #include <string>
 #include <vector>
@@ -834,4 +836,146 @@ BOOST_AUTO_TEST_CASE(AlqLimitedToMaxWithGroupTarget)
     const double second = glift.initialOilRate();
     BOOST_CHECK_SMALL(second - first, rate_tol);
     BOOST_CHECK_SMALL(group_info.oilRate("PLAT-A") - group_oil, rate_tol);
+}
+
+// The rates of a producer against a THP are cut back to the WELDRAW drawdown limit held in the
+// well state, a liquid rate limit for an oil well.
+BOOST_AUTO_TEST_CASE(ThpLimitedRatesHonourWeldraw)
+{
+    using TypeTag = Opm::Properties::TTag::TestGliftTypeTag;
+    using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
+    using IndexTraits = typename FluidSystem::IndexTraitsType;
+    using WellModel = Opm::BlackoilWellModel<TypeTag>;
+
+    auto simulator = Opm::initSimulator<TypeTag>("GLIFT1.DATA", "test_glift1_weldraw",
+                                                 /*threads=*/2);
+    simulator->model().applyInitialSolution();
+    simulator->setEpisodeIndex(-1);
+    simulator->setEpisodeLength(0.0);
+    simulator->startNextEpisode(/*episodeStartTime=*/0.0, /*episodeLength=*/1e30);
+    simulator->setTimeStepSize(43200);
+    simulator->problem().resetIterationForNewTimestep();
+    WellModel& well_model = simulator->problem().wellModel();
+
+    well_model.beginReportStep(0);
+    well_model.beginTimeStep();
+    const auto& group_state_helper = well_model.groupStateHelper();
+    auto logger_guard = group_state_helper.pushLogger();
+    well_model.calculateExplicitQuantities();
+
+    const auto& wells = well_model.localNonshutWells();
+    const auto well = std::ranges::find_if(wells,
+                                           [](const auto& w) { return w->name() == "B-1H"; });
+    BOOST_REQUIRE(well != wells.end());
+    auto& well_state = well_model.wellState();
+    const auto& pu = well_state.phaseUsageInfo();
+    const auto liquid = [&pu](const std::vector<double>& rates) {
+        return -rates[pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx)]
+               - rates[pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx)];
+    };
+    const auto& summary_state = simulator->vanguard().summaryState();
+    const double thp = (*well)->wellEcl().productionControls(summary_state).thp_limit;
+
+    const auto unlimited = (*well)->computeWellRatesAtThpLimitProd(*simulator, group_state_helper,
+                                                                   well_state, thp);
+    BOOST_REQUIRE(unlimited.has_value());
+    const double max_rate = 0.5 * liquid(*unlimited);
+    BOOST_REQUIRE_GT(max_rate, 0.0);
+
+    well_state.well("B-1H").weldraw_max_rate = max_rate;
+    const auto limited = (*well)->computeWellRatesAtThpLimitProd(*simulator, group_state_helper,
+                                                                 well_state, thp);
+    BOOST_REQUIRE(limited.has_value());
+    BOOST_CHECK_CLOSE(liquid(*limited), max_rate, 1e-6);
+}
+
+// The rates of a producer against a THP are cut back to its reservoir volume limit.
+BOOST_AUTO_TEST_CASE(ThpLimitedRatesHonourResv)
+{
+    using TypeTag = Opm::Properties::TTag::TestGliftTypeTag;
+    using WellModel = Opm::BlackoilWellModel<TypeTag>;
+
+    auto simulator = Opm::initSimulator<TypeTag>("GLIFT1_RESV.DATA", "test_glift1_resv",
+                                                 /*threads=*/2);
+    simulator->model().applyInitialSolution();
+    simulator->setEpisodeIndex(-1);
+    simulator->setEpisodeLength(0.0);
+    simulator->startNextEpisode(/*episodeStartTime=*/0.0, /*episodeLength=*/1e30);
+    simulator->setTimeStepSize(43200);
+    simulator->problem().resetIterationForNewTimestep();
+    WellModel& well_model = simulator->problem().wellModel();
+
+    // The limit is set in report step 1.
+    simulator->setEpisodeIndex(0);
+    well_model.beginReportStep(0);
+    well_model.commitWGState();
+    simulator->setEpisodeIndex(1);
+    well_model.beginReportStep(1);
+    well_model.beginTimeStep();
+    const auto& group_state_helper = well_model.groupStateHelper();
+    auto logger_guard = group_state_helper.pushLogger();
+    well_model.calculateExplicitQuantities();
+
+    const auto& wells = well_model.localNonshutWells();
+    const auto well = std::ranges::find_if(wells,
+                                           [](const auto& w) { return w->name() == "B-1H"; });
+    BOOST_REQUIRE(well != wells.end());
+    const auto& summary_state = simulator->vanguard().summaryState();
+    const auto controls = (*well)->wellEcl().productionControls(summary_state);
+    BOOST_REQUIRE(controls.hasControl(Opm::Well::ProducerCMode::RESV));
+
+    const auto rates = (*well)->computeWellRatesAtThpLimitProd(*simulator, group_state_helper,
+                                                               well_model.wellState(),
+                                                               controls.thp_limit);
+    BOOST_REQUIRE(rates.has_value());
+    std::vector<double> coeff(rates->size(), 1.0);
+    (*well)->rateConverter().calcCoeff(/*fipreg*/ 0, (*well)->pvtRegionIdx(), *rates, coeff);
+    const double resv = -std::inner_product(rates->begin(), rates->end(), coeff.begin(), 0.0);
+    BOOST_CHECK_CLOSE(resv, controls.resv_rate, 1e-6);
+}
+
+// A well stopped behind the closed choke of its sub-sea manifold produces nothing, but stays
+// operable, so it is not closed at the end of the time step, and it reopens with the choke.
+BOOST_AUTO_TEST_CASE(WellStoppedBehindClosedChoke)
+{
+    using TypeTag = Opm::Properties::TTag::TestGliftTypeTag;
+    using WellModel = Opm::BlackoilWellModel<TypeTag>;
+
+    auto simulator = Opm::initSimulator<TypeTag>("GLIFT1.DATA", "test_glift1_closed_choke",
+                                                 /*threads=*/2);
+    simulator->model().applyInitialSolution();
+    simulator->setEpisodeIndex(-1);
+    simulator->setEpisodeLength(0.0);
+    simulator->startNextEpisode(/*episodeStartTime=*/0.0, /*episodeLength=*/1e30);
+    simulator->setTimeStepSize(43200);
+    simulator->problem().resetIterationForNewTimestep();
+    WellModel& well_model = simulator->problem().wellModel();
+
+    well_model.beginReportStep(0);
+    well_model.beginTimeStep();
+    const auto& group_state_helper = well_model.groupStateHelper();
+    auto logger_guard = group_state_helper.pushLogger();
+    well_model.calculateExplicitQuantities();
+
+    const auto& wells = well_model.localNonshutWells();
+    const auto found = std::ranges::find_if(wells,
+                                            [](const auto& w) { return w->name() == "B-1H"; });
+    BOOST_REQUIRE(found != wells.end());
+    auto& well = **found;
+    auto& well_state = well_model.wellState();
+    BOOST_REQUIRE(well.isOperableAndSolvable());
+    BOOST_REQUIRE(!well.wellIsStopped());
+
+    well.stopBehindClosedChoke();
+    well.prepareWellBeforeAssembling(*simulator, simulator->timeStepSize(),
+                                     group_state_helper, well_state);
+    BOOST_CHECK(well.wellIsStopped());
+    BOOST_CHECK(well.isOperableAndSolvable());
+    for (const double rate : well_state.well("B-1H").surface_rates) {
+        BOOST_CHECK_SMALL(rate, 1e-12);
+    }
+
+    well.reopenBehindChoke();
+    BOOST_CHECK(!well.stoppedBehindClosedChoke());
+    BOOST_CHECK(!well.wellIsStopped());
 }
