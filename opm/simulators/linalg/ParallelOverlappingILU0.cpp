@@ -22,19 +22,22 @@
 
 #include <opm/simulators/linalg/ParallelOverlappingILU0_impl.hpp>
 
+#include <opm/simulators/linalg/BCRSMatrix.hpp>
+#include <opm/simulators/linalg/BlockVector.hpp>
+
 #include <dune/istl/owneroverlapcopy.hh>
 
 namespace Opm
 {
 
 #define INSTANTIATE_PAR(T, Dim, ...)                                                     \
-  template class ParallelOverlappingILU0<Dune::BCRSMatrix<MatrixBlock<T,Dim,Dim>>,       \
-                                         Dune::BlockVector<Dune::FieldVector<T,Dim>>,    \
-                                         Dune::BlockVector<Dune::FieldVector<T,Dim>>,    \
+  template class ParallelOverlappingILU0<Opm::BCRSMatrix<MatrixBlock<T,Dim,Dim>>, \
+                                         Opm::BlockVector<Dune::FieldVector<T,Dim>>,    \
+                                         Opm::BlockVector<Dune::FieldVector<T,Dim>>,    \
                                          __VA_ARGS__>;                                   \
-  template class ParallelOverlappingILU0<Dune::BCRSMatrix<Dune::FieldMatrix<T,Dim,Dim>>, \
-                                         Dune::BlockVector<Dune::FieldVector<T,Dim>>,    \
-                                         Dune::BlockVector<Dune::FieldVector<T,Dim>>,    \
+  template class ParallelOverlappingILU0<Opm::BCRSMatrix<Dune::FieldMatrix<T,Dim,Dim>>, \
+                                         Opm::BlockVector<Dune::FieldVector<T,Dim>>,    \
+                                         Opm::BlockVector<Dune::FieldVector<T,Dim>>,    \
                                          __VA_ARGS__>;
 
 #if HAVE_MPI

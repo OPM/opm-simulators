@@ -34,7 +34,6 @@
 #endif
 
 #include <dune/common/fmatrix.hh>
-#include <dune/istl/bcrsmatrix.hh>
 
 #include <HYPRE.h>
 #include <HYPRE_krylov.h>

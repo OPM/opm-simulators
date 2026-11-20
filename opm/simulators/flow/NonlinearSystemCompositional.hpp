@@ -30,6 +30,8 @@
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 
+#include <opm/simulators/linalg/BlockVector.hpp>
+
 #include <flowexperimental/comp/wells/CompWellModel.hpp>
 
 #include <filesystem>
@@ -54,7 +56,7 @@ public:
     static constexpr int numEq = Indices::numEq;
 
     using VectorBlockType = Dune::FieldVector<Scalar, numEq>;
-    using BVector = Dune::BlockVector<VectorBlockType>;
+    using BVector = Opm::BlockVector<VectorBlockType>;
 
     NonlinearSystemCompositional(Simulator& simulator,
                                  const ModelParameters& param,

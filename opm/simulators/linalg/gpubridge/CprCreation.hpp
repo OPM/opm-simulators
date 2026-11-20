@@ -24,6 +24,8 @@
 #include <dune/istl/paamg/matrixhierarchy.hh>
 #include <dune/istl/umfpack.hh>
 
+#include <opm/simulators/linalg/BCRSMatrix.hpp>
+#include <opm/simulators/linalg/BlockVector.hpp>
 #include <opm/simulators/linalg/gpubridge/Matrix.hpp>
 #include <opm/simulators/linalg/gpubridge/Preconditioner.hpp>
 
@@ -55,8 +57,8 @@ protected:
 
     BlockedMatrix<Scalar> *mat = nullptr;    // input matrix, blocked
 
-    using DuneMat = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, 1, 1> >;
-    using DuneVec = Dune::BlockVector<Dune::FieldVector<Scalar, 1> >;
+    using DuneMat = Opm::BCRSMatrix<Dune::FieldMatrix<Scalar, 1, 1> >;
+    using DuneVec = Opm::BlockVector<Dune::FieldVector<Scalar, 1> >;
     using MatrixOperator = Dune::MatrixAdapter<DuneMat, DuneVec, DuneVec>;
     using DuneAmg = Dune::Amg::MatrixHierarchy<MatrixOperator, Dune::Amg::SequentialInformation>;
     std::unique_ptr<DuneAmg> dune_amg;

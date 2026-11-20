@@ -30,6 +30,8 @@
 
 #include <opm/output/data/Solution.hpp>
 
+#include <opm/simulators/linalg/BlockVector.hpp>
+
 #include <algorithm>
 #include <cmath>
 #include <fmt/format.h>
@@ -186,7 +188,7 @@ void RSTConv::gatherAndAccumulate(const std::vector<int>& lIdx,
 }
 
 template<class Scalar, std::size_t Size>
-using BFV = Dune::BlockVector<Dune::FieldVector<Scalar,Size>>;
+using BFV = Opm::BlockVector<Dune::FieldVector<Scalar,Size>>;
 
 #define INSTANTIATE(T,SIZE)                                              \
     template void RSTConv::update(const BFV<T,SIZE>&);                   \

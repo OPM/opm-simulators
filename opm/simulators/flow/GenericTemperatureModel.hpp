@@ -28,7 +28,6 @@
 #ifndef OPM_GENERIC_TEMPERATURE_MODEL_HPP
 #define OPM_GENERIC_TEMPERATURE_MODEL_HPP
 
-#include <dune/istl/bcrsmatrix.hh>
 
 #include <opm/grid/common/CartesianIndexMapper.hpp>
 
@@ -37,6 +36,8 @@
 #include <opm/models/blackoil/blackoilmodel.hh>
 
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
+#include <opm/simulators/linalg/BCRSMatrix.hpp>
+#include <opm/simulators/linalg/BlockVector.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
 
 #include <cstddef>
@@ -54,8 +55,8 @@ class GenericTemperatureModel
 public:
     // the jacobian matrix
     using MatrixBlockTemp = MatrixBlock<Scalar, 1, 1>;
-    using EnergyMatrix = Dune::BCRSMatrix<MatrixBlockTemp>;
-    using EnergyVector = Dune::BlockVector<Dune::FieldVector<Scalar, 1>>;
+    using EnergyMatrix = Opm::BCRSMatrix<MatrixBlockTemp>;
+    using EnergyVector = Opm::BlockVector<Dune::FieldVector<Scalar, 1>>;
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
     static constexpr int dimWorld = Grid::dimensionworld;
 
