@@ -25,9 +25,12 @@
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 
+#include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
+
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
+#include <opm/simulators/wells/WellState.hpp>
 
 #include <cassert>
 
@@ -115,6 +118,30 @@ computeWellBlockAveragePressures(const Scalar gravity) const
             .inferBlockAveragePressures(calcIdx, well.pavg(),
                                         gravity,
                                         well.getWPaveRefDepth());
+
+        const auto closeReason = well_model_.wellTestState()
+            .well_close_reason(well.name());
+
+        if (((closeReason == WellTestConfig::Reason::ECONOMIC) ||
+             (closeReason == WellTestConfig::Reason::PHYSICAL)) &&
+            (well_model_.wellState().well(wellID).status == WellStatus::SHUT))
+        {
+            // Well has been dynamically shut this run due to an economic
+            // limit (WECON) or a physical (operability) cause and is thus
+            // disconnected from the reservoir.  Its block-average pressures
+            // are reported as zero (i.e., omitted from the result set),
+            // matching the reference simulator.  Wells which are merely
+            // stopped--retaining open reservoir connections--closed for
+            // other reasons (e.g., group limits), or shut in the input
+            // schedule still have well-defined WBP* values.
+            //
+            // Note: inferBlockAveragePressures() above is retained
+            // unconditionally because it carries collective, per-well MPI
+            // communication which must be executed on every rank that owns a
+            // (possibly distributed) well.  Only the local result assignment
+            // is skipped here.
+            continue;
+        }
 
         const auto& result = this->wbpCalculationService_
             .averagePressures(calcIdx);
