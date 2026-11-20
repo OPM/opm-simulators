@@ -298,12 +298,12 @@ template<typename Scalar, typename IndexTraits>
 std::optional<Scalar>
 GasLiftStage2<Scalar, IndexTraits>::getGroupMaxALQ_(const Group& group)
 {
-    // GasLiftGroupInfo holds the GLIFTOPT limit, combined with the limit a reservoir
+    // GasLiftGroupInfo holds the smaller of the GLIFTOPT and GLIFTLIM limits, combined with the limit a reservoir
     // coupling master imposes on a slave group.
     if (this->group_info_.hasGroup(group.name())) {
         return this->group_info_.maxAlq(group.name());
     }
-    return std::nullopt; // If GLIFTOPT is missing from schedule, assume unlimited alq
+    return std::nullopt; // Without a GLIFTOPT or GLIFTLIM limit, assume unlimited alq
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -314,7 +314,7 @@ GasLiftStage2<Scalar, IndexTraits>::getGroupMaxTotalGas_(const Group& group)
     if (this->group_info_.hasGroup(group.name())) {
         return this->group_info_.maxTotalGasRate(group.name());
     }
-    return std::nullopt; // If GLIFTOPT is missing from schedule, assume unlimited alq
+    return std::nullopt; // Without a GLIFTOPT or GLIFTLIM limit, assume unlimited alq
 }
 
 // Find all subordinate wells of a given group.

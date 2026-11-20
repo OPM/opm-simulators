@@ -327,7 +327,7 @@ struct ProductionGroupConstraints {
     Scalar resv_limit;
 };
 
-/// @brief Gas lift limits (GLIFTOPT) the master imposes on a slave group.
+/// @brief Gas lift limits (GLIFTOPT, GLIFTLIM) the master imposes on a slave group.
 ///
 /// @details The master derives them from GLIFTOPT and GLIFTLIM records on the master group and on
 /// its ancestors, see RescoupConstraintsCalculator::calculateGasLiftGroupLimits_().

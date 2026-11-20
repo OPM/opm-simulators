@@ -271,7 +271,7 @@ public:
         std::size_t num_gas_lift_limits
     ) const;
 
-    /// @brief Send the gas lift limits (GLIFTOPT) for the slave's groups.
+    /// @brief Send the gas lift limits (GLIFTOPT, GLIFTLIM) for the slave's groups.
     ///   Rank-0-only on the master comm.
     void sendGasLiftGroupLimitsToSlave(
         std::size_t slave_idx, const std::vector<GasLiftGroupLimits>& gas_lift_limits

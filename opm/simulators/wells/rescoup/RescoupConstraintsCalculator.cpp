@@ -786,7 +786,7 @@ shareGasLiftLimit_(const Group& limit_group,
                    const std::function<Scalar(const std::string&)>& use_of) const
 {
     if (limit_group.name() == master_group) {
-        // GLIFTOPT on the master group itself: the slave group gets the full limit.
+        // GLIFTOPT or GLIFTLIM on the master group itself: the slave group gets the full limit.
         return limit;
     }
     // Rates below are in limit_group units, i.e. scaled by the efficiency factors of
