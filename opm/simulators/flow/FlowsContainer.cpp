@@ -57,11 +57,17 @@ namespace {
     void assignToVec(Array& array,
                      const unsigned faceId,
                      const unsigned globalDofIdx,
-                     const Scalar value)
+                     const Scalar value,
+                     const bool add)
     {
         if constexpr (idx != -1) {
             if (!array[idx][faceId].empty()) {
-                array[idx][faceId][globalDofIdx] = value;
+                if (add) {
+                    array[idx][faceId][globalDofIdx] += value;
+                }
+                else {
+                    array[idx][faceId][globalDofIdx] = value;
+                }
             }
         }
     }
@@ -305,12 +311,13 @@ assignFlores(const unsigned globalDofIdx,
              const unsigned nncId,
              const Scalar gas,
              const Scalar oil,
-             const Scalar water)
+             const Scalar water,
+             const bool add)
 {
     if (faceId >= 0) {
-        assignToVec<gasCompIdx>(this->flores_, faceId, globalDofIdx, gas);
-        assignToVec<oilCompIdx>(this->flores_, faceId, globalDofIdx, oil);
-        assignToVec<waterCompIdx>(this->flores_, faceId, globalDofIdx, water);
+        assignToVec<gasCompIdx>(this->flores_, faceId, globalDofIdx, gas, add);
+        assignToVec<oilCompIdx>(this->flores_, faceId, globalDofIdx, oil, add);
+        assignToVec<waterCompIdx>(this->flores_, faceId, globalDofIdx, water, add);
     }
     else if (faceId == -2) {
         assignToNnc<gasCompIdx>(this->floresn_, nncId, gas);
@@ -326,12 +333,13 @@ assignFlows(const unsigned globalDofIdx,
             const unsigned nncId,
             const Scalar gas,
             const Scalar oil,
-            const Scalar water)
+            const Scalar water,
+            const bool add)
 {
     if (faceId >= 0) {
-        assignToVec<gasCompIdx>(this->flows_, faceId, globalDofIdx, gas);
-        assignToVec<oilCompIdx>(this->flows_, faceId, globalDofIdx, oil);
-        assignToVec<waterCompIdx>(this->flows_, faceId, globalDofIdx, water);
+        assignToVec<gasCompIdx>(this->flows_, faceId, globalDofIdx, gas, add);
+        assignToVec<oilCompIdx>(this->flows_, faceId, globalDofIdx, oil, add);
+        assignToVec<waterCompIdx>(this->flows_, faceId, globalDofIdx, water, add);
     }
     else if (faceId == -2) {
         assignToNnc<gasCompIdx>(this->flowsn_, nncId, gas);
@@ -353,8 +361,16 @@ void FlowsContainer<FluidSystem>::
 assignBlockFlows(const unsigned index,
                  const int faceId,
                  const int comp_idx,
-                 const Scalar flow)
-{ flows_[comp_idx][faceId][index] = flow; }
+                 const Scalar flow,
+                 const bool add)
+{
+    if (add) {
+        flows_[comp_idx][faceId][index] += flow;
+    }
+    else {
+        flows_[comp_idx][faceId][index] = flow;
+    }
+}
 
 template<class FluidSystem>
 void FlowsContainer<FluidSystem>::
