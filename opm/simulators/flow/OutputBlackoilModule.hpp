@@ -1924,10 +1924,14 @@ private:
                           if (std::ranges::binary_search(blockIdxs, cartesianIdx)) {
                               const auto compIdxs = std::array{ gasCompIdx, oilCompIdx, waterCompIdx };
                               const auto compEnabled = std::array{ Indices::gasEnabled, Indices::oilEnabled, Indices::waterEnabled };
+                              // A face of a non-conforming grid has several intersections; its flow is their sum.
+                              std::array<bool, 6> seen{};
                               for (const auto& flowsInfo : flowsInfos) {
                                   if (flowsInfo.faceId < 0) {
                                       continue;
                                   }
+                                  const bool add = seen[flowsInfo.faceId];
+                                  seen[flowsInfo.faceId] = true;
                                   for (unsigned ii = 0; ii < compIdxs.size(); ++ii) {
                                       if (!compEnabled[ii]) {
                                           continue;
@@ -1937,20 +1941,28 @@ private:
                                                                   flowsInfo.faceId,
                                                                   compIdxs[ii],
                                                                   flowsInfo.flow[conti0EqIdx
-                                                                      + FluidSystem::canonicalToActiveCompIdx(compIdxs[ii])]);
+                                                                      + FluidSystem::canonicalToActiveCompIdx(compIdxs[ii])],
+                                                                  add);
                                       }
                                   }
                               }
                           }
                       }
                       else {
+                          // A face of a non-conforming grid has several intersections; its flow is their sum.
+                          std::array<bool, 6> seen{};
                           for (const auto& flowsInfo : flowsInfos) {
+                              const bool add = flowsInfo.faceId >= 0 && seen[flowsInfo.faceId];
+                              if (flowsInfo.faceId >= 0) {
+                                  seen[flowsInfo.faceId] = true;
+                              }
                               flowsC.assignFlows(ectx.globalDofIdx,
                                                  flowsInfo.faceId,
                                                  flowsInfo.nncId,
                                                  value_or_zero(gas_idx, flowsInfo.flow),
                                                  value_or_zero(oil_idx, flowsInfo.flow),
-                                                 value_or_zero(water_idx, flowsInfo.flow));
+                                                 value_or_zero(water_idx, flowsInfo.flow),
+                                                 add);
                           }
                       }
                    }, !this->simulator_.problem().model().linearizer().getFlowsInfo().empty()
@@ -1965,13 +1977,19 @@ private:
                       const auto water_idx = Indices::waterEnabled ?
                           conti0EqIdx + FluidSystem::canonicalToActiveCompIdx(waterCompIdx) : -1;
                       const auto& floresInfos = floresInf[ectx.globalDofIdx];
+                      std::array<bool, 6> seen{};
                       for (const auto& floresInfo : floresInfos) {
+                          const bool add = floresInfo.faceId >= 0 && seen[floresInfo.faceId];
+                          if (floresInfo.faceId >= 0) {
+                              seen[floresInfo.faceId] = true;
+                          }
                           flowsC.assignFlores(ectx.globalDofIdx,
                                               floresInfo.faceId,
                                               floresInfo.nncId,
                                               value_or_zero(gas_idx, floresInfo.flow),
                                               value_or_zero(oil_idx, floresInfo.flow),
-                                              value_or_zero(water_idx, floresInfo.flow));
+                                              value_or_zero(water_idx, floresInfo.flow),
+                                              add);
                       }
                  }, !this->simulator_.problem().model().linearizer().getFloresInfo().empty()
             },

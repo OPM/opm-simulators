@@ -65,12 +65,15 @@ public:
                   const bool allocRestart,
                   std::map<std::string, int>& rstKeywords);
 
+    //! \param add Add to the face value instead of assigning it (further
+    //!            intersections of a face of a non-conforming grid).
     void assignFlores(const unsigned globalDofIdx,
                       const int faceId,
                       const unsigned nncId,
                       const Scalar gas,
                       const Scalar oil,
-                      const Scalar water);
+                      const Scalar water,
+                      const bool add);
 
     void assignBlockVelocity(const unsigned globalDofIdx,
                              const int faceId,
@@ -80,14 +83,16 @@ public:
     void assignBlockFlows(const unsigned globalDofIdx,
                           const int faceId,
                           const int comp_idx,
-                          const Scalar flow);
+                          const Scalar flow,
+                          const bool add);
 
     void assignFlows(const unsigned globalDofIdx,
                      const int faceId,
                      const unsigned nncId,
                      const Scalar gas,
                      const Scalar oil,
-                     const Scalar water);
+                     const Scalar water,
+                     const bool add);
 
     void outputRestart(data::Solution& sol);
 

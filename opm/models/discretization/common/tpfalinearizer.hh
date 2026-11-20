@@ -731,14 +731,33 @@ private:
                                 nncId = it->second.second;
                             }
                         }
-                        loc_flinfo[dofIdx - 1] = FlowInfo{faceId, flow, nncId};
+                        // An NNC is output once, from its cell1. Seen from its cell2 it is
+                        // marked -3 so that its flow does not land in a face slot of cell2.
+                        int flowFaceId = faceId;
+                        if (faceId != -2) {
+                            const auto& rrange = nncIndices.equal_range(cartNeighborIdx);
+                            for (auto it = rrange.first; it != rrange.second; ++it) {
+                                if (it->second.first == cartMyIdx) {
+                                    flowFaceId = -3;
+                                }
+                            }
+                        }
+                        loc_flinfo[dofIdx - 1] = FlowInfo{flowFaceId, flow, nncId};
                         loc_vlinfo[dofIdx - 1] = VelocityInfo{faceId, flow};
                     }
                 }
 
                 for (unsigned bdfIdx = 0; bdfIdx < stencil.numBoundaryFaces(); ++bdfIdx) {
                     const auto& scvf = stencil.boundaryFace(bdfIdx);
-                    const int faceId = scvf.dirId();
+                    int faceId = scvf.dirId();
+                    // On a non-conforming face a boundary piece must not overwrite the
+                    // flow of the interior intersections of the same face.
+                    for (unsigned i = 0; i < stencil.numInteriorFaces(); ++i) {
+                        if (loc_flinfo[i].faceId == faceId) {
+                            faceId = -3;
+                            break;
+                        }
+                    }
                     loc_flinfo[stencil.numInteriorFaces() + bdfIdx] = FlowInfo{faceId, flow, nncId};
                 }
 
