@@ -27,6 +27,8 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/SummaryState.hpp>
+#include <opm/input/eclipse/Schedule/eval_uda.hpp>
 #include <opm/input/eclipse/Schedule/Well/FilterCake.hpp>
 #include <opm/input/eclipse/Schedule/Well/WELDRAW.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellBrineProperties.hpp>
@@ -257,6 +259,14 @@ updateInjMult(std::vector<Scalar>& inj_multipliers,
     }
 
     inj_multipliers = this->inj_multiplier_;
+
+    // The irreversible (CIRR) multiplier must be retained also if the
+    // well was not evaluated during the time step, e.g., if it was stopped.
+    if (this->well_ecl_.getInjMultMode() == Well::InjMultMode::CIRR) {
+        for (auto i = 0*inj_multipliers.size(); i < inj_multipliers.size(); ++i) {
+            inj_multipliers[i] = std::max(inj_multipliers[i], this->prev_inj_multiplier_[i]);
+        }
+    }
 }
 
 template<typename Scalar, typename IndexTraits>
@@ -265,6 +275,7 @@ WellInterfaceGeneric<Scalar, IndexTraits>::
 getInjMult(const int local_perf_index,
            const Scalar bhp,
            const Scalar perf_pres,
+           const SummaryState& summary_state,
            DeferredLogger& dlogger) const
 {
     assert(!this->isProducer());
@@ -282,24 +293,27 @@ getInjMult(const int local_perf_index,
                                                   : this->well_ecl_.getConnections()[perf_ecl_index].injmult();
         const Scalar pres = is_wrev ? bhp : perf_pres;
 
-        const auto frac_press = injmult.fracture_pressure;
+        const auto frac_press = static_cast<Scalar>(
+            UDA::eval_well_uda_pressure(injmult.fracture_pressure,
+                                        this->name(),
+                                        summary_state));
         const auto gradient = injmult.multiplier_gradient;
         if (pres > frac_press) {
             multiplier = 1. + (pres - frac_press) * gradient;
         }
         const Scalar osc_threshold = param_.inj_mult_osc_threshold_;
-        const Scalar prev_multiplier = this->inj_multiplier_[perf_ecl_index] > 0 ? this->inj_multiplier_[perf_ecl_index] : 1.0;
+        const Scalar prev_multiplier = this->inj_multiplier_[local_perf_index] > 0 ? this->inj_multiplier_[local_perf_index] : 1.0;
         if (std::abs(multiplier - prev_multiplier) > osc_threshold) {
-            const Scalar prev2_multiplier = this->inj_multiplier_previter_[perf_ecl_index] > 0 ? this->inj_multiplier_previter_[perf_ecl_index] : 1.0;
+            const Scalar prev2_multiplier = this->inj_multiplier_previter_[local_perf_index] > 0 ? this->inj_multiplier_previter_[local_perf_index] : 1.0;
             const bool oscillating = (multiplier - prev_multiplier) * (prev_multiplier - prev2_multiplier) < 0;
 
             const Scalar min_damp_factor = this->param_.inj_mult_min_damp_factor_;
-            Scalar damp_factor = this->inj_multiplier_damp_factor_[perf_ecl_index];
+            Scalar damp_factor = this->inj_multiplier_damp_factor_[local_perf_index];
             if (oscillating) {
                 if (damp_factor > min_damp_factor) {
                     const Scalar damp_multiplier = this->param_.inj_mult_damp_mult_;
                     damp_factor = std::max(min_damp_factor, damp_factor * damp_multiplier);
-                    this->inj_multiplier_damp_factor_[perf_ecl_index] = damp_factor;
+                    this->inj_multiplier_damp_factor_[local_perf_index] = damp_factor;
                 } else {
                     const auto msg = fmt::format("Well {}, perforation {}: Injectivity multiplier dampening factor reached minimum (= {})",
                                                  this->name(),
@@ -313,11 +327,11 @@ getInjMult(const int local_perf_index,
         // for CIRR mode, if there is no active WINJMULT setup, we will use the previous injection multiplier,
         // to mimic keeping the existing fracturing open
         if (this->well_ecl_.getInjMultMode() == Well::InjMultMode::CIRR) {
-            multiplier = std::max(multiplier, this->prev_inj_multiplier_[perf_ecl_index]);
+            multiplier = std::max(multiplier, this->prev_inj_multiplier_[local_perf_index]);
         }
 
-        this->inj_multiplier_[perf_ecl_index] = multiplier;
-        this->inj_multiplier_previter_[perf_ecl_index] = prev_multiplier;
+        this->inj_multiplier_[local_perf_index] = multiplier;
+        this->inj_multiplier_previter_[local_perf_index] = prev_multiplier;
     }
 
     return multiplier;
