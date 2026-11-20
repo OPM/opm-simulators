@@ -480,3 +480,42 @@ BOOST_AUTO_TEST_CASE(EmptyWell) {
 
     BOOST_CHECK_EQUAL(local_p, global_p);
 }
+
+// A perforated well where no process reports the first open connection cannot have
+// its first perforation values made consistent, so this has to be detected.
+BOOST_AUTO_TEST_CASE(PerforatedWellWithoutFirstPerforation) {
+    auto comm = Opm::Parallel::Communication(Dune::MPIHelper::getCommunicator());
+    Opm::ParallelWellInfo<double> pw({"WELL1", true}, comm);
+
+    pw.beginReset();
+    pw.pushBackEclIndex(-1, comm.rank());
+    pw.endReset();
+
+    BOOST_CHECK_THROW(pw.communicateFirstPerforation(false), std::logic_error);
+}
+
+// The same ParallelWellInfo is reused for all the report steps, so a well that
+// loses its open connections must not keep broadcasting from the process that
+// held the first one earlier.
+BOOST_AUTO_TEST_CASE(FirstPerforationForgottenWhenConnectionsClose) {
+    auto comm = Opm::Parallel::Communication(Dune::MPIHelper::getCommunicator());
+    Opm::ParallelWellInfo<double> pw({"WELL1", true}, comm);
+
+    // First report step: the well is perforated and rank 0 holds its first connection.
+    pw.beginReset();
+    pw.pushBackEclIndex(-1, comm.rank());
+    pw.endReset();
+    pw.communicateFirstPerforation(comm.rank() == 0);
+
+    const double from_first = 1.0;
+    BOOST_CHECK_EQUAL(pw.broadcastFirstPerforationValue(from_first), from_first);
+
+    // Second report step: all the connections are closed, so every process has to
+    // keep its own value instead of the one of the process selected above.
+    pw.beginReset();
+    pw.endReset();
+    pw.communicateFirstPerforation(false);
+
+    const double per_rank = 1.0 + comm.rank();
+    BOOST_CHECK_EQUAL(pw.broadcastFirstPerforationValue(per_rank), per_rank);
+}
