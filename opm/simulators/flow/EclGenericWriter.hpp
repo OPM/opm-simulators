@@ -103,7 +103,8 @@ public:
     // Parallel LGR INIT output: connection transmissibilities gathered from the
     // ranks' own (distributed) simulator transmissibilities. When set,
     // computeTrans_ / exportNncStructure_ take values from these instead of
-    // querying a whole-grid transmissibility object. Complete on the I/O rank only.
+    // querying a whole-grid transmissibility object, which is then only asked
+    // about connections that no rank records. Complete on the I/O rank only.
     void setGatheredLgrTrans(std::optional<GatheredLgrOutputTrans> gatheredTrans)
     {
         gatheredLgrTrans_ = std::move(gatheredTrans);
@@ -141,13 +142,17 @@ protected:
     const double* findGatheredTrans_(const std::array<int,N>& key) const;
 
     // Output transmissibility value for a connection: from the gathered per-rank
-    // simulator transmissibilities when set (parallel LGR runs; a missing key is
-    // a hard error), otherwise from the whole-grid transmissibility object
-    // (c1, c2). Key shape as in findGatheredTrans_.
+    // simulator transmissibilities when set (parallel LGR runs), otherwise from
+    // the whole-grid transmissibility object (c1, c2). In parallel LGR runs a
+    // missing key is zero when the level-zero face between the two origin cells
+    // has zero transmissibility, and a hard error otherwise. Key shape as in
+    // findGatheredTrans_.
     template <std::size_t N>
     double gatheredOrGlobalTrans_(const std::array<int,N>& key,
                                   unsigned c1,
-                                  unsigned c2) const;
+                                  unsigned c2,
+                                  unsigned originIn,
+                                  unsigned originOut) const;
 
     void doWriteOutput(const int                          reportStepNum,
                        const std::optional<int>           timeStepNum,
