@@ -1486,16 +1486,6 @@ runSubStep_()
     auto handleFailure = [this, &substep_report]
             (const std::string& failure_reason, const std::exception& e, bool log_exception = true)
     {
-        // A failed step is retried with a smaller time step by the loop in
-        // run(), which calls this function again. That is only safe when
-        // every rank has failed. A rank that failed alone must not start the
-        // next attempt: the other ranks are still in the collective calls of
-        // this one.
-        Opm::detail::abortIfNotAllRanksFailed(
-            solver_().model().simulator().vanguard().grid().comm(),
-            failure_reason + ": " + e.what(),
-            "when a time step failed");
-        substep_report = solver_().failureReport();
         // Keep the exception text: it carries the actual reason (e.g. which
         // equation had a too-large residual), which otherwise only surfaces
         // at debug verbosity while the PRT shows just the generic category.
@@ -1505,6 +1495,16 @@ runSubStep_()
         {
             this->cause_of_failure_ += " (" + what + ")";
         }
+        // A failed step is retried with a smaller time step by the loop in
+        // run(), which calls this function again. That is only safe when
+        // every rank has failed. A rank that failed alone must not start the
+        // next attempt: the other ranks are still in the collective calls of
+        // this one.
+        Opm::detail::abortIfNotAllRanksFailed(
+            solver_().model().simulator().vanguard().grid().comm(),
+            this->cause_of_failure_,
+            "when a time step failed");
+        substep_report = solver_().failureReport();
         if (log_exception && solverVerbose_()) {
             OpmLog::debug(std::string("Caught Exception: ") + e.what());
         }
