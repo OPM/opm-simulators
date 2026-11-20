@@ -178,6 +178,24 @@ public:
      */
     virtual int getSolveCount() const = 0;
 
+    /**
+     * \brief Return the time used by preconditioner applications since the
+     * last call to this function, and reset the counter.
+     *
+     * \note The default implementation returns 0 (no timing available).
+     */
+    virtual double popPreconditionerApplyTime()
+    { return 0.0; }
+
+    /**
+     * \brief Return the time used by preconditioner updates since the last
+     * call to this function, and reset the counter.
+     *
+     * \note The default implementation returns 0 (no timing available).
+     */
+    virtual double popPreconditionerUpdateTime()
+    { return 0.0; }
+
 protected:
 
     /**
