@@ -123,11 +123,14 @@ void checkAllMPIProcesses([[maybe_unused]] const std::string& message)
     // Say why before aborting, on std::cerr rather than OpmLog: this rank may
     // be any rank, and on ranks other than 0 OpmLog has no output by default.
     // And MPI_Abort() ends the process without flushing the log files, so the
-    // message of the exception would otherwise be lost.
+    // message of the exception would otherwise be lost. The message is written
+    // in one piece, so that it is not mixed with the messages of other ranks.
     const auto reportStuck = [&comm, &message]() {
-        std::cerr << "\nError: rank " << comm.rank() << " failed, and not all ranks of this "
-                  << "process group reported a failure. The run is aborted.\n"
-                  << "The failure on rank " << comm.rank() << " was: " << message << std::endl;
+        std::cerr << fmt::format("\nError: rank {} failed, and not all ranks of this "
+                                 "process group reported a failure. The run is aborted.\n"
+                                 "The failure on rank {} was: {}\n",
+                                 comm.rank(), comm.rank(), message)
+                  << std::flush;
     };
     if (comm.size() > 1)
     {

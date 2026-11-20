@@ -24,6 +24,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
+#include <sstream>
 #include <thread>
 #endif
 
@@ -95,11 +96,17 @@ bool enabledFor(const MPI_Comm comm)
     // Written to std::cerr, not to OpmLog. This rank may be any rank, and on
     // ranks other than 0 OpmLog has no output by default. And MPI_Abort()
     // ends the process without flushing the log files.
-    std::cerr << "\nError: rank " << rank << " failed, and the other ranks of this "
-              << "process group did not report a failure within "
-              << state().timeout_seconds << " s (" << where << ").\n"
-              << "The ranks can no longer communicate in step, so the run is aborted.\n"
-              << "The failure on rank " << rank << " was: " << message << std::endl;
+    //
+    // The message is built first and written in one piece: std::cerr writes
+    // each << on its own, and when several ranks abort at the same time, the
+    // pieces of different ranks could otherwise be mixed in the output.
+    std::ostringstream text;
+    text << "\nError: rank " << rank << " failed, and the other ranks of this "
+         << "process group did not report a failure within "
+         << state().timeout_seconds << " s (" << where << ").\n"
+         << "The ranks can no longer communicate in step, so the run is aborted.\n"
+         << "The failure on rank " << rank << " was: " << message << '\n';
+    std::cerr << text.str() << std::flush;
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     std::abort(); // not reached
 }
