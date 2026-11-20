@@ -135,6 +135,9 @@ class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLo
     using Toolbox = MathToolbox<Evaluation>;
 
 public:
+    //! computeStorage() can be given intensive quantities alone, without an element.
+    static constexpr bool formsStorageFromIntensiveQuantities = true;
+
     struct ResidualNBInfo {
         double trans;
         double faceArea;
