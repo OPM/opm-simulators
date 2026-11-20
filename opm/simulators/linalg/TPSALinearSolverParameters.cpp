@@ -80,8 +80,9 @@ void TpsaLinearSolverParameters::registerParameters()
         ("Continue simulation even if TPSA linear solver did not converge");
     Parameters::Register<Parameters::TpsaLinearSolver>
         ("Configuration for linear solver. Valid preset options are: hypre, ilu0, dilu, "
-         "or amg. Alternatively, you can request a configuration to be read from a JSON file by "
-         "giving the filename here, ending with '.json'");
+         "or amg. Alternatively, you can request a configuration to be read from a TOML or JSON file by "
+         "giving the filename here, ending with '.toml' or '.json'. "
+         "Use --write-toml-example=tpsa-linear-solver to generate a documented example file");
     Parameters::Register<Parameters::TpsaLinearSolverPrintJsonDefinition>
         ("Print JSON formatted configuration of the TPSA linear solver. Can be used to make configuration JSON file "
         "for --tpsa-linear-solver");

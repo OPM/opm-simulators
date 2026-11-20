@@ -29,8 +29,8 @@ namespace Opm {
 /// Form collection of Zoltan partitioning parameters from named configuration
 ///
 /// \param[in] conf Named Zoltan configuration. Must either be the name of a
-/// JSON configuration file with the filename extension ".json", or one of
-/// the known configuration names
+/// TOML or JSON configuration file with the filename extension ".toml" or
+/// ".json", respectively, or one of the known configuration names
 ///
 ///   -* graph Generates configuration parameters for the "GRAPH"
 ///            load-balancing method, using the "PHG" graph package.
@@ -55,9 +55,9 @@ setupZoltanParams(const std::string&           conf,
 /// Form collection of METIS partitioning parameters from named configuration
 ///
 /// \param[in] conf Named METIS configuration. Must either be the name of a
-/// JSON configuration file with the filename extension ".json", or the
-/// known configuration name "default" which uses the built-in default
-/// partitioning parameters.
+/// TOML or JSON configuration file with the filename extension ".toml" or
+/// ".json", respectively, or the known configuration name "default" which
+/// uses the built-in default partitioning parameters.
 ///
 /// \return Collection of METIS partitioning parameters.
 std::map<std::string, std::string>

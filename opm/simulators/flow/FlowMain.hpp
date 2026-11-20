@@ -34,6 +34,7 @@
 #include <opm/simulators/flow/FlowUtils.hpp>
 #include <opm/simulators/flow/NlddReporting.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicit.hpp>
+#include <opm/simulators/flow/TomlConfigExamples.hpp>
 #include <opm/simulators/flow/rescoup/ReservoirCouplingEnabled.hpp>
 
 #if HAVE_DUNE_FEM
@@ -126,6 +127,7 @@ namespace Opm {
             Parameters::Register<Parameters::EndStep>
                 ("Stop the simulation after this report step. "
                  "A negative value runs to the end of the schedule");
+            registerTomlExampleParameters();
 
             // register the base parameters
             registerAllParameters_<TypeTag>(/*finalizeRegistration=*/false);
@@ -184,6 +186,26 @@ namespace Opm {
                         Parameters::printValues(std::cout);
                     }
                     return -1;
+                }
+
+                // deal with --write-toml-example
+                const auto tomlExamples = Parameters::Get<Parameters::WriteTomlExample>();
+                if (!tomlExamples.empty()) {
+                    int exampleStatus = -1;
+                    if (mpiRank == 0) {
+                        try {
+                            for (const auto& file : writeTomlExamples(tomlExamples)) {
+                                std::cout << "Wrote example configuration file "
+                                          << file.generic_string() << '\n';
+                            }
+                        }
+                        catch (const std::exception& e) {
+                            std::cerr << "Failed to write TOML example: " << e.what() << '\n';
+                            exampleStatus = EXIT_FAILURE;
+                        }
+                    }
+                    comm.broadcast(&exampleStatus, 1, 0);
+                    return exampleStatus;
                 }
             }
 
