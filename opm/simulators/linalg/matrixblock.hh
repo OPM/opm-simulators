@@ -26,7 +26,9 @@
 #include <dune/common/dynmatrix.hh>
 #include <dune/common/fmatrix.hh>
 #include <dune/common/typetraits.hh>
+#include <dune/common/version.hh>
 
+#include <dune-istl-config.hh>
 #include <dune/istl/superlu.hh>
 #include <dune/istl/umfpack.hh>
 #include <dune/istl/istlexception.hh>
@@ -298,7 +300,7 @@ struct MatrixDimension<Opm::MatrixBlock<Scalar, n, m> >
 { };
 
 
-#if HAVE_SUITESPARSE_UMFPACK
+#if HAVE_SUITESPARSE_UMFPACK && DUNE_VERSION_LTE(DUNE_ISTL, 2, 11)
 /// \brief UMFPack specialization for Opm::MatrixBlock to make AMG happy
 ///
 /// Without this the empty default implementation would be used.
@@ -318,7 +320,7 @@ public:
 };
 #endif
 
-#if HAVE_SUPERLU
+#if HAVE_SUPERLU && DUNE_VERSION_LTE(DUNE_ISTL, 2, 11)
 /// \brief SuperLU specialization for Opm::MatrixBlock to make AMG happy
 ///
 /// Without this the empty default implementation would be used.

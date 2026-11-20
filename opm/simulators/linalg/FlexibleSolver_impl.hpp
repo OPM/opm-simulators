@@ -31,6 +31,7 @@
 #include <opm/simulators/linalg/Preconditioner2InverseOperator.hpp>
 #include <opm/simulators/linalg/WellOperators.hpp>
 #include <opm/simulators/linalg/PreconditionerFactoryGPUIncludeWrapper.hpp>
+#include <opm/simulators/linalg/ISTLDirectSolverHelper.hpp>
 #include <opm/simulators/linalg/is_gpu_operator.hpp>
 
 #if HAVE_AVX2_EXTENSION
@@ -310,7 +311,7 @@ namespace Dune
                         OPM_THROW(std::invalid_argument, "UMFPack cannot be used with floats");
                     } else {
                         using MatrixType = std::remove_const_t<std::remove_reference_t<decltype(linearoperator_for_solver_->getmat())>>;
-                        linsolver_ = std::make_shared<Dune::UMFPack<MatrixType>>(linearoperator_for_solver_->getmat(), verbosity, false);
+                        linsolver_ = std::make_shared<Opm::UMFPack<MatrixType, VectorType, VectorType>>(linearoperator_for_solver_->getmat(), verbosity, false);
                         direct_solver_ = true;
                     }
 #endif
@@ -356,7 +357,7 @@ namespace Dune
                 OPM_THROW(std::invalid_argument, "UMFPack cannot be used with floats");
             } else {
                 using MatrixType = std::remove_const_t<std::remove_reference_t<decltype(linearoperator_for_solver_->getmat())>>;
-                linsolver_ = std::make_shared<Dune::UMFPack<MatrixType>>(linearoperator_for_solver_->getmat(), 0, false);
+                linsolver_ = std::make_shared<Opm::UMFPack<MatrixType, VectorType, VectorType>>(linearoperator_for_solver_->getmat(), 0, false);
             }
         }
 #else
