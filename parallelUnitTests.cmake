@@ -61,6 +61,138 @@ opm_add_test(test_gatherdeferredlogger
     4
 )
 
+opm_add_test(test_parallel_exception_sync
+  DEPENDS
+    opmsimulators
+  LIBRARIES
+    opmsimulators
+    Boost::unit_test_framework
+  SOURCES
+    tests/test_parallel_exception_sync.cpp
+  DRIVER_ARGS
+    -n 4
+  PROCESSORS
+    4
+)
+
+# One rank fails alone, and must abort the run with a message. This entry
+# runs the binary of the entry above (EXE_TARGET, so no SOURCES), only its
+# test case LoneFailureAborts. An aborted run never exits with 0, so the test
+# passes when its output matches PASS_REGULAR_EXPRESSION instead, whatever
+# the exit code. It fails, whatever else the output says, when it matches
+# FAIL_REGULAR_EXPRESSION: the message of a rank that came back from its
+# wait instead of being ended by the abort. A rank that hangs instead of
+# aborting fails on the TIMEOUT, after a minute rather than after ctest's
+# default of 1500 s.
+opm_add_test(test_parallel_exception_sync_abort
+  EXE_TARGET
+    test_parallel_exception_sync
+  DRIVER_ARGS
+    -n 4
+  TEST_ARGS
+    --run_test=LoneFailureAborts
+  PROCESSORS
+    4
+)
+set_tests_properties(parallel_exception_sync_abort
+  PROPERTIES
+  TIMEOUT 60
+  PASS_REGULAR_EXPRESSION
+    "did not report a failure within 1 s"
+  FAIL_REGULAR_EXPRESSION
+    "The run should have been aborted"
+)
+
+# Rank 0 waits in the barrier for a failed time step while the other ranks
+# take the maximum at the end of a parallel try-catch region. Rank 0 must
+# abort with its message, as above, and no rank may come back from its wait:
+# the barrier and the maximum must not be matched with each other.
+opm_add_test(test_parallel_exception_sync_barrier_vs_region
+  EXE_TARGET
+    test_parallel_exception_sync
+  DRIVER_ARGS
+    -n 4
+  TEST_ARGS
+    --run_test=BarrierMeetsRegionEnd
+  PROCESSORS
+    4
+)
+set_tests_properties(parallel_exception_sync_barrier_vs_region
+  PROPERTIES
+  TIMEOUT 60
+  PASS_REGULAR_EXPRESSION
+    "did not report a failure within 1 s .when a time step failed"
+  FAIL_REGULAR_EXPRESSION
+    "The run should have been aborted"
+)
+
+# Rank 0 throws inside a parallel try-catch region while the other ranks wait
+# in a blocking collective call further down in the region. Rank 0 must abort
+# at the end of the region with the message of its exception. The pattern
+# covers three lines of that message: where rank 0 waited, and the exception.
+opm_add_test(test_parallel_exception_sync_region_end
+  EXE_TARGET
+    test_parallel_exception_sync
+  DRIVER_ARGS
+    -n 4
+  TEST_ARGS
+    --run_test=RegionEndFailureAborts
+  PROCESSORS
+    4
+)
+set_tests_properties(parallel_exception_sync_region_end
+  PROPERTIES
+  TIMEOUT 60
+  PASS_REGULAR_EXPRESSION
+    "within 1 s .at the end of a parallel try-catch region[^\n]*\n[^\n]*\nThe failure on rank 0 was: region: failure on rank 0 only"
+  FAIL_REGULAR_EXPRESSION
+    "The run should have been aborted"
+)
+
+# The last rank alone ends the run with an exception and checks the other
+# ranks in checkAllMPIProcesses(), as FlowMain does. It must abort with the
+# message of its exception, although it is not rank 0.
+opm_add_test(test_parallel_exception_sync_last_rank
+  EXE_TARGET
+    test_parallel_exception_sync
+  DRIVER_ARGS
+    -n 4
+  TEST_ARGS
+    --run_test=LoneFailureOnLastRankAborts
+  PROCESSORS
+    4
+)
+set_tests_properties(parallel_exception_sync_last_rank
+  PROPERTIES
+  TIMEOUT 60
+  PASS_REGULAR_EXPRESSION
+    "within 1 s .when the run ended with an exception[^\n]*\n[^\n]*\nThe failure on rank 3 was: failure on the last rank only"
+  FAIL_REGULAR_EXPRESSION
+    "The run should have been aborted"
+)
+
+# Rank 0 ends the run with an exception while the other ranks failed a time
+# step and wait before they retry it. The two waits must not release each
+# other: the run must be aborted, by either side.
+opm_add_test(test_parallel_exception_sync_barrier_vs_run_end
+  EXE_TARGET
+    test_parallel_exception_sync
+  DRIVER_ARGS
+    -n 4
+  TEST_ARGS
+    --run_test=BarrierMeetsRunEnd
+  PROCESSORS
+    4
+)
+set_tests_properties(parallel_exception_sync_barrier_vs_run_end
+  PROPERTIES
+  TIMEOUT 60
+  PASS_REGULAR_EXPRESSION
+    "did not report a failure within 1 s .when (the run ended with an exception|a time step failed)"
+  FAIL_REGULAR_EXPRESSION
+    "The run should have been aborted"
+)
+
 opm_add_test(test_parallelwellinfo_mpi
   EXE_TARGET
     test_parallelwellinfo
