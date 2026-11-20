@@ -62,6 +62,9 @@ protected:
     static constexpr int WFrac = PrimaryVariables::WFrac;
     static constexpr int GFrac = PrimaryVariables::GFrac;
     static constexpr int SFrac = PrimaryVariables::SFrac;
+
+    static constexpr bool enable_energy = PrimaryVariables::enable_energy;
+    static constexpr int Temperature = PrimaryVariables::Temperature;
 public:
     using EvalWell = typename PrimaryVariables::EvalWell;
     using Eval = DenseAd::Evaluation<Scalar, Indices::numDerivatives>;
@@ -94,9 +97,6 @@ protected:
 
     EvalWell extendEval(const Eval& in) const;
 
-    // computing the accumulation term for later use in well mass equations
-    void computeAccumWell();
-
     ConvergenceReport getWellConvergence(const WellState<Scalar, IndexTraits>& well_state,
                                          const std::vector<Scalar>& B_avg,
                                          const Scalar maxResidualAllowed,
@@ -112,9 +112,6 @@ protected:
               const bool has_polymermw);
 
     PrimaryVariables primary_variables_; //!< Primary variables for well
-
-    // the saturations in the well bore under surface conditions at the beginning of the time step
-    std::vector<Scalar> F0_;
 
     StandardWellEquations<Scalar, IndexTraits, Indices::numEq> linSys_; //!< Linear equation system
     StdWellConnections connections_; //!< Connection level values
