@@ -71,21 +71,18 @@ add_custom_command(
 #  https://pybind11.readthedocs.io/en/stable/compiling.html
 #
 pybind11_add_module(BlackOil ${PYBIND11_SYSTEM}
-  $<TARGET_OBJECTS:moduleVersion>
   PyBlackOilSimulator.cpp
   ${PYTHON_DOCSTRINGS_GENERATED_HPP}  # Include the generated .hpp as a source file
 )
 opm_add_target_options(TARGET BlackOil)
 
 pybind11_add_module(GasWater ${PYBIND11_SYSTEM}
-  $<TARGET_OBJECTS:moduleVersion>
   PyGasWaterSimulator.cpp
   ${PYTHON_GW_DOCSTRINGS_GENERATED_HPP}  # Include the generated .hpp as a source file
 )
 opm_add_target_options(TARGET GasWater)
 
 pybind11_add_module(OnePhase ${PYBIND11_SYSTEM}
-  $<TARGET_OBJECTS:moduleVersion>
   PyOnePhaseSimulator.cpp
   ${PYTHON_OP_DOCSTRINGS_GENERATED_HPP}  # Include the generated .hpp as a source file
 )

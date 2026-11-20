@@ -28,6 +28,7 @@
 #include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
 
 #include <opm/simulators/flow/Banners.hpp>
+#include <opm/simulators/utils/moduleVersion.hpp>
 #include <opm/simulators/utils/readDeck.hpp>
 
 #if HAVE_DAMARIS
@@ -60,6 +61,11 @@ namespace Opm {
 Main::Main(int argc, char** argv, bool ownMPI)
     : argc_(argc), argv_(argv), ownMPI_(ownMPI)
 {
+    // Quickly answer "flow --version" and "flow --build-info" before initializing MPI:
+    // it needs no MPI, and MPI initialization would dominate its run time.
+    handleVersionCmdLine_(argc_, argv_, Opm::moduleVersionName());
+    handleBuildInfoCmdLine_(argc_, argv_);
+
 #if HAVE_MPI
     maybeSaveReservoirCouplingSlaveLogFilename_();
 #endif
@@ -271,6 +277,39 @@ void Main::handleVersionCmdLine_(int argc, char** argv,
         std::cout << "flow " << moduleVersionName << std::endl;
         std::exit(EXIT_SUCCESS);
     }
+}
+
+void Main::handleBuildInfoCmdLine_(int argc, char** argv)
+{
+    const auto pos = std::find_if(argv, argv + argc,
+                                  [](const char* arg)
+                                  { return std::strcmp(arg, "--build-info") == 0; });
+
+    if (pos == argv + argc) {
+        return;
+    }
+
+    std::string mpi = "none";
+#if HAVE_MPI
+    // Allowed before MPI_Init; keep the library's name and version only,
+    // e.g. "Open MPI v5.0.7" of "Open MPI v5.0.7, package: ..."
+    char library[MPI_MAX_LIBRARY_VERSION_STRING];
+    int length = 0;
+    if (MPI_Get_library_version(library, &length) == MPI_SUCCESS) {
+        mpi.assign(library, length);
+        mpi = mpi.substr(0, mpi.find_first_of(",\n"));
+    }
+    else {
+        mpi.clear();
+    }
+#endif
+
+    std::cout << "version=" << moduleVersionName() << '\n'
+              << "hash=" << moduleVersionHash() << '\n'
+              << "build_time=" << compileTimestamp() << '\n'
+              << "build_type=" << moduleBuildType() << '\n'
+              << "mpi=" << mpi << std::endl;
+    std::exit(EXIT_SUCCESS);
 }
 
 void Main::handleTestSplitCommunicatorCmdLine_()
