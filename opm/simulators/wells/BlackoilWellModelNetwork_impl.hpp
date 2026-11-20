@@ -97,11 +97,13 @@ doPreStepRebalance(DeferredLogger& deferred_logger)
                                             well_state);
         },
         [&](auto& well, const bool failed_on_this_rank, const std::string& reason) {
-            const auto cause = failed_on_this_rank ? reason : std::string{"it failed on another rank"};
-            deferred_logger.warning("PRESTEP_NETWORK_REBALANCE_WELL_FAILED",
-                                    fmt::format("Well {} failed during the initial (pre-step) network balance ({}). "
-                                                "The well is stopped and solved with zero rate.",
-                                                well->name(), cause));
+            // log on the ranks where the well failed only, not once more for each other rank of the well
+            if (failed_on_this_rank) {
+                deferred_logger.warning("PRESTEP_NETWORK_REBALANCE_WELL_FAILED",
+                                        fmt::format("Well {} failed during the initial (pre-step) network balance ({}). "
+                                                    "The well is stopped and solved with zero rate.",
+                                                    well->name(), reason));
+            }
             well_state.well(well->indexOfWell()) = state_before_step.value();
             try {
                 well->updatePrimaryVariables(well_model_.groupStateHelper());
