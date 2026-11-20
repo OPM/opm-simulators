@@ -226,7 +226,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"GIALL", {true, std::nullopt}},
         {"GIMODEL", {true, std::nullopt}},
         {"GINODE", {true, std::nullopt}},
-        {"GLIFTLIM", {true, std::nullopt}},
         {"GNETDP", {true, std::nullopt}},
         {"GNETINJE", {true, std::nullopt}},
         {"GNETPUMP", {true, std::nullopt}},

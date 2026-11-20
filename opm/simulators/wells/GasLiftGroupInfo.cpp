@@ -729,7 +729,7 @@ initializeGroupRatesRecursive_(const Group& group)
     oil_target = helper.getProductionGroupRateLimit(group, Group::ProductionCMode::ORAT);
     gas_target = helper.getProductionGroupRateLimit(group, Group::ProductionCMode::GRAT);
     water_target = helper.getProductionGroupRateLimit(group, Group::ProductionCMode::WRAT);
-    // GLIFTOPT, combined with the limits a reservoir coupling master imposes
+    // GLIFTOPT and GLIFTLIM, combined with the limits a reservoir coupling master imposes
     std::tie(max_alq, max_total_gas) = helper.getGasLiftGroupLimits(group);
     if (oil_target || liquid_target || water_target || gas_target || max_total_gas || max_alq) {
         updateGroupIdxMap_(group.name());
