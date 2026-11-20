@@ -251,10 +251,8 @@ BOOST_AUTO_TEST_CASE(FatalFailureOfLocalWellDoesNotStopCollectivesOfLaterWells)
     // ranks, and solving B contains a collective operation. If the failure of A made rank 0 leave the loop
     // at once, rank 1 would wait for rank 0 in B, which would then never come.
     const auto& world = Dune::MPIHelper::getCommunication();
-    BOOST_REQUIRE_GE(world.size(), 2);
-    if (world.rank() > 1) {
-        return;
-    }
+    // the layout of the wells is for two ranks, other ranks would not take part in the collective operation
+    BOOST_REQUIRE_EQUAL(world.size(), 2);
     const Dune::Communication<MPI_Comm> self(MPI_COMM_SELF);
 
     std::vector<TestWell> wells;
@@ -295,10 +293,8 @@ BOOST_AUTO_TEST_CASE(RecoveryOfLocalWellDoesNotDisturbLaterDistributedWell)
 {
     // As above, but A fails with a numerical problem and recovers on its own, B is not affected.
     const auto& world = Dune::MPIHelper::getCommunication();
-    BOOST_REQUIRE_GE(world.size(), 2);
-    if (world.rank() > 1) {
-        return;
-    }
+    // the layout of the wells is for two ranks, other ranks would not take part in the collective operation
+    BOOST_REQUIRE_EQUAL(world.size(), 2);
     const Dune::Communication<MPI_Comm> self(MPI_COMM_SELF);
 
     std::vector<TestWell> wells;
