@@ -933,3 +933,49 @@ BOOST_AUTO_TEST_CASE(ThpLimitedRatesHonourResv)
     const double resv = -std::inner_product(rates->begin(), rates->end(), coeff.begin(), 0.0);
     BOOST_CHECK_CLOSE(resv, controls.resv_rate, 1e-6);
 }
+
+// A well stopped behind the closed choke of its sub-sea manifold produces nothing, but stays
+// operable, so it is not closed at the end of the time step, and it reopens with the choke.
+BOOST_AUTO_TEST_CASE(WellStoppedBehindClosedChoke)
+{
+    using TypeTag = Opm::Properties::TTag::TestGliftTypeTag;
+    using WellModel = Opm::BlackoilWellModel<TypeTag>;
+
+    auto simulator = Opm::initSimulator<TypeTag>("GLIFT1.DATA", "test_glift1_closed_choke",
+                                                 /*threads=*/2);
+    simulator->model().applyInitialSolution();
+    simulator->setEpisodeIndex(-1);
+    simulator->setEpisodeLength(0.0);
+    simulator->startNextEpisode(/*episodeStartTime=*/0.0, /*episodeLength=*/1e30);
+    simulator->setTimeStepSize(43200);
+    simulator->problem().resetIterationForNewTimestep();
+    WellModel& well_model = simulator->problem().wellModel();
+
+    well_model.beginReportStep(0);
+    well_model.beginTimeStep();
+    const auto& group_state_helper = well_model.groupStateHelper();
+    auto logger_guard = group_state_helper.pushLogger();
+    well_model.calculateExplicitQuantities();
+
+    const auto& wells = well_model.localNonshutWells();
+    const auto found = std::ranges::find_if(wells,
+                                            [](const auto& w) { return w->name() == "B-1H"; });
+    BOOST_REQUIRE(found != wells.end());
+    auto& well = **found;
+    auto& well_state = well_model.wellState();
+    BOOST_REQUIRE(well.isOperableAndSolvable());
+    BOOST_REQUIRE(!well.wellIsStopped());
+
+    well.stopBehindClosedChoke();
+    well.prepareWellBeforeAssembling(*simulator, simulator->timeStepSize(),
+                                     group_state_helper, well_state);
+    BOOST_CHECK(well.wellIsStopped());
+    BOOST_CHECK(well.isOperableAndSolvable());
+    for (const double rate : well_state.well("B-1H").surface_rates) {
+        BOOST_CHECK_SMALL(rate, 1e-12);
+    }
+
+    well.reopenBehindChoke();
+    BOOST_CHECK(!well.stoppedBehindClosedChoke());
+    BOOST_CHECK(!well.wellIsStopped());
+}

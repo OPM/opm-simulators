@@ -283,8 +283,10 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
                                                    Group::ProductionCMode::GRAT,
                                                    Group::ProductionCMode::LRAT,
                                                    Group::ProductionCMode::RESV};
-            const bool has_target = target > 0.0
-                && std::ranges::find(rate_modes, cmode) != rate_modes.end();
+            const bool rate_target = std::ranges::find(rate_modes, cmode) != rate_modes.end();
+            const bool has_target = rate_target && target > 0.0;
+            // A zero target, set or left after the reductions above, closes the choke.
+            const bool choke_closed = rate_target && target <= 0.0;
 
             // The wells cannot produce against less than the node's own network
             // pressure, which does not include the manifold's choke.
@@ -434,7 +436,7 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
             // after the first Newton iteration, may be undone, and only once.
             const bool provisionally = !well_model_.iterationContext().isFirstGlobalIteration();
             for (const auto& well : well_model_) {
-                if (!takes_common_thp(well)) {
+                if (!takes_common_thp(well) || choke_closed) {
                     continue;
                 }
                 const auto kept = well->keptStopped();
@@ -452,6 +454,30 @@ computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
                                                            reopened ? "can flow again"
                                                                     : "cannot flow, kept stopped",
                                                            well_group_thp / unit::barsa));
+                }
+            }
+
+            // Behind a closed choke the open wells stop, without being closed at
+            // the end of the time step, and reopen once the target is positive.
+            for (const auto& well : well_model_) {
+                if (!takes_common_thp(well)) {
+                    continue;
+                }
+                const bool was_stopped = well->stoppedBehindClosedChoke();
+                const auto kept = well->keptStopped();
+                if (!choke_closed) {
+                    well->reopenBehindChoke();
+                }
+                else if (kept != KeptStopped::Provisionally && kept != KeptStopped::Finally
+                         && well_state.well(well->indexOfWell()).status == Well::Status::OPEN)
+                {
+                    well->stopBehindClosedChoke();
+                }
+                if (well->stoppedBehindClosedChoke() != was_stopped) {
+                    const auto* change = was_stopped ? "reopens with the choke"
+                                                     : "stops behind the closed choke";
+                    local_deferredLogger.debug(fmt::format("Sub-sea manifold {}: well {} {}",
+                                                           nodeName, well->name(), change));
                 }
             }
 
