@@ -84,7 +84,7 @@ namespace TTag {
 struct AssemblyBridgeTest { using InheritsFrom = std::tuple<FlowGasWaterEnergyProblemGPU>; };
 template <template <class> class Storage>
 struct to_gpu_type<AssemblyBridgeTest, Storage> {
-    using type = FlowGasWaterEnergyProblemGPUTrue<Storage>;
+    using type = FlowGasWaterEnergyDeviceTypeTag<Storage>;
 };
 }
 template <class TypeTag>

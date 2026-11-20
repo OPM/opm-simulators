@@ -138,7 +138,15 @@ public:
                                   "GPU intensive quantities dispatcher does not support diffusion or dispersion");
                     }
                     runGpuIntensiveQuantitiesDispatcher_(timeIdx);
+                    // Retain the full CPU cache for existing host consumers.
+                    // Assembly borrows the device IQs independently of this mirror.
                     const std::size_t numCells = this->intensiveQuantityCache_[timeIdx].size();
+                    std::vector<IntensiveQuantities*> outIqPtrs(numCells);
+                    for (std::size_t i = 0; i < numCells; ++i) {
+                        outIqPtrs[i] = &this->intensiveQuantityCache_[timeIdx][i];
+                    }
+                    gpuIntensiveQuantitiesDispatcher_->materializeHostIntensiveQuantities(
+                        timeIdx, outIqPtrs.data(), numCells);
                     for (std::size_t i = 0; i < numCells; ++i) {
                         this->setIntensiveQuantitiesCacheEntryValidity(i, timeIdx, true);
                     }
@@ -279,6 +287,39 @@ private:
     }
 
 public:
+#if HAVE_CUDA
+    bool hasGpuPropertyAssemblyBridge() const
+    {
+        if constexpr (Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            return useGpuIntensiveQuantitiesDispatcher_ && gpuIntensiveQuantitiesDispatcher_
+                   && gpuIntensiveQuantitiesDispatcher_->hasDeviceModelView();
+        }
+        return false;
+    }
+
+    template <class T = TypeTag>
+    std::enable_if_t<Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<T>::value,
+                     const typename Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcher<T>::Bridge&>
+    gpuPropertyAssemblyBridge() const
+    {
+        if (!hasGpuPropertyAssemblyBridge()) {
+            OPM_THROW(std::logic_error, "GPU property/assembly bridge has no valid device IQ model");
+        }
+        return gpuIntensiveQuantitiesDispatcher_->bridge();
+    }
+#endif
+
+    void advanceTimeLevel()
+    {
+        ParentType::advanceTimeLevel();
+#if HAVE_CUDA
+        if constexpr (Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            if (gpuIntensiveQuantitiesDispatcher_) {
+                gpuIntensiveQuantitiesDispatcher_->advanceTimeLevel();
+            }
+        }
+#endif
+    }
 
 protected:
 
@@ -368,20 +409,8 @@ protected:
                     std::make_unique<
                         Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcher<TypeTag>>();
             }
-            using PV = GetPropType<TypeTag, Properties::PrimaryVariables>;
             const auto& sol = this->solution(timeIdx);
-            const std::size_t numCells = this->intensiveQuantityCache_[timeIdx].size();
-            std::vector<const PV*> priVarsPtrs(numCells);
-            std::vector<IntensiveQuantities*> outIqPtrs(numCells);
-            for (std::size_t i = 0; i < numCells; ++i) {
-                priVarsPtrs[i] = &sol[i];
-                outIqPtrs[i] = &this->intensiveQuantityCache_[timeIdx][i];
-            }
-            gpuIntensiveQuantitiesDispatcher_->update(
-                this->simulator_.problem(),
-                priVarsPtrs.data(),
-                outIqPtrs.data(),
-                numCells);
+            gpuIntensiveQuantitiesDispatcher_->update(this->simulator_.problem(), sol, timeIdx);
         }
     }
 #endif
