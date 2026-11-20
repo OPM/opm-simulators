@@ -219,6 +219,52 @@ function(add_test_compareSeparateECLFiles)
 endfunction()
 
 ###########################################################################
+# TEST: add_test_compareContinuumToSinglePorosity
+###########################################################################
+
+# Input:
+#   - casename: name of the test
+#   - dir1, filename1: single porosity deck (reference)
+#   - dir2, filename2: dual-continuum deck, in which there is no flow between the continua
+#   - continuum: fracture or matrix, the continuum compared with the single porosity run
+#
+# Details:
+#   - Runs both decks and compares the cells of the continuum with the single porosity run.
+function(add_test_compareContinuumToSinglePorosity)
+  set(oneValueArgs
+    CASENAME
+    FILENAME1
+    FILENAME2
+    DIR1
+    DIR2
+    CONTINUUM
+    DEV_SIMULATOR
+    SIMULATOR
+  )
+  set(multiValueArgs TEST_ARGS)
+  cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
+  if(USE_DEV_SIMULATOR_IN_TESTS AND PARAM_DEV_SIMULATOR)
+    set(PARAM_SIMULATOR ${PARAM_DEV_SIMULATOR})
+  endif()
+  set(RESULT_PATH ${BASE_RESULT_PATH}/${PARAM_SIMULATOR}+${PARAM_CASENAME})
+  set(DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR1}
+                  -j ${OPM_TESTS_ROOT}/${PARAM_DIR2}
+                  -f ${PARAM_FILENAME1}
+                  -g ${PARAM_FILENAME2}
+                  -k ${PARAM_CONTINUUM}
+                  -r ${RESULT_PATH}
+                  -p ${PROJECT_SOURCE_DIR}/tests/continuum_equivalence.py)
+  opm_add_test(compareContinuumToSinglePorosity_${PARAM_SIMULATOR}+${PARAM_CASENAME}
+    EXE_TARGET
+      ${PARAM_SIMULATOR}
+    DRIVER_ARGS
+      ${DRIVER_ARGS}
+    TEST_ARGS
+      ${PARAM_TEST_ARGS}
+  )
+endfunction()
+
+###########################################################################
 # TEST: add_test_compare_restarted_simulation
 ###########################################################################
 
