@@ -654,8 +654,10 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                             getMatrix(), pressIndex, transpose, enableThreadParallel);
                     };
                 } else if ( weightsType == "trueimpes" ) {
+                    const auto options = Amg::TrueImpesWeightsOptions::fromPropertyTree(
+                        prm.get_child("preconditioner"s));
                     weightsCalculator =
-                        [this, pressIndex, enableThreadParallel]
+                        [this, pressIndex, enableThreadParallel, options]
                         {
                             Vector weights(rhs_->size());
                             ElementContext elemCtx(simulator_);
@@ -664,7 +666,8 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                                                      elemCtx,
                                                      simulator_.model(),
                                                      *element_chunks_,
-                                                     enableThreadParallel
+                                                     enableThreadParallel,
+                                                     options
                             );
                             return weights;
                         };
