@@ -388,12 +388,16 @@ update(bool global, const TransUpdateQuantities update_quantities,
         if (pinchOption4ALL) {
             useSmallestMultiplier = false;
         }
+        oldTran_ = eclGrid.useOldTran();
     }
     if (global && comm.size() > 1) {
         comm.broadcast(&useSmallestMultiplier, 1, 0);
         comm.broadcast(&pinchOption4ALL, 1, 0);
         comm.broadcast(&pinchActive, 1, 0);
+        comm.broadcast(&oldTran_, 1, 0);
     }
+    // The cell sizes are taken from the corners of the cells of the grid
+    const bool oldTran = oldTran_ && std::is_same_v<Grid, Dune::CpGrid>;
 
     // fill the centroids cache to avoid repeated calculations in loops below
     centroids_cache_.resize(gridView_.size(0));
@@ -453,6 +457,52 @@ update(bool global, const TransUpdateQuantities update_quantities,
                                       MapBuilderInsertionMode::Insert_Or_Assign);
 
     const auto& nnc_input = eclState_.getInputNNC().input();
+
+    // OLDTRAN: the direction (0 for I, 1 for J) if the two cells are neighbours in the same
+    // layer, and -1 otherwise.
+    auto lateralNeighbourDir = [this](const unsigned elemIdx1, const unsigned elemIdx2) -> int
+    {
+        std::array<int,dimWorld> ijk1{};
+        std::array<int,dimWorld> ijk2{};
+        cartMapper_.cartesianCoordinate(elemIdx1, ijk1);
+        cartMapper_.cartesianCoordinate(elemIdx2, ijk2);
+        if (ijk1[2] != ijk2[2]) {
+            return -1;
+        }
+        const int di = std::abs(ijk1[0] - ijk2[0]);
+        const int dj = std::abs(ijk1[1] - ijk2[1]);
+        if (di == 1 && dj == 0) {
+            return 0;
+        }
+        return (di == 0 && dj == 1) ? 1 : -1;
+    };
+
+    // OLDTRAN: the sizes of the cell from the corners of the cell, in the same way as
+    // EclipseGrid::getCellDims(). The EclipseGrid is only available on the root process.
+    auto cellDims = [](const auto& element) -> std::array<Scalar,3>
+    {
+        const auto geometry = element.geometry();
+        auto edge = [&geometry](const int a, const int b) {
+            auto distance = geometry.corner(a);
+            distance -= geometry.corner(b);
+            return static_cast<Scalar>(distance.two_norm());
+        };
+        return {Scalar{0.25} * (edge(0, 1) + edge(2, 3) + edge(4, 5) + edge(6, 7)),
+                Scalar{0.25} * (edge(0, 2) + edge(1, 3) + edge(4, 6) + edge(5, 7)),
+                Scalar{0.25} * (edge(0, 4) + edge(1, 5) + edge(2, 6) + edge(3, 7))};
+    };
+
+    // OLDTRAN: half transmissibility from the cell to its neighbour in the direction dir
+    // (0 for I, 1 for J), the face has the full area of the side of the cell
+    auto oldTranHalf = [this, &cellDims](const auto& element, const unsigned elemIdx, const int dir) -> Scalar
+    {
+        const auto dims = cellDims(element);
+        DimVector areaNormal(0.0);
+        DimVector distance(0.0);
+        areaNormal[dir] = dims[1 - dir] * dims[2];
+        distance[dir] = Scalar{0.5} * dims[dir];
+        return computeHalfTrans_(areaNormal, 2*dir, distance, permeability_[elemIdx]);
+    };
 
 #ifdef _OPENMP
 #pragma omp parallel for
@@ -564,6 +614,19 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 inside.faceIdx  = intersection.indexInInside();
                 outside.faceIdx = intersection.indexInOutside();
 
+                // OLDTRAN: cells with a neighbour in the same layer are connected with the full
+                // face area, also when the grid has no face between them or only for a part of it
+                const int oldTranDir = (oldTran && inside.cartElemIdx != outside.cartElemIdx)
+                    ? lateralNeighbourDir(inside.elemIdx, outside.elemIdx)
+                    : -1;
+                const bool oldTranNnc = (inside.faceIdx == -1) && (oldTranDir >= 0);
+                if (oldTranNnc) {
+                    // Give the connection the faces of the cells it connects
+                    const bool outsideIsNext = outside.cartElemIdx > inside.cartElemIdx;
+                    inside.faceIdx = 2*oldTranDir + (outsideIsNext ? 1 : 0);
+                    outside.faceIdx = 2*oldTranDir + (outsideIsNext ? 0 : 1);
+                }
+
                 if (inside.faceIdx == -1) {
                     // NNC. Set zero transmissibility, as it will be
                     // *added to* by applyNncToGridTrans_() later.
@@ -584,15 +647,41 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 }
 
                 typename std::is_same<Grid, Dune::CpGrid>::type isCpGrid;
-                computeFaceProperties(intersection,
-                                      inside,
-                                      outside,
-                                      faceAreaNormal,
-                                      isCpGrid);
+                if (!oldTranNnc) {
+                    computeFaceProperties(intersection,
+                                          inside,
+                                          outside,
+                                          faceAreaNormal,
+                                          isCpGrid);
+                }
 
-                Scalar trans = computeHalfMean(computeHalfTrans_, permeability_);
+                Scalar trans{};
+                if (oldTranDir >= 0) {
+                    auto onesided = std::array<Scalar,2>{oldTranHalf(elem, inside.elemIdx, oldTranDir),
+                                                         oldTranHalf(outsideElem, outside.elemIdx, oldTranDir)};
+                    applyNtg_(onesided[0], inside, ntg);
+                    applyNtg_(onesided[1], outside, ntg);
+                    trans = harmonicMean(onesided[0], onesided[1]);
+                    if (storeHalfTrans_) {
+                        halfTransMap.insert_or_assign(details::directionalIsId(inside.elemIdx, outside.elemIdx),
+                                                      onesided[0]);
+                        halfTransMap.insert_or_assign(details::directionalIsId(outside.elemIdx, inside.elemIdx),
+                                                      onesided[1]);
+                    }
+                }
+                else {
+                    trans = computeHalfMean(computeHalfTrans_, permeability_);
+                }
 
-                if (storeHalfTrans_) {
+                // OLDTRAN: the lateral connections are only between cells in the same layer.
+                // The cells that are overlapped by a stepped neighbour in another layer are not
+                // connected to it.
+                if (oldTran && oldTranDir < 0 && inside.faceIdx <= 3 &&
+                    inside.cartElemIdx != outside.cartElemIdx) {
+                    trans = 0.0;
+                }
+
+                if (storeHalfTrans_ && oldTranDir < 0) {
                     // one-sided half transmissibilities (NTG applied),
                     // for the adjoint permeability chain rule
                     auto onesided = computeHalf(computeHalfTrans_,
@@ -655,6 +744,13 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 }
 
                 transMap.insert_or_assign(details::isId(inside.elemIdx, outside.elemIdx), trans);
+
+                if (oldTranNnc) {
+                    // There is no face in the grid for this connection. OLDTRAN is only used
+                    // when the thermal, diffusive and dispersive transmissibilities are not
+                    // needed, see EclipseGrid::useOldTran()
+                    continue;
+                }
 
                 // update the "thermal half transmissibility" for the intersection
                 if (enableEnergy_ && !onlyTrans) {

@@ -326,6 +326,12 @@ protected:
     bool enableDiffusivity_;
     bool enableDispersivity_;
     bool warnEditNNC_ = true;
+
+    // The grid is given by DX, DY, DZ and TOPS, so the transmissibilities of the
+    // lateral connections are calculated from the sizes of the cells as with the
+    // keyword OLDTRAN. Set when the transmissibilities are calculated for the
+    // global grid.
+    bool oldTran_ = false;
     std::unordered_map<std::uint64_t, Scalar> thermalHalfTrans_; //NB this is based on direction map size is ca 2*trans_ (diffusivity_)
     std::unordered_map<std::uint64_t, Scalar> halfTrans_; // directional, only filled when storeHalfTrans_
     bool storeHalfTrans_ = false;
