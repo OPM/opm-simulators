@@ -315,6 +315,12 @@ namespace Opm {
                                      std::vector<Scalar>& well_flux,
                                      DeferredLogger& deferred_logger) const override;
 
+        void computeWellRatesWithBhp(const Simulator& simulator,
+                                     const WellStateType& well_state,
+                                     const Scalar& bhp,
+                                     std::vector<Scalar>& well_flux,
+                                     DeferredLogger& deferred_logger) const override;
+
         void computeWellRatesWithBhpIterations(const Simulator& simulator,
                                                const Scalar& bhp,
                                                const GroupStateHelperType& groupStateHelper,
