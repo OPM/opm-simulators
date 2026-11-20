@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <functional>
+#include <numeric>
 #include <vector>
 
 namespace {

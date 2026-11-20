@@ -22,6 +22,7 @@
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
+#include <array>
 #include <cstddef>
 #include <functional>
 #include <memory>
