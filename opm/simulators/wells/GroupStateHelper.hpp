@@ -264,8 +264,8 @@ public:
     }
 
     /// @brief Gas lift limits of a group: maximum lift gas and maximum total gas.
-    /// @details The group's GLIFTOPT record, and for a reservoir coupling slave group
-    ///          the limits the master imposes; the smaller value applies.
+    /// @details The group's GLIFTOPT and GLIFTLIM records, and for a reservoir coupling
+    ///          slave group the limits the master imposes; the smallest value applies.
     /// @return (max lift gas, max total gas), each nullopt if there is no limit
     std::pair<std::optional<Scalar>, std::optional<Scalar>>
     getGasLiftGroupLimits(const Group& group) const;

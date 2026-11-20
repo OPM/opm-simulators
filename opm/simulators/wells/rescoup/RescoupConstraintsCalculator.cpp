@@ -362,11 +362,12 @@ calculateGasLiftGroupLimits_(std::size_t slave_idx) const
         Scalar max_lift_gas = no_limit;
         Scalar max_total_gas = no_limit;
         const Group* group = &this->schedule_.getGroup(master_group, this->report_step_idx_);
-        // Walk up from the master group to FIELD; each level with a GLIFTOPT record can limit the group
+        // Walk up from the master group to FIELD; each level with a GLIFTOPT or GLIFTLIM record can limit the group
         while (true) {
             if (glo.has_group(group->name())) {
                 const auto& gl_group = glo.group(group->name());
-                if (const auto& limit = gl_group.max_lift_gas(); limit.has_value()) {
+                // The smaller of the GLIFTOPT and GLIFTLIM limits
+                if (const auto limit = gl_group.lift_gas_limit(); limit.has_value()) {
                     max_lift_gas = std::min(max_lift_gas, this->shareGasLiftLimit_(
                         *group, master_group, static_cast<Scalar>(*limit),
                         lift_gas_below(*group), lift_gas_of));

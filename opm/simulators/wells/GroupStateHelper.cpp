@@ -736,8 +736,9 @@ getGasLiftGroupLimits(const Group& group) const
     const auto& glo = this->schedule_.glo(this->report_step_);
     if (glo.has_group(group.name())) {
         const auto& gl_group = glo.group(group.name());
-        if (gl_group.max_lift_gas().has_value()) {
-            max_lift_gas = static_cast<Scalar>(*gl_group.max_lift_gas());
+        // The smaller of the GLIFTOPT and GLIFTLIM limits
+        if (const auto limit = gl_group.lift_gas_limit(); limit.has_value()) {
+            max_lift_gas = static_cast<Scalar>(*limit);
         }
         if (gl_group.max_total_gas().has_value()) {
             max_total_gas = static_cast<Scalar>(*gl_group.max_total_gas());

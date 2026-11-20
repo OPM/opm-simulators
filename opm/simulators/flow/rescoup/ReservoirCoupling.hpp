@@ -329,7 +329,7 @@ struct ProductionGroupConstraints {
 
 /// @brief Gas lift limits (GLIFTOPT) the master imposes on a slave group.
 ///
-/// @details The master derives them from GLIFTOPT records on the master group and on
+/// @details The master derives them from GLIFTOPT and GLIFTLIM records on the master group and on
 /// its ancestors, see RescoupConstraintsCalculator::calculateGasLiftGroupLimits_().
 /// A value of -1 means no limit.
 template <class Scalar>
@@ -337,7 +337,7 @@ struct GasLiftGroupLimits {
     // To save memory and avoid varying size of the struct when serializing
     // and deserializing the group name, we use an index instead of the full name.
     std::size_t group_name_idx;   // Index of group name in the master group names vector
-    Scalar max_lift_gas;          // Maximum lift gas supply rate (GLIFTOPT item 2)
+    Scalar max_lift_gas;          // Maximum lift gas supply rate (GLIFTOPT item 2, GLIFTLIM item 2)
     Scalar max_total_gas;         // Maximum total gas rate, produced + lift gas (GLIFTOPT item 3)
 };
 

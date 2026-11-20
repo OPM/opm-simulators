@@ -753,8 +753,8 @@ add_test_compareECLFiles(
     --solver-max-time-step-in-days=0.05
 )
 
-# Gas lift optimization. GASLIFT-01 is left out, GASLIFT-11 needs GLIFTLIM and
-# GASLIFT-15 restarts from GASLIFT-14.
+# Gas lift optimization. GASLIFT-01 is left out, and GASLIFT-15 restarts from
+# GASLIFT-14.
 set(_gaslift_tests
   GASLIFT-03
   GASLIFT-04
@@ -764,6 +764,7 @@ set(_gaslift_tests
   GASLIFT-08
   GASLIFT-09
   GASLIFT-10
+  GASLIFT-11
   GASLIFT-12
   GASLIFT-13
   GASLIFT-14
