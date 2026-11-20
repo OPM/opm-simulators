@@ -13,6 +13,17 @@ opm_add_test(test_ParallelFieldProps_np2
     2
 )
 
+opm_add_test(test_parallel_transmissibility_np2
+  EXE_TARGET
+    test_parallel_transmissibility
+  DRIVER_ARGS
+    -n 2
+  PROCESSORS
+    2
+  WORKING_DIRECTORY
+    ${PROJECT_BINARY_DIR}/tests
+)
+
 opm_add_test(test_compequil_invalid_eqlnum_np2
   EXE_TARGET
     test_compequil
