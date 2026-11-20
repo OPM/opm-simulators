@@ -115,6 +115,10 @@ add_rc_m2_test(netroot TEST2A_FLOW_NETROOT T2A_MOD1_FLOW)
 add_rc_m2_test(slavenet TEST2A_SN_FLOW T2A_SN_MOD1_FLOW)
 add_rc_m2_test(slavenet2 TEST2A_SN2_FLOW T2A_SN2_MOD1_FLOW)
 add_rc_m2_test(slavenet3 TEST2A_SN3_FLOW T2A_SN3_MOD1_FLOW)
+# A slave group with a gas limit of its own (GRUPSLAV flag BOTH), which it breaks while
+# the master's target is an oil rate, and the oil flag BOTH without an oil limit of its own.
+add_rc_m2_test(slavenet TEST2A_SN_OWNLIM_FLOW T2A_SN_OWNLIM_MOD1_FLOW
+               REFERENCE_SUBDIR TEST2A_SN_OWNLIM_FLOW)
 
 # Gas lift: the four masters share one case directory and spawn the same
 # slave decks, so each keeps its reference files in its own sub-directory.
@@ -123,3 +127,14 @@ foreach(master TEST2A_GL_FLOW TEST2A_GL_MGL_LEAF_FLOW TEST2A_GL_MGL_MOD1_FLOW)
 endforeach()
 add_rc_m2_test(gaslift TEST2A_GL_NOGRP_FLOW T2A_GL_NOGRP_MOD1_FLOW
                REFERENCE_SUBDIR TEST2A_GL_NOGRP_FLOW)
+# The GRUPSLAV oil flag SLAV, while the master's targets change between oil and gas.
+add_rc_m2_test(gaslift TEST2A_GL_SLAV_FLOW T2A_GL_SLAV_MOD1_FLOW
+               REFERENCE_SUBDIR TEST2A_GL_SLAV_FLOW)
+# The master withdraws the production target of a slave group that has a gas limit
+# of its own but no oil limit.
+add_rc_m2_test(gaslift TEST2A_GL_WD_OWN_FLOW T2A_GL_WD_OWN_MOD1_FLOW
+               REFERENCE_SUBDIR TEST2A_GL_WD_OWN_FLOW)
+# The master withdraws the water injection targets of all its groups, and a slave
+# group has the water injection flag BOTH without a GCONINJE of its own.
+add_rc_m2_test(gaslift TEST2A_GL_WD_INJ_FLOW T2A_GL_WD_INJ_MOD1_FLOW
+               REFERENCE_SUBDIR TEST2A_GL_WD_INJ_FLOW)

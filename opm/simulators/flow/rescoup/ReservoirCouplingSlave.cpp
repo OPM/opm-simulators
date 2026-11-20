@@ -33,8 +33,12 @@
 
 #include <dune/common/parallel/mpitraits.hh>
 
+#include <set>
+#include <string>
+#include <utility>
 #include <vector>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 namespace Opm {
 // NOTE: All slave-master communicators have set a custom error handler, which eventually
@@ -413,6 +417,24 @@ receiveNumMasterGroupNodePressuresFromMaster()
 template <class Scalar>
 void
 ReservoirCouplingSlave<Scalar>::
+clearMasterInjectionTargets()
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->clearMasterInjectionTargets();
+}
+
+template <class Scalar>
+void
+ReservoirCouplingSlave<Scalar>::
+clearMasterProductionConstraints()
+{
+    assert(this->report_step_data_);
+    this->report_step_data_->clearMasterProductionConstraints();
+}
+
+template <class Scalar>
+void
+ReservoirCouplingSlave<Scalar>::
 receiveProductionGroupConstraintsFromMaster(std::size_t num_targets)
 {
     assert(this->report_step_data_);
@@ -545,12 +567,28 @@ checkGrupSlavGroupNames_()
 {
     // Validate that each slave group name has a corresponding master group name
     bool grup_slav_found = false;
+    std::set<std::string> slav_flags;
+    using FilterFlag = ReservoirCoupling::GrupSlav::FilterFlag;
     for (std::size_t report_step = 0; report_step < this->schedule_.size(); ++report_step) {
         auto rescoup = this->schedule_[report_step].rescoup();
         if (rescoup.grupSlavCount() > 0) {
             grup_slav_found = true;
             auto grup_slavs = rescoup.grupSlavs();
             for (const auto& [slave_group_name, grup_slav] : grup_slavs) {
+                const std::pair<FilterFlag, const char*> flags[] = {
+                    {grup_slav.oilProdFlag(), "oil production"},
+                    {grup_slav.liquidProdFlag(), "water and liquid production"},
+                    {grup_slav.gasProdFlag(), "gas production"},
+                    {grup_slav.fluidVolumeProdFlag(), "reservoir volume production"},
+                    {grup_slav.oilInjFlag(), "oil injection"},
+                    {grup_slav.waterInjFlag(), "water injection"},
+                    {grup_slav.gasInjFlag(), "gas injection"},
+                };
+                for (const auto& [flag, what] : flags) {
+                    if (flag == FilterFlag::SLAV) {
+                        slav_flags.insert(fmt::format("{} ({})", slave_group_name, what));
+                    }
+                }
                 auto map_iter = this->slave_to_master_group_map_.find(slave_group_name);
                 if (map_iter == this->slave_to_master_group_map_.end()) {
                     RCOUP_LOG_THROW(std::runtime_error,
@@ -567,6 +605,15 @@ checkGrupSlavGroupNames_()
                 }
             }
         }
+    }
+    if (!slav_flags.empty()) {
+        // This function runs only in a slave that has received master group names,
+        // that is, a slave started by a master run.
+        this->logger_.warning(fmt::format(
+            "Reservoir coupling: GRUPSLAV has the flag SLAV for {}. "
+            "With SLAV the targets and limits from the master are ignored for that "
+            "rate type, so the group targets and limits of the master run can be exceeded.",
+            fmt::join(slav_flags, ", ")));
     }
     if (!grup_slav_found) {
         RCOUP_LOG_THROW(std::runtime_error, "Reservoir coupling: Failed to find slave group names: "
