@@ -183,6 +183,26 @@ gpuMemcpyDeviceToHostAsync(T* dstHost, const T* srcDevice, std::size_t count, cu
         cudaMemcpyAsync(dstHost, srcDevice, count * sizeof(T), cudaMemcpyDeviceToHost, stream));
 }
 
+/**
+ * @brief Copy count elements between device buffers on the specified stream.
+ * @note Does not synchronize; both buffers must remain alive until the copy completes.
+ * @note A zero count is a no-op, including for null pointers.
+ * @note In debug builds, validates both device pointers and the stream.
+ */
+template <typename T>
+inline void
+gpuMemcpyDeviceToDeviceAsync(T* dstDevice, const T* srcDevice, std::size_t count, cudaStream_t stream)
+{
+    if (count == 0) {
+        return;
+    }
+    OPM_GPUISTL_DETAIL_ASSERT_DEVICE_POINTER(dstDevice);
+    OPM_GPUISTL_DETAIL_ASSERT_DEVICE_POINTER(srcDevice);
+    OPM_GPUISTL_DETAIL_ASSERT_GPU_STREAM(stream);
+    OPM_GPU_SAFE_CALL(
+        cudaMemcpyAsync(dstDevice, srcDevice, count * sizeof(T), cudaMemcpyDeviceToDevice, stream));
+}
+
 } // namespace Opm::gpuistl::detail
 
 #endif // OPM_GPUISTL_DETAIL_GPU_MEMCPY_HPP
