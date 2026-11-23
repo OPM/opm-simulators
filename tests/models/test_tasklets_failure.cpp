@@ -29,7 +29,10 @@
 
 // Note: we do not use boost.test as it does not cleanly combine with fork() usage
 
+#include <cerrno>
 #include <chrono>
+#include <cstdio>
+#include <cstdlib>
 #include <iostream>
 #include <mutex>
 #include <thread>
@@ -131,7 +134,8 @@ int main()
 {
     pid_t pid = fork(); // Create a new process, such that this child process can call exit(EXIT_FAILURE)
     if (pid == -1) {
-        assert(0 && "Fork failed");
+        std::perror("fork");
+        return EXIT_FAILURE;
     } else if (pid == 0) {
         // Child process
         execute();
@@ -139,9 +143,20 @@ int main()
     } else {
         // Parent process
         std::cout << "Checking failure of child process with parent process, process id " << pid << std::endl;
-        int status;
-        waitpid(pid, &status, 0);
-        assert(WIFEXITED(status));  // Check if the child process exited
-        assert(WEXITSTATUS(status) == EXIT_FAILURE);  // Check if the exit status is EXIT_FAILURE
+        // Checked without assert(), which NDEBUG compiles out.
+        int status = 0;
+        pid_t waited;
+        do {
+            waited = waitpid(pid, &status, 0);
+        } while (waited == -1 && errno == EINTR);
+        if (waited != pid) {
+            std::perror("waitpid");
+            return EXIT_FAILURE;
+        }
+        if (!WIFEXITED(status) || WEXITSTATUS(status) != EXIT_FAILURE) {
+            std::cerr << "The child process did not exit with EXIT_FAILURE" << std::endl;
+            return EXIT_FAILURE;
+        }
     }
+    return EXIT_SUCCESS;
 }
