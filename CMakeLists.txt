@@ -366,19 +366,26 @@ macro(opm-simulators_sources_hook)
     # cuda warns when constxpr functions are used in kernels.
     # since the entire stl is constexpr ..., we enable relaxed flag
     set_source_files_properties(
-      opm/simulators/linalg/gpuistl/GpuBlackoilIntensiveQuantitiesDispatcher.cu
+      opm/simulators/linalg/gpuistl/GpuBlackoilNohystIntensiveQuantitiesDryGas.cu
+      opm/simulators/linalg/gpuistl/GpuBlackoilNohystIntensiveQuantitiesWetGas.cu
       tests/gpuistl/test_blackoilfluidstategpu.cu
       tests/gpuistl/test_blackoilintensivequantities_gpu.cu
+      tests/gpuistl/test_blackoilintensivequantities_gpu_threephase.cu
       tests/gpuistl/test_gpu_ad.cu
+      tests/gpuistl/test_gpu_ecl_material_law_manager.cu
       tests/gpuistl/test_gpu_ecl_thermal_law_manager.cu
+      tests/gpuistl/test_gpu_flow_problem_refresh.cu
       tests/gpuistl/test_gpu_linear_two_phase_material.cu
       tests/gpuistl/test_gpuPvt.cu
       tests/gpuistl/test_gpuConstantCompressibilityWaterPvt.cu
+      tests/gpuistl/test_gpuDryGasPvt.cu
       tests/gpuistl/test_gpuLiveOilPvt.cu
       tests/gpuistl/test_gpuTabulatedFunctions.cu
+      tests/gpuistl/test_gpuWetGasPvt.cu
       tests/gpuistl/test_gpuBlackOilFluidSystem.cu
       tests/gpuistl/test_GpuAssemblyBridge.cu
       tests/gpuistl/test_GpuPropertyAssemblyBridge.cu
+      tests/gpuistl/test_gpuBlackOilFluidSystemSpe1.cu
       tests/gpuistl/test_GpuSparseMatrix.cu
       tests/gpuistl/test_GpuSparseTable.cu
       tests/gpuistl/test_MiniMatrix.cu
@@ -503,6 +510,7 @@ macro(opm-simulators_tests_hook)
                  AmgxInterface
                  AmgxPreconditioner
                  blackoilintensivequantities_gpu
+                 blackoilintensivequantities_gpu_threephase
                  blackoilfluidstategpu
                  conditional_storage
                  cublas_handle
@@ -515,19 +523,24 @@ macro(opm-simulators_tests_hook)
                  cuVector_operations
                  deviceBlockOperations
                  gpu_ad
+                 gpu_ecl_material_law_manager
                  gpu_ecl_thermal_law_manager
+                 gpu_flow_problem_refresh
                  gpu_linear_two_phase_material
                  gpu_pointer_attributes
                  gpu_resources
                  gpu_safe_call
                  gpu_smart_pointers
                  gpuBlackOilFluidSystem
-                 GpuAssemblyBridge
+                  GpuAssemblyBridge
+                 gpuBlackOilFluidSystemSpe1
                  GpuBuffer
                  gpuConstantCompressibilityWaterPvt
                  GpuDILU
                  GpuJac
+                 gpuDryGasPvt
                  gpuLiveOilPvt
+                 gpuWetGasPvt
                  GpuOwnerOverlapCopy
                  GpuPressureTransferPolicy
                  GpuPropertyAssemblyBridge

@@ -543,7 +543,7 @@ portable to the GPU via the standard `copy_to_gpu` / `make_view` pattern.
 The two classes are **interchangeable as template arguments**: any class
 that is templated on `FluidSystemT` can be instantiated with either the
 static (`BlackOilFluidSystem`) or the non-static
-(`BlackOilFluidSystemNonStatic<Scalar, IndexTraits, GpuView>`) variant.
+(`BlackOilFluidSystemNonStatic<Scalar, IndexTraits, GpuView, PvtApproaches>`) variant.
 
 ### How dependent classes support both variants: `fluidSystemIsStatic`
 
@@ -599,8 +599,9 @@ FluidSystem::initFromState(eclState, schedule);
 //    valid as long as no re-init occurs.
 auto& dynamicFs = FluidSystem::getNonStaticInstance();
 
-// 3. Copy the fluid system to the GPU (owning buffer).
-auto gpuFsBuffer = Opm::gpuistl::copy_to_gpu(dynamicFs);
+// 3. Copy the fluid system to the GPU (owning buffer). The template argument
+//    chooses the PVT classes on the GPU, see BlackOilPvtApproaches.hpp in opm-common.
+auto gpuFsBuffer = Opm::gpuistl::copy_to_gpu<Opm::Co2StorePvtApproaches>(dynamicFs);
 
 // 4. Create a trivially copyable view to pass to kernels.
 auto gpuFsView = Opm::gpuistl::make_view(gpuFsBuffer);

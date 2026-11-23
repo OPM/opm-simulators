@@ -1,0 +1,226 @@
+// -*- mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+// vi: set et ts=4 sw=4 sts=4:
+/*
+  Copyright 2026 Equinor ASA
+
+  This file is part of the Open Porous Media project (OPM).
+
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+*/
+/*!
+ * \file
+ *
+ * GPU TypeTags for the three-phase black-oil configurations with live oil and
+ * dry gas (e.g. SPE1) or wet gas (e.g. Norne), derived from the
+ * \c FlowProblemNohyst TypeTag that \c flow uses for such decks.
+ *
+ * Only the properties that must differ on the GPU are overridden: the storage
+ * of the primary variables, the fluid system, the material law, the problem
+ * and the element context. Everything else, in particular the module switches
+ * that determine the layout of \c BlackOilIntensiveQuantities, is inherited
+ * from \c FlowProblemNohyst. The CPU TypeTag can therefore be the source of
+ * the cross-TypeTag converting constructors directly. The wet gas TypeTag only
+ * differs in the PVT approaches of the fluid system.
+ */
+#ifndef OPM_GPU_FLOW_BLACKOIL_NOHYST_TYPETAG_HPP
+#define OPM_GPU_FLOW_BLACKOIL_NOHYST_TYPETAG_HPP
+
+#if HAVE_CUDA
+
+#include <opm/common/utility/VectorWithDefaultAllocator.hpp>
+
+#include <opm/material/fluidmatrixinteractions/EclDefaultMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/EclEpsTwoPhaseLaw.hpp>
+#include <opm/material/fluidmatrixinteractions/EclMaterialLawTwoPhaseTypes.hpp>
+#include <opm/material/fluidmatrixinteractions/GpuEclMaterialLawManager.hpp>
+#include <opm/material/fluidmatrixinteractions/PiecewiseLinearTwoPhaseMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/PiecewiseLinearTwoPhaseMaterialParams.hpp>
+#include <opm/material/fluidsystems/BlackOilFluidSystemNonStatic.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/BlackOilPvtApproaches.hpp>
+
+#include <opm/models/blackoil/blackoilintensivequantities.hh>
+#include <opm/models/blackoil/blackoilprimaryvariables.hh>
+
+#include <opm/simulators/flow/FlowProblemNohystTypeTag.hpp>
+#include <opm/simulators/flow/GpuFlowProblem.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuView.hpp>
+#include <opm/simulators/linalg/gpuistl/MiniVector.hpp>
+
+#include <cstddef>
+#include <tuple>
+#include <type_traits>
+
+namespace Opm::Properties {
+
+namespace TTag {
+
+/// The TypeTag of the GPU intensive quantities: \c FlowProblemNohyst with
+/// GPU-compatible primary variables, fluid system, material law and problem.
+struct FlowBlackoilNohystGPU {
+    using InheritsFrom = std::tuple<FlowProblemNohyst>;
+};
+
+/// \c FlowBlackoilNohystGPU with live oil and wet gas (PVTO, PVTG and PVTW).
+struct FlowBlackoilNohystWetGasGPU {
+    using InheritsFrom = std::tuple<FlowBlackoilNohystGPU>;
+};
+
+} // namespace TTag
+
+// -----------------------------------------------------------------------
+// MaterialLaw: EclDefaultMaterial over EclEpsTwoPhaseLaw over GpuView-backed
+// piecewise-linear two-phase laws. The traits are those of the CPU law, so
+// the GpuManager accepts the CPU manager. The GPU manager stores the scaled
+// endpoints per cell and applies endpoint scaling as the CPU law does; it
+// rejects the options it does not implement (GpuManager::validate). Decks
+// without endpoint scaling store no per-cell endpoints.
+// -----------------------------------------------------------------------
+template <class TypeTag>
+struct MaterialLaw<TypeTag, TTag::FlowBlackoilNohystGPU>
+{
+private:
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Traits = typename GetPropType<TTag::FlowProblemNohyst, Properties::MaterialLaw>::Traits;
+    using TwoPhaseTypes = ::Opm::EclMaterialLaw::TwoPhaseTypes<Traits>;
+    using GasOilTraits = typename TwoPhaseTypes::GasOilTraits;
+    using OilWaterTraits = typename TwoPhaseTypes::OilWaterTraits;
+    using GasOilParams = ::Opm::PiecewiseLinearTwoPhaseMaterialParams<
+        GasOilTraits, ::Opm::gpuistl::GpuView<const Scalar>>;
+    using OilWaterParams = ::Opm::PiecewiseLinearTwoPhaseMaterialParams<
+        OilWaterTraits, ::Opm::gpuistl::GpuView<const Scalar>>;
+    using GasOilLaw = ::Opm::EclEpsTwoPhaseLaw<
+        ::Opm::PiecewiseLinearTwoPhaseMaterial<GasOilTraits, GasOilParams>>;
+    using OilWaterLaw = ::Opm::EclEpsTwoPhaseLaw<
+        ::Opm::PiecewiseLinearTwoPhaseMaterial<OilWaterTraits, OilWaterParams>>;
+
+public:
+    using EclMaterialLawManager = ::Opm::EclMaterialLaw::GpuManager<
+        Traits, GasOilLaw, OilWaterLaw, ::Opm::VectorWithDefaultAllocator>;
+    using type = typename EclMaterialLawManager::MaterialLaw;
+};
+
+template <class TypeTag>
+struct PrimaryVariables<TypeTag, TTag::FlowBlackoilNohystGPU>
+{
+    using type = ::Opm::BlackOilPrimaryVariables<TypeTag, ::Opm::gpuistl::MiniVector>;
+};
+
+template <class TypeTag>
+struct FluidSystem<TypeTag, TTag::FlowBlackoilNohystGPU>
+{
+    using type = ::Opm::BlackOilFluidSystemNonStatic<
+        GetPropType<TypeTag, Properties::Scalar>,
+        ::Opm::BlackOilDefaultFluidSystemIndices,
+        ::Opm::gpuistl::GpuView,
+        ::Opm::LiveOilDryGasPvtApproaches>;
+};
+
+template <class TypeTag>
+struct FluidSystem<TypeTag, TTag::FlowBlackoilNohystWetGasGPU>
+{
+    using type = ::Opm::BlackOilFluidSystemNonStatic<
+        GetPropType<TypeTag, Properties::Scalar>,
+        ::Opm::BlackOilDefaultFluidSystemIndices,
+        ::Opm::gpuistl::GpuView,
+        ::Opm::LiveOilWetGasPvtApproaches>;
+};
+
+// -----------------------------------------------------------------------
+// Problem: GpuFlowProblem (GpuView-backed) without thermal laws.
+// -----------------------------------------------------------------------
+template <class TypeTag>
+struct Problem<TypeTag, TTag::FlowBlackoilNohystGPU>
+{
+private:
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using CpuStorageMaterialLawManager =
+        typename GetProp<TypeTag, Properties::MaterialLaw>::EclMaterialLawManager;
+    using GpuViewMaterialLawManager =
+        ::Opm::EclMaterialLaw::GpuManager<typename CpuStorageMaterialLawManager::Traits,
+                                          typename CpuStorageMaterialLawManager::GasOilLaw,
+                                          typename CpuStorageMaterialLawManager::OilWaterLaw,
+                                          ::Opm::gpuistl::GpuView,
+                                          typename CpuStorageMaterialLawManager::MaterialLaw>;
+
+public:
+    using type = ::Opm::GpuFlowProblem<Scalar, GpuViewMaterialLawManager, ::Opm::gpuistl::GpuView>;
+};
+
+template <class TypeTag>
+struct ElementContext<TypeTag, TTag::FlowBlackoilNohystGPU>
+{
+    using type = std::nullptr_t;
+};
+
+} // namespace Opm::Properties
+
+namespace Opm::detail {
+
+// Consistency checks between the CPU TypeTag and a GPU TypeTag.
+template <class GpuTag>
+struct CheckFlowBlackoilNohystGpuTypeTags
+{
+    using CpuTag = Properties::TTag::FlowProblemNohyst;
+
+    using GpuMaterialLaw = GetPropType<GpuTag, Properties::MaterialLaw>;
+    using CpuMaterialLaw = GetPropType<CpuTag, Properties::MaterialLaw>;
+
+    // The intensive quantities use the MaterialLaw property for the capillary
+    // pressures; GpuFlowProblem uses the law of its manager for the relative
+    // permeabilities and for the parameters returned by materialLawParams().
+    static_assert(std::is_same_v<GpuMaterialLaw,
+                                 typename GetPropType<GpuTag, Properties::Problem>::
+                                     EclMaterialLawManager::MaterialLaw>);
+    static_assert(std::is_same_v<typename GpuMaterialLaw::Traits,
+                                 typename CpuMaterialLaw::Traits>);
+
+    using GpuMaterialLawManager =
+        typename GetProp<GpuTag, Properties::MaterialLaw>::EclMaterialLawManager;
+    using GpuGasOilLaw = typename GpuMaterialLawManager::GasOilLaw;
+    using GpuOilWaterLaw = typename GpuMaterialLawManager::OilWaterLaw;
+    static_assert(std::is_same_v<GpuMaterialLaw,
+                                 EclDefaultMaterial<typename GpuMaterialLaw::Traits,
+                                                    GpuGasOilLaw,
+                                                    GpuOilWaterLaw>>);
+    // Without the layer, the GPU manager would reject every deck with
+    // endpoint scaling that the CPU TypeTag runs.
+    static_assert(!getPropValue<CpuTag, Properties::EnableEndpointScaling>()
+                      || (EclMaterialLaw::detail::EpsLayer<GpuGasOilLaw>::present
+                          && EclMaterialLaw::detail::EpsLayer<GpuOilWaterLaw>::present),
+                  "the CPU TypeTag has endpoint scaling, so the GPU two-phase laws "
+                  "must be EclEpsTwoPhaseLaw");
+
+    static_assert(std::is_same_v<GetPropType<GpuTag, Properties::Indices>,
+                                 GetPropType<CpuTag, Properties::Indices>>);
+    static_assert(std::is_same_v<GetPropType<GpuTag, Properties::Evaluation>,
+                                 GetPropType<CpuTag, Properties::Evaluation>>);
+    static_assert(getPropValue<GpuTag, Properties::NumPhases>()
+                  == getPropValue<CpuTag, Properties::NumPhases>());
+    static_assert(getPropValue<GpuTag, Properties::EnergyModuleType>()
+                  == getPropValue<CpuTag, Properties::EnergyModuleType>());
+
+    static_assert(std::is_trivially_copyable_v<
+                  typename BlackOilIntensiveQuantities<GpuTag>::FluidState>,
+                  "the fluid state is copied byte-wise to and from the device");
+};
+
+// sizeof instantiates the class, and with it the checks.
+static_assert(sizeof(CheckFlowBlackoilNohystGpuTypeTags<Properties::TTag::FlowBlackoilNohystGPU>) > 0);
+static_assert(sizeof(CheckFlowBlackoilNohystGpuTypeTags<Properties::TTag::FlowBlackoilNohystWetGasGPU>) > 0);
+
+} // namespace Opm::detail
+
+#endif // HAVE_CUDA
+
+#endif // OPM_GPU_FLOW_BLACKOIL_NOHYST_TYPETAG_HPP

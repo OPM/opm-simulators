@@ -118,7 +118,10 @@ namespace Opm {
  * (\c GpuBuffer / \c GpuView).
  *
  * The material law manager is held by value (so it is trivially copyable
- * into a CUDA kernel together with the rest of the problem state).
+ * into a CUDA kernel together with the rest of the problem state). It is a
+ * snapshot of the CPU manager at construction, so the problem must be built
+ * after the CPU problem has applied SWATINIT
+ * (\c FlowProblemBlackoil::finishInit()).
  *
  * \tparam ScalarT             Floating point type used for rock data.
  * \tparam MaterialLawManagerT GPU material law manager type (e.g.
@@ -297,6 +300,44 @@ public:
             OPM_THROW(std::logic_error,
                       "GPU FlowProblem does not support non-default rock compaction multipliers");
         }
+    }
+
+    /*!
+     * \brief Copy the current mixing limits of the CPU problem into the
+     *        existing device buffers.
+     *
+     * The CPU values change at the start of each time step (DRSDT, DRVDT,
+     * VAPPARS), when a time step is chopped and on restart, so a problem built
+     * once at initialization goes stale. The buffers keep their size and
+     * address, so views made with \c make_view before the refresh stay valid.
+     *
+     * The other per-cell fields are snapshots taken at construction, which is
+     * correct only as long as they cannot change during the run:
+     *  - porosity: no rock compaction (checked by the constructors) and no
+     *    \c GEO_MODIFIER (checked by the dispatcher).
+     *  - the material law parameters and \c pvtRegionIndex: no hysteresis.
+     * A field that can change during the run must be refreshed here.
+     *
+     * Only enabled when this problem uses \c GpuBuffer storage.
+     */
+    template <class CpuProblem,
+              class StS = Storage<Scalar>,
+              std::enable_if_t<
+                  std::is_same_v<StS, ::Opm::gpuistl::GpuBuffer<Scalar>>,
+                  int> = 0>
+    void refreshMixingLimits(const CpuProblem& cpu, unsigned timeIdx)
+    {
+        maxOilSaturation_.copyFromHost(extractHostField(cpu, [](const CpuProblem& p, unsigned u) {
+            return Scalar(p.maxOilSaturation(u));
+        }));
+        maxOilVaporizationFactor_.copyFromHost(
+            extractHostField(cpu, [timeIdx](const CpuProblem& p, unsigned u) {
+                return Scalar(p.maxOilVaporizationFactor(timeIdx, u));
+            }));
+        maxGasDissolutionFactor_.copyFromHost(
+            extractHostField(cpu, [timeIdx](const CpuProblem& p, unsigned u) {
+                return Scalar(p.maxGasDissolutionFactor(timeIdx, u));
+            }));
     }
 
     OPM_HOST_DEVICE ModelView model() const
@@ -481,13 +522,20 @@ public:
 
 private:
     template <class CpuProblem, class F>
-    static Storage<Scalar> extractRockField(const CpuProblem& cpu, F f)
+    static std::vector<Scalar> extractHostField(const CpuProblem& cpu, F f)
     {
         const std::size_t n = cpu.model().numGridDof();
         std::vector<Scalar> v(n);
         for (std::size_t i = 0; i < n; ++i) {
             v[i] = f(cpu, static_cast<unsigned>(i));
         }
+        return v;
+    }
+
+    template <class CpuProblem, class F>
+    static Storage<Scalar> extractRockField(const CpuProblem& cpu, F f)
+    {
+        const std::vector<Scalar> v = extractHostField(cpu, f);
         if constexpr (std::is_same_v<Storage<Scalar>,
                                      ::Opm::VectorWithDefaultAllocator<Scalar>>) {
             return Storage<Scalar>(v.begin(), v.end());

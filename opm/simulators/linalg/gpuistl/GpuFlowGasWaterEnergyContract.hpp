@@ -240,7 +240,8 @@ struct FluidSystem<TypeTag, TTag::FlowGasWaterEnergyDeviceTypeTag<Storage>> {
     using type = ::Opm::BlackOilFluidSystemNonStatic<
         GetPropType<TypeTag, Properties::Scalar>,
         ::Opm::BlackOilDefaultFluidSystemIndices,
-        Storage>;
+        Storage,
+        ::Opm::Co2StorePvtApproaches>;
 };
 
 template <class TypeTag, template <class> class Storage>

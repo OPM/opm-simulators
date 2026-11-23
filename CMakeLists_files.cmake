@@ -350,6 +350,9 @@ if(CUDA_FOUND OR hip_FOUND)
     set_property(SOURCE "${PROJECT_BINARY_DIR}/opm/simulators/linalg/gpuistl_hip/GpuBlackoilNewtonUpdate.hip"
                  APPEND PROPERTY COMPILE_OPTIONS "-ffp-contract=off")
   endif()
+  ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg GpuBlackoilNohystIntensiveQuantities.cpp)
+  ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg GpuBlackoilNohystIntensiveQuantitiesDryGas.cu)
+  ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg GpuBlackoilNohystIntensiveQuantitiesWetGas.cu)
 
 
   # HEADERS
@@ -359,6 +362,9 @@ if(CUDA_FOUND OR hip_FOUND)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuFlowGasWaterEnergyBridge.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuFlowGasWaterEnergyContract.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuFipCellRecord.hpp)
+  ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuBlackoilNohystIntensiveQuantities.hpp)
+  ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuBlackoilNohystIntensiveQuantities_impl.hpp)
+  ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuFlowBlackoilNohystTypeTag.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuFlowGasWaterEnergyTypeTags.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/autotuner.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/coloringAndReorderingUtils.hpp)
@@ -634,12 +640,15 @@ if(CUDA_FOUND OR hip_FOUND)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_safe_conversion.cpp)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_solver_adapter.cpp)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpu_ad.cu)
+  ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpu_ecl_material_law_manager.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpu_ecl_thermal_law_manager.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpu_linear_two_phase_material.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpuPvt.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpuConstantCompressibilityWaterPvt.cu)
+  ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpuDryGasPvt.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpuLiveOilPvt.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpuTabulatedFunctions.cu)
+  ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpuWetGasPvt.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpu_smart_pointers.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpu_resources.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpu_pointer_attributes.cpp)
@@ -648,6 +657,7 @@ if(CUDA_FOUND OR hip_FOUND)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_conditional_storage.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_preconditioner_factory_gpu.cpp)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpuBlackOilFluidSystem.cu)
+  ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpuBlackOilFluidSystemSpe1.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_GpuPressureTransferPolicy.cpp)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_deviceBlockOperations.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_primaryvarswithdifferentvector.cpp)
@@ -656,6 +666,8 @@ if(CUDA_FOUND OR hip_FOUND)
   endif()
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_MiniMatrix.cu)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_blackoilintensivequantities_gpu.cu)
+  ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_blackoilintensivequantities_gpu_threephase.cu)
+  ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_gpu_flow_problem_refresh.cu)
   # Boost < 1.75 + nvcc = trouble in this test
   if(Boost_VERSION VERSION_GREATER 1.74)
     ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_MiniVector.cu)
@@ -669,12 +681,16 @@ if(CUDA_FOUND OR hip_FOUND)
   if(NOT CONVERT_CUDA_TO_HIP)
     set(CU_FILES_NEEDING_RELAXED_CONSTEXPR
       tests/gpuistl/test_gpu_ad.cu
+      tests/gpuistl/test_gpu_ecl_material_law_manager.cu
       tests/gpuistl/test_gpu_linear_two_phase_material.cu
       tests/gpuistl/test_gpuPvt.cu
       tests/gpuistl/test_gpuConstantCompressibilityWaterPvt.cu
+      tests/gpuistl/test_gpuDryGasPvt.cu
       tests/gpuistl/test_gpuLiveOilPvt.cu
       tests/gpuistl/test_gpuTabulatedFunctions.cu
+      tests/gpuistl/test_gpuWetGasPvt.cu
       tests/gpuistl/test_gpuBlackOilFluidSystem.cu
+      tests/gpuistl/test_gpuBlackOilFluidSystemSpe1.cu
       tests/gpuistl/test_GpuSparseMatrix.cu
       tests/gpuistl/test_GpuSparseTable.cu
       tests/gpuistl/test_blackoilfluidstategpu.cu
@@ -1150,6 +1166,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/FlowProblemBlackoilProperties.hpp
   opm/simulators/flow/FlowProblemComp.hpp
   opm/simulators/flow/FlowProblemCompProperties.hpp
+  opm/simulators/flow/FlowProblemNohystTypeTag.hpp
   opm/simulators/flow/FlowProblemParameters.hpp
   opm/simulators/flow/FlowProblemTPSA.hpp
   opm/simulators/flow/FlowsContainer.hpp

@@ -122,7 +122,8 @@ private:
     using DynamicCpuFluidSystem =
         std::remove_reference_t<decltype(CpuFluidSystem::getNonStaticInstance())>;
     using FluidSystemBuffer =
-        decltype(::Opm::gpuistl::copy_to_gpu(std::declval<DynamicCpuFluidSystem&>()));
+        decltype(::Opm::gpuistl::copy_to_gpu<typename DeviceFluidSystem::PvtApproachesType>(
+            std::declval<DynamicCpuFluidSystem&>()));
     using MaterialLawManager =
         typename GetProp<DeviceTypeTag, Properties::MaterialLaw>::EclMaterialLawManager;
     using GpuMaterialLawManager =
@@ -757,7 +758,8 @@ private:
         {
             const detail::ScopedGpuMemoryAccounting staticAccounting(staticData);
             auto fluidSystemBuffer =
-                ::Opm::gpuistl::copy_to_gpu(CpuFluidSystem::getNonStaticInstance());
+                ::Opm::gpuistl::copy_to_gpu<typename DeviceFluidSystem::PvtApproachesType>(
+                    CpuFluidSystem::getNonStaticInstance());
             fluidSystemBuffer_ = std::make_unique<FluidSystemBuffer>(std::move(fluidSystemBuffer));
             const auto fluidSystemView = ::Opm::gpuistl::make_view(*fluidSystemBuffer_);
             deviceFluidSystem_ = ::Opm::gpuistl::make_gpu_shared_ptr<DeviceFluidSystem>(fluidSystemView);
