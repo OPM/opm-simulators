@@ -95,6 +95,7 @@
 #include <format>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <new>
 #include <string>
@@ -661,6 +662,13 @@ struct TemporaryFile {
 using ProductionTypeTag = Opm::Properties::TTag::FlowGasWaterEnergyProblem;
 using ProductionSimulator = Opm::GetPropType<ProductionTypeTag, Opm::Properties::Simulator>;
 
+template <class IQ>
+__global__ void makeFirstStorageBlockSingular(Opm::gpuistl::GpuView<IQ> iq)
+{
+    using Evaluation = std::remove_cvref_t<decltype(iq[0].porosity())>;
+    const_cast<Evaluation&>(iq[0].porosity()) = Evaluation(0.0);
+}
+
 /// Read \p deckPath and set up a simulator for the production TypeTag, with
 /// its initial solution and CPU intensive quantities.
 static std::unique_ptr<ProductionSimulator> makeProductionSimulator(const std::string& deckPath)
@@ -855,9 +863,26 @@ static void runProductionDispatcherTest(const std::string& deckPath)
         }
     }
     BOOST_CHECK_THROW(dispatcher.computeTrueImpesWeights(weights, 0.0), std::invalid_argument);
+    BOOST_CHECK_THROW(dispatcher.computeTrueImpesWeights(weights, -dt), std::invalid_argument);
+    BOOST_CHECK_THROW(dispatcher.computeTrueImpesWeights(
+                          weights, std::numeric_limits<double>::infinity()), std::invalid_argument);
+    BOOST_CHECK_THROW(dispatcher.computeTrueImpesWeights(
+                          weights, std::numeric_limits<double>::quiet_NaN()), std::invalid_argument);
     Opm::gpuistl::GpuVector<double> wrongSize(1);
     BOOST_CHECK_THROW(dispatcher.computeTrueImpesWeights(wrongSize, dt), std::invalid_argument);
     BOOST_CHECK_EQUAL(dispatcher.trueImpesWeightUpdates(), 1u);
+
+    // A singular device block must request CPU fallback. A fresh IQ update
+    // restores the resident path without counting the failed attempt.
+    const auto stream = dispatcher.bridge().stream();
+    makeFirstStorageBlockSingular<<<1, 1, 0, stream>>>(dispatcher.bridge().intensiveQuantitiesView(0));
+    OPM_GPU_SAFE_CALL(cudaGetLastError());
+    OPM_GPU_SAFE_CALL(cudaStreamSynchronize(stream));
+    BOOST_CHECK(!dispatcher.computeTrueImpesWeights(weights, dt));
+    BOOST_CHECK_EQUAL(dispatcher.trueImpesWeightUpdates(), 1u);
+    dispatcher.update(problem, changedSolution, 0);
+    BOOST_REQUIRE(dispatcher.computeTrueImpesWeights(weights, dt));
+    BOOST_CHECK_EQUAL(dispatcher.trueImpesWeightUpdates(), 2u);
 
     for (std::size_t i = 0; i < numCells; ++i) {
         intensiveQuantities[i]->fluidState().setDensity(FluidSystem::waterPhaseIdx, -1.0);
