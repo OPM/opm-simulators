@@ -52,7 +52,12 @@ class FlowsContainer
 
     static constexpr auto gasCompIdx = FluidSystem::gasCompIdx;
     static constexpr auto oilCompIdx = FluidSystem::oilCompIdx;
-    static constexpr auto waterCompIdx = FluidSystem::waterCompIdx;
+    // Slot of the water results.  Compositional fluid systems have no water
+    // component index; there water takes the slot after oil and gas.
+    static constexpr int waterCompIdx = FluidSystem::waterCompIdx >= 0
+        ? FluidSystem::waterCompIdx
+        : (numPhases == 3 ? 2 : -1);
+    static_assert(waterCompIdx != gasCompIdx && waterCompIdx != oilCompIdx);
 
 public:
     FlowsContainer(const Schedule& schedule,

@@ -438,6 +438,27 @@ public:
                           : Scalar{0};
                   }}
             },
+            // Phase flow rates at reservoir conditions through the cell faces.
+            // The flash model's face fluxes hold them by phase index.
+            Entry{[&floresInf = this->simulator_.problem().model().linearizer().getFloresInfo(),
+                   &flowsC = this->flowsC_](const ExtractContext& ectx)
+                  {
+                      const auto phaseRate = [](const auto& flow, const unsigned phaseIdx)
+                      {
+                          return FluidSystem::phaseIsActive(phaseIdx)
+                              ? Scalar{flow[phaseIdx]}
+                              : Scalar{0};
+                      };
+                      for (const auto& floresInfo : floresInf[ectx.globalDofIdx]) {
+                          flowsC.assignFlores(ectx.globalDofIdx,
+                                              floresInfo.faceId,
+                                              floresInfo.nncId,
+                                              phaseRate(floresInfo.flow, gasPhaseIdx),
+                                              phaseRate(floresInfo.flow, oilPhaseIdx),
+                                              phaseRate(floresInfo.flow, waterPhaseIdx));
+                      }
+                  }, !this->simulator_.problem().model().linearizer().getFloresInfo().empty()
+            },
         };
 
         this->extractors_ = Extractor::removeInactive(extractors);
