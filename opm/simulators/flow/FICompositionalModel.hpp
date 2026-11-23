@@ -65,6 +65,11 @@ public:
         const unsigned numDof = this->numGridDof();
         const auto flashSettings = IntensiveQuantities::FlashSettings::fromParameters();
 
+        // Once every cell has a flash result, each flash starts from the previous
+        // result of its cell, if thermodynamic hints are enabled.
+        const bool warmStartFlash =
+            timeIdx == 0 && this->enableThermodynamicHints_ && hasFlashResults_;
+
         // An exception must not escape the parallel loop, which would call
         // std::terminate(); rethrow it afterwards, so that a failed flash
         // chops the time step.
@@ -78,7 +83,8 @@ public:
         for (unsigned globalIdx = 0; globalIdx < numDof; ++globalIdx) {
             try {
                 this->intensiveQuantityCache_[timeIdx][globalIdx]
-                    .update(problem, solution[globalIdx], globalIdx, timeIdx, flashSettings);
+                    .update(problem, solution[globalIdx], globalIdx, timeIdx, flashSettings,
+                            warmStartFlash);
                 this->setIntensiveQuantitiesCacheEntryValidity(globalIdx, timeIdx, true);
             }
             catch (...) {
@@ -87,10 +93,29 @@ public:
             }
         }
 
+        // a failed update can leave a cell without a usable result
+        if (timeIdx == 0) {
+            hasFlashResults_ = !exceptionPtr;
+        }
+
         if (exceptionPtr) {
             std::rethrow_exception(exceptionPtr);
         }
     }
+
+    template <class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        ParentType::serializeOp(serializer);
+        // the cached flash results belong to the state before the load
+        if (!serializer.isSerializing()) {
+            hasFlashResults_ = false;
+        }
+    }
+
+private:
+    // whether the cached quantities of every cell hold a flash result
+    mutable bool hasFlashResults_ = false;
 };
 
 } // namespace Opm

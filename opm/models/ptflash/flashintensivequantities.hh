@@ -190,13 +190,17 @@ public:
     /*!
      * \brief Update the quantities of a cell from its primary variables, without
      *        an element context.
+     *
+     * With warmStartFlash, the flash starts from the result of the previous
+     * update of this object if that was two-phase.
      */
     template <class Problem, class PrimaryVariables>
     void update(const Problem& problem,
                 const PrimaryVariables& priVars,
                 unsigned globalIdx,
                 unsigned timeIdx,
-                const FlashSettings& flashSettings)
+                const FlashSettings& flashSettings,
+                bool warmStartFlash = false)
     {
         // the energy and diffusion modules need an element context
         static_assert(!enableEnergy);
@@ -206,10 +210,25 @@ public:
         const Scalar T = problem.temperature(globalIdx, timeIdx);
         fluidState_.setTemperature(Toolbox::createConstant(T));
 
-        // No hint: the cache entry of this cell has just been invalidated, so the
-        // flash starts from Wilson K-values.
+        // Reuse the previous flash only if it was two-phase: from a single-phase
+        // result the stability test would start with K-values that can be
+        // trivial. Otherwise there is no hint: the cache entry of this cell has
+        // just been invalidated, so the flash starts from Wilson K-values.
+        const Scalar previousL = warmStartFlash ? getValue(fluidState_.L()) : Scalar{-1};
+        const FlashIntensiveQuantities* hint = previousL > 0 && previousL < 1 ? this : nullptr;
+        if (hint) {
+            // The flash leaves the K-values it started from in the fluid state, so
+            // take the converged ones from its phase compositions.
+            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
+                fluidState_.setKvalue(
+                    compIdx,
+                    fluidState_.moleFraction(FluidSystem::gasPhaseIdx, compIdx)
+                        / fluidState_.moleFraction(FluidSystem::oilPhaseIdx, compIdx));
+            }
+        }
+
         ParameterCache paramCache(problem.eosRegionIndex(globalIdx));
-        updatePhaseProperties_(problem, priVars, globalIdx, timeIdx, /*hint=*/nullptr,
+        updatePhaseProperties_(problem, priVars, globalIdx, timeIdx, hint,
                                problem.pvtRegionIndex(globalIdx),
                                problem.materialLawParams(globalIdx), paramCache, flashSettings);
 
