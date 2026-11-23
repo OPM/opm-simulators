@@ -22,6 +22,7 @@
 #include <config.h>
 
 #include <opm/simulators/flow/RegionPhasePVAverage.hpp>
+#include <opm/models/parallel/threadmanager.hpp>
 
 #include <opm/input/eclipse/EclipseState/Grid/FieldProps.hpp>
 
@@ -86,6 +87,7 @@ RegionPhasePoreVolAverage(const Parallel::Communication&  comm,
     , getRegionArray_ { std::move(getRegionArray) }
     , rsStart_        { regionStartPointers(rsetNames_, getRegionArray_, comm_) }
     , x_              (rsStart_.back() * numPhases * AvgType::NumTypes * Element::NumElem)
+    , threadSums_     (ThreadManager::maxThreads(), std::vector<double>(x_.size(), 0.0))
 {}
 
 double Opm::RegionPhasePoreVolAverage::fieldValue(const Phase& p) const
@@ -112,6 +114,8 @@ value(std::string_view rset, const Phase& p, const Region& r) const
 void Opm::RegionPhasePoreVolAverage::prepareAccumulation()
 {
     std::ranges::fill(this->x_, 0.0);
+    this->threadSums_.assign(ThreadManager::maxThreads(),
+                             std::vector<double>(this->x_.size(), 0.0));
 }
 
 void Opm::RegionPhasePoreVolAverage::
@@ -128,6 +132,12 @@ addCell(const std::size_t activeCell,
 
 void Opm::RegionPhasePoreVolAverage::accumulateParallel()
 {
+    for (auto& local : this->threadSums_) {
+        for (std::size_t i = 0; i < this->x_.size(); ++i) {
+            this->x_[i] += local[i];
+            local[i] = 0.0;
+        }
+    }
     this->comm_.get().sum(this->x_.data(), static_cast<int>(this->x_.size()));
 }
 
@@ -184,8 +194,9 @@ void Opm::RegionPhasePoreVolAverage::add(const Ix      start,
                                          const double  x,
                                          const double  w)
 {
-    this->value (start, type) += w * x;
-    this->weight(start, type) += w;
+    auto& local = this->threadSums_[ThreadManager::threadId()];
+    local[this->valueArrayIndex(start, type, Element::Value)] += w * x;
+    local[this->valueArrayIndex(start, type, Element::Weight)] += w;
 }
 
 double& Opm::RegionPhasePoreVolAverage::value(const Ix start, const AvgType type)

@@ -71,6 +71,7 @@ class FIBlackOilModel : public BlackOilModel<TypeTag>
     using ParentType = BlackOilModel<TypeTag>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using BlockPrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
@@ -90,12 +91,19 @@ class FIBlackOilModel : public BlackOilModel<TypeTag>
     static constexpr bool avoidElementContext = getPropValue<TypeTag, Properties::AvoidElementContext>();
 
 public:
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+
     explicit FIBlackOilModel(Simulator& simulator)
         : BlackOilModel<TypeTag>(simulator)
         , element_chunks_(this->gridView_,
                           Dune::Partitions::all,
                           ThreadManager::maxThreads())
     {
+        if constexpr (gridIsUnchanging) {
+            interior_element_chunks_.emplace(this->gridView_,
+                                             Dune::Partitions::interior,
+                                             ThreadManager::maxThreads());
+        }
 #if HAVE_CUDA
         if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
             useGpuIntensiveQuantitiesDispatcher_ =
@@ -180,6 +188,81 @@ public:
         }
 #endif
         return ParentType::globalResidual(destination, value);
+    }
+
+    // Reuse interior iterators on the fixed CpGrid. Rebuild them for grids
+    // whose element iterators can be invalidated by adaptation.
+    template <class Func>
+    void withInteriorElementChunks(Func&& func) const
+    {
+        if constexpr (gridIsUnchanging) {
+            std::forward<Func>(func)(*interior_element_chunks_);
+        } else {
+            // A changing grid invalidates stored element iterators.
+            const auto chunks = ElementChunks(this->simulator_.gridView(),
+                                              Dune::Partitions::interior,
+                                              ThreadManager::maxThreads());
+            std::forward<Func>(func)(chunks);
+        }
+    }
+
+    template <class Func>
+    bool withSparseHostStateForBlockOutput(unsigned timeIdx,
+                                           const std::vector<unsigned>& cells,
+                                           Func&& func) const
+    {
+#if HAVE_CUDA
+        if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            if (gpuIntensiveQuantitiesDispatcher_ && gpuIntensiveQuantitiesDispatcher_->hasBridge()) {
+                auto& bridge = gpuIntensiveQuantitiesDispatcher_->bridge();
+                if (bridge.hasPrimaryVariables(timeIdx) && bridge.hasIntensiveQuantities(timeIdx)) {
+                    assert(!hostOutputTimeIdx_);
+                    std::vector<BlockPrimaryVariables*> primaryDestinations;
+                    std::vector<IntensiveQuantities*> intensiveDestinations;
+                    primaryDestinations.reserve(cells.size());
+                    intensiveDestinations.reserve(cells.size());
+                    for (const unsigned cell : cells) {
+                        primaryDestinations.push_back(&this->mutableSolution(timeIdx)[cell]);
+                        intensiveDestinations.push_back(&this->intensiveQuantityCache_[timeIdx][cell]);
+                    }
+                    gpuIntensiveQuantitiesDispatcher_->materializeHostBlockState(
+                        timeIdx, cells.data(), primaryDestinations.data(),
+                        intensiveDestinations.data(), cells.size());
+                    for (const unsigned cell : cells) {
+                        this->setIntensiveQuantitiesCacheEntryValidity(cell, timeIdx, true);
+                    }
+                    struct Scope {
+                        std::optional<unsigned>& slot;
+                        ~Scope() { slot.reset(); }
+                    } scope{hostOutputTimeIdx_};
+                    hostOutputTimeIdx_ = timeIdx;
+                    std::forward<Func>(func)();
+                    return true;
+                }
+            }
+        }
+#endif
+        return false;
+    }
+
+    template <class Func>
+    bool withCompactFipForOutput(Func&& func) const
+    {
+#if HAVE_CUDA
+        if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                return false;
+            }
+            if (gpuIntensiveQuantitiesDispatcher_ && gpuIntensiveQuantitiesDispatcher_->hasBridge()
+                && gpuIntensiveQuantitiesDispatcher_->bridge().hasIntensiveQuantities(0)) {
+                auto records = gpuIntensiveQuantitiesDispatcher_->compactFipCells();
+                std::forward<Func>(func)(records);
+                return true;
+            }
+        }
+#endif
+        return false;
     }
 
     void invalidateAndUpdateIntensiveQuantities(unsigned timeIdx) const
@@ -354,6 +437,48 @@ private:
     }
 
 public:
+    // Sparse source evaluation should not materialize the entire device cache.
+    // Ordinary grid traversals retain the bulk materialization path below.
+    const IntensiveQuantities& intensiveQuantitiesForSource(unsigned globalIdx,
+                                                           unsigned timeIdx) const
+    {
+#if HAVE_CUDA
+        ensureHostIntensiveQuantities(timeIdx, globalIdx, /*singleCell=*/true);
+#endif
+        return intensiveQuantities(globalIdx, timeIdx);
+    }
+
+#if HAVE_CUDA
+    void prepareHostIntensiveQuantitiesForSources(unsigned timeIdx,
+                                                  const std::vector<unsigned>& indices) const
+    {
+        if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            if (indices.empty() || hostOutputTimeIdx_ == timeIdx
+                || !gpuIntensiveQuantitiesDispatcher_ || !gpuIntensiveQuantitiesDispatcher_->hasBridge()
+                || !gpuIntensiveQuantitiesDispatcher_->bridge().hasIntensiveQuantities(timeIdx)) {
+                return;
+            }
+            std::lock_guard<std::mutex> lock(gpuHostIntensiveQuantitiesMutex_);
+            std::vector<unsigned> missing;
+            std::vector<IntensiveQuantities*> destinations;
+            missing.reserve(indices.size());
+            destinations.reserve(indices.size());
+            for (const unsigned cell : indices) {
+                if (ParentType::cachedIntensiveQuantities(cell, timeIdx) == nullptr) {
+                    missing.push_back(cell);
+                    destinations.push_back(&this->intensiveQuantityCache_[timeIdx][cell]);
+                }
+            }
+            if (missing.empty()) { return; }
+            gpuIntensiveQuantitiesDispatcher_->materializeHostSourceIntensiveQuantities(
+                timeIdx, missing.data(), destinations.data(), missing.size());
+            for (const unsigned cell : missing) {
+                this->setIntensiveQuantitiesCacheEntryValidity(cell, timeIdx, true);
+            }
+        }
+    }
+#endif
+
 #if HAVE_CUDA
     const IntensiveQuantities* cachedIntensiveQuantities(unsigned globalIdx, unsigned timeIdx) const
     {
@@ -362,7 +487,8 @@ public:
     }
 
     void ensureHostIntensiveQuantities(unsigned timeIdx,
-                                      std::optional<unsigned> globalIdx = std::nullopt) const
+                                      std::optional<unsigned> globalIdx = std::nullopt,
+                                      bool singleCell = false) const
     {
         if (hostOutputTimeIdx_ == timeIdx) {
             return;
@@ -393,6 +519,12 @@ public:
                 }
             }
             if (hostCacheIsValid) {
+                return;
+            }
+            if (singleCell && globalIdx) {
+                gpuIntensiveQuantitiesDispatcher_->materializeHostIntensiveQuantity(
+                    timeIdx, *globalIdx, this->intensiveQuantityCache_[timeIdx][*globalIdx]);
+                this->setIntensiveQuantitiesCacheEntryValidity(*globalIdx, timeIdx, true);
                 return;
             }
             std::vector<IntensiveQuantities*> outIqPtrs(numCells);
@@ -467,6 +599,17 @@ public:
         return false;
     }
 
+    bool computeGpuTrueImpesWeights(gpuistl::GpuVector<Scalar>& weights,
+                                   Scalar timeStepSize) const
+    {
+        if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            if (hasGpuPropertyAssemblyBridge() && this->gridView_.comm().size() == 1) {
+                return gpuIntensiveQuantitiesDispatcher_->computeTrueImpesWeights(weights, timeStepSize);
+            }
+        }
+        return false;
+    }
+
     template <class T = TypeTag>
     std::enable_if_t<Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<T>::value,
                      const typename Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcher<T>::Bridge&>
@@ -501,6 +644,20 @@ public:
         }
 #endif
     }
+
+private:
+    // Out of line so the accessor above stays small enough to inline in the assembly loop.
+    [[noreturn]] static void throwIntensiveQuantityError_(bool cacheDisabled)
+    {
+        if (cacheDisabled) {
+            OPM_THROW(std::logic_error,
+                      "Intensive quantity cache is disabled; "
+                      "use --enable-intensive-quantity-cache=true");
+        }
+        OPM_THROW(std::logic_error, "Intensive quantites need to be updated in code");
+    }
+
+public:
 
 protected:
 
@@ -573,6 +730,7 @@ protected:
     }
 
     ElementChunks<GridView, Dune::Partitions::All> element_chunks_;
+    std::optional<ElementChunks<GridView, Dune::Partitions::Interior>> interior_element_chunks_;
 
 #if HAVE_CUDA
     bool useGpuIntensiveQuantitiesDispatcher_{false};

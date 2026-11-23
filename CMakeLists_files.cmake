@@ -358,6 +358,7 @@ if(CUDA_FOUND OR hip_FOUND)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuBlackoilNewtonValidation.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuFlowGasWaterEnergyBridge.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuFlowGasWaterEnergyContract.hpp)
+  ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuFipCellRecord.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuFlowGasWaterEnergyTypeTags.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/autotuner.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/coloringAndReorderingUtils.hpp)
@@ -866,6 +867,7 @@ list (APPEND TEST_DATA_FILES
 # originally generated with the command:
 # find opm -name '*.h*' -a ! -name '*-pch.hpp' -printf '\t%p\n' | sort
 list (APPEND PUBLIC_HEADER_FILES
+  opm/simulators/linalg/gpuistl/GpuFipCellRecord.hpp
   opm/models/blackoil/blackoilbioeffectsmodules.hh
   opm/models/blackoil/blackoilbioeffectsparams.hpp
   opm/models/blackoil/blackoilboundaryratevector.hh

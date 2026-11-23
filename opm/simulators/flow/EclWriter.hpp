@@ -28,12 +28,15 @@
 #ifndef OPM_ECL_WRITER_HPP
 #define OPM_ECL_WRITER_HPP
 
+#include <exception>
 #include <dune/grid/common/partitionset.hh>
 
 #include <opm/common/TimingMacros.hpp> // OPM_TIMEBLOCK
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/utility/TimeService.hpp>
 #include <opm/input/eclipse/Schedule/RPTConfig.hpp>
+#include <opm/models/parallel/threadmanager.hpp>
+#include <opm/grid/utility/ElementChunks.hpp>
 
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
@@ -874,41 +877,141 @@ private:
                          isSubStep && !writeAllSolutions,
                          log, forceRestartFieldAllocation);
 
-        ElementContext elemCtx(simulator_);
-
         OPM_BEGIN_PARALLEL_TRY_CATCH();
 
-        simulator_.model().withHostStateForOutput(/*timeIdx=*/0, [&] {
-            {
-                OPM_TIMEBLOCK(prepareCellBasedData);
+        {
+            OPM_TIMEBLOCK(prepareCellBasedData);
 
-                this->outputModule_->prepareDensityAccumulation();
-                this->outputModule_->setupExtractors(isSubStep, reportStepNum);
-                for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
-                    elemCtx.updatePrimaryStencil(elem);
-                    elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-
-                    this->outputModule_->processElement(elemCtx);
-                    this->outputModule_->processElementBlockData(elemCtx);
-                }
-                this->outputModule_->clearExtractors();
-            }
-
-            {
-                OPM_TIMEBLOCK(prepareFluidInPlace);
-
+            this->outputModule_->prepareDensityAccumulation();
+            this->outputModule_->setupExtractors(isSubStep, reportStepNum);
+            bool usedCompactFip = false;
+            if constexpr (requires { simulator_.model().hasGpuPropertyAssemblyBridge();
+                                     this->outputModule_->hasBlockExtractors();
+                                     this->outputModule_->hasLgrBlockExtractors();
+                                     this->outputModule_->canUseCompactFipOutput(); }) {
+                if (isSubStep && !Parameters::Get<Parameters::EnableWriteAllSolutions>()
+                    && !this->outputModule_->needInterfaceFluxes(isSubStep)
+                    && this->outputModule_->canUseCompactFipOutput()
+                    && !this->outputModule_->hasLgrBlockExtractors()) {
+                    usedCompactFip = simulator_.model().withCompactFipForOutput(
+                        [&](const auto& records) {
+                            // The bridge record uses global-space indexing; the
+                            // number of interior cells need not be a prefix of it.
+                            simulator_.model().withInteriorElementChunks([&](const auto& chunks) {
+                                std::vector<std::exception_ptr> workerErrors(ThreadManager::maxThreads());
 #ifdef _OPENMP
-#pragma omp parallel for
+#pragma omp parallel for if (simulator_.vanguard().grid().maxLevel() == 0)
 #endif
-                for (int dofIdx = 0; dofIdx < num_interior; ++dofIdx) {
-                    const auto& intQuants = simulator_.model().intensiveQuantities(dofIdx, /*timeIdx=*/0);
-                    const auto totVolume = simulator_.model().dofTotalVolume(dofIdx);
-
-                    this->outputModule_->updateFluidInPlace(dofIdx, intQuants, totVolume);
+                                for (std::size_t chunkIdx = 0; chunkIdx < chunks.size(); ++chunkIdx) {
+                                    try {
+                                        auto chunkIterator = chunks.begin();
+                                        chunkIterator += chunkIdx;
+                                        const auto chunk = *chunkIterator;
+                                        for (const auto& elem : chunk) {
+                                            const unsigned cell = simulator_.model().elementMapper().index(elem);
+                                            this->outputModule_->updateFluidInPlace(
+                                                cell, records[cell],
+                                                simulator_.model().dofTotalVolume(cell));
+                                        }
+                                    } catch (...) {
+                                        auto& error = workerErrors[ThreadManager::threadId()];
+                                        if (!error) { error = std::current_exception(); }
+                                    }
+                                }
+                                for (const auto& error : workerErrors) {
+                                    if (error) { std::rethrow_exception(error); }
+                                }
+                            });
+                        });
+                    if (usedCompactFip && this->outputModule_->hasBlockExtractors()) {
+                        std::vector<unsigned> blockCells;
+                        simulator_.model().withInteriorElementChunks([&](const auto& chunks) {
+                            for (const auto& chunk : chunks) {
+                                for (const auto& elem : chunk) {
+                                    const unsigned cell = simulator_.model().elementMapper().index(elem);
+                                    if (this->outputModule_->needsGlobalBlockCell(cell)) {
+                                        blockCells.push_back(cell);
+                                    }
+                                }
+                            }
+                        });
+                        usedCompactFip = simulator_.model().withSparseHostStateForBlockOutput(
+                            /*timeIdx=*/0, blockCells, [&] {
+                                simulator_.model().withInteriorElementChunks([&](const auto& chunks) {
+                                    for (const auto& chunk : chunks) {
+                                        ElementContext elemCtx(simulator_);
+                                        for (const auto& elem : chunk) {
+                                            const unsigned cell = simulator_.model().elementMapper().index(elem);
+                                            if (!this->outputModule_->needsGlobalBlockCell(cell)) {
+                                                continue;
+                                            }
+                                            elemCtx.updatePrimaryStencil(elem);
+                                            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                                            this->outputModule_->processElementBlockData(elemCtx);
+                                        }
+                                    }
+                                });
+                            });
+                    }
                 }
             }
+            if (!usedCompactFip) {
+                // Each element writes only its own cell's output entries.
+                const auto processChunks = [&](const auto& chunks) {
+                    std::vector<std::exception_ptr> workerErrors(ThreadManager::maxThreads());
+#ifdef _OPENMP
+#pragma omp parallel for if (simulator_.vanguard().grid().maxLevel() == 0)
+#endif
+                    for (std::size_t chunkIdx = 0; chunkIdx < chunks.size(); ++chunkIdx) {
+                        try {
+                            auto chunkIterator = chunks.begin();
+                            chunkIterator += chunkIdx;
+                            const auto chunk = *chunkIterator;
+                            ElementContext elemCtx(simulator_);
+                            for (const auto& elem : chunk) {
+                                elemCtx.updatePrimaryStencil(elem);
+                                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
-        });
+                                this->outputModule_->processElement(elemCtx);
+                                this->outputModule_->processElementBlockData(elemCtx);
+
+                                // Reuse the IQs already loaded into the element context. A
+                                // separate parallel FIP traversal reloads the whole cache and,
+                                // on GPU models, serializes cell lookups on the host-cache mutex.
+                                for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
+                                    const auto globalIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+                                    this->outputModule_->updateFluidInPlace(
+                                        globalIdx, elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0),
+                                        simulator_.model().dofTotalVolume(globalIdx));
+                                }
+                            }
+                        } catch (...) {
+                            auto& error = workerErrors[ThreadManager::threadId()];
+                            if (!error) { error = std::current_exception(); }
+                        }
+                    }
+                    for (const auto& error : workerErrors) {
+                        if (error) { std::rethrow_exception(error); }
+                    }
+                };
+                const auto processCells = [&] {
+                    if constexpr (requires { simulator_.model().withInteriorElementChunks(processChunks); }) {
+                        simulator_.model().withInteriorElementChunks(processChunks);
+                    } else {
+                        // Compositional models do not retain reusable element chunks.
+                        const auto chunks = ElementChunks(gridView, Dune::Partitions::interior,
+                                                           ThreadManager::maxThreads());
+                        processChunks(chunks);
+                    }
+                };
+                if constexpr (requires { simulator_.model().withHostStateForOutput(0u, processCells); }) {
+                    simulator_.model().withHostStateForOutput(/*timeIdx=*/0, processCells);
+                } else {
+                    processCells();
+                }
+            }
+            this->outputModule_->clearExtractors();
+        }
 
         OPM_END_PARALLEL_TRY_CATCH("EclWriter::prepareLocalCellData() failed: ",
                                    this->simulator_.vanguard().grid().comm());

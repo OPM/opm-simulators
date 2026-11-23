@@ -189,6 +189,10 @@ namespace Opm {
         /// should be the return value from fieldStartIx() or rsetStartIx().
         std::vector<double> x_{};
 
+        // Workers own separate regional sums. Fold these after the output
+        // traversal joins, before the existing MPI reduction.
+        std::vector<std::vector<double>> threadSums_{};
+
         /// Compute final average value for a single region and phase.
         ///
         /// Prefers the average value weighted by phase-filled pore-volume,

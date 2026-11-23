@@ -28,6 +28,11 @@
 #include <boost/test/unit_test.hpp>
 
 #include <opm/simulators/flow/RegionPhasePVAverage.hpp>
+#include <opm/models/parallel/threadmanager.hpp>
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 #include <opm/simulators/flow/partitionCells.hpp>
 
@@ -236,6 +241,55 @@ namespace {
 // ===========================================================================
 
 using PVAvg = Opm::RegionPhasePoreVolAverage;
+
+BOOST_AUTO_TEST_CASE(Threaded_Accumulation_Matches_Serial)
+{
+#ifdef _OPENMP
+    const int previousThreads = omp_get_max_threads();
+    omp_set_num_threads(4);
+    Opm::ThreadManager::init(false);
+#endif
+    auto comm = Opm::Parallel::Communication { Dune::MPIHelper::getCommunicator() };
+    const auto regions = RegionSets{};
+    auto serial = PVAvg {comm, 3, regions.names(), regions};
+    auto threaded = PVAvg {comm, 3, regions.names(), regions};
+    const auto add = [](PVAvg& averages, const unsigned sample) {
+        const unsigned cell = sample % 27;
+        for (unsigned phase = 0; phase < 3; ++phase) {
+            averages.addCell(cell, PVAvg::Phase{phase},
+                             PVAvg::CellValue{double(cell + phase + 1), 0.25, 4.0});
+        }
+    };
+    // Many cells share field/region accumulators, exercising the contested
+    // updates that previously lost contributions under OpenMP.
+    for (unsigned pass = 0; pass < 2; ++pass) {
+        serial.prepareAccumulation();
+        threaded.prepareAccumulation();
+        for (unsigned sample = 0; sample < 27 * 4096; ++sample) {
+            add(serial, sample);
+        }
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+        for (unsigned sample = 0; sample < 27 * 4096; ++sample) {
+            add(threaded, sample);
+        }
+        serial.accumulateParallel();
+        threaded.accumulateParallel();
+        for (unsigned phase = 0; phase < 3; ++phase) {
+            const auto p = PVAvg::Phase{phase};
+            BOOST_CHECK_EQUAL(threaded.fieldValue(p), serial.fieldValue(p));
+            for (unsigned layer = 0; layer < 3; ++layer) {
+                BOOST_CHECK_EQUAL(threaded.value("FIPLRS", p, PVAvg::Region{layer}),
+                                  serial.value("FIPLRS", p, PVAvg::Region{layer}));
+            }
+        }
+    }
+#ifdef _OPENMP
+    omp_set_num_threads(previousThreads);
+    Opm::ThreadManager::init(false);
+#endif
+}
 
 BOOST_AUTO_TEST_SUITE(Sequential)
 

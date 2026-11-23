@@ -49,6 +49,7 @@
 #include <opm/input/eclipse/Units/Units.hpp>
 
 #include <opm/models/utils/parametersystem.hpp>
+#include <opm/models/parallel/threadmanager.hpp>
 
 #include <opm/output/data/RegionVariableValues.hpp>
 #include <opm/output/data/RegionsetVariableDescriptor.hpp>
@@ -615,15 +616,35 @@ regionSum(const ScalarBuffer& property,
     // added after the interior cells
     // OwnerCellsFirst = True
     assert(regionId.size() >= property.size());
-    for (std::size_t j = 0; j < property.size(); ++j) {
-        const int regionIdx = regionId[j] - 1;
-        // the cell is not attributed to any region. ignore it!
-        if (regionIdx < 0) {
-            continue;
+    const auto numThreads = ThreadManager::maxThreads();
+    // Limit scratch storage when the region count approaches the cell count.
+    if (numThreads == 1 || maxNumberOfRegions > property.size() / numThreads) {
+        for (std::size_t j = 0; j < property.size(); ++j) {
+            const int regionIdx = regionId[j] - 1;
+            if (regionIdx >= 0) {
+                assert(regionIdx < static_cast<int>(maxNumberOfRegions));
+                totals[regionIdx] += property[j];
+            }
         }
-
-        assert(regionIdx < static_cast<int>(maxNumberOfRegions));
-        totals[regionIdx] += property[j];
+    } else {
+        // Reduce per-thread region sums before the existing MPI reduction.
+        std::vector<ScalarBuffer> threadTotals(
+            numThreads, ScalarBuffer(maxNumberOfRegions, 0.0));
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+        for (std::size_t j = 0; j < property.size(); ++j) {
+            const int regionIdx = regionId[j] - 1;
+            if (regionIdx >= 0) {
+                assert(regionIdx < static_cast<int>(maxNumberOfRegions));
+                threadTotals[ThreadManager::threadId()][regionIdx] += property[j];
+            }
+        }
+        for (const auto& local : threadTotals) {
+            for (std::size_t region = 0; region < maxNumberOfRegions; ++region) {
+                totals[region] += local[region];
+            }
+        }
     }
 
     comm.sum(totals.data(), totals.size());

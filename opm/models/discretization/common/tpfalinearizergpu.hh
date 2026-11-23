@@ -225,6 +225,8 @@ public:
                     linearizer.model_(), linearizer.boundaryInfo_, numCells);
             }
 
+            linearizer.prepare_source_intensive_quantities_gpu(numCells, domain);
+
             launchLinearization<typename GpuParams::LocalResidualGPU>(
                 numCells,
                 gpuParams_->domainView(),
@@ -380,13 +382,20 @@ private:
         for (unsigned ii = 0; ii < numCells; ++ii) {
             const unsigned cell = domain.cells[ii];
             ADVectorBlockCPU source(0.0);
-            const auto& intQuantsIn = linearizer.model_().intensiveQuantities(cell, 0);
             const double volume = linearizer.model_().dofTotalVolume(cell);
-            if (linearizer.separateSparseSourceTerms_) {
-                LocalResidual::computeSourceDense(
-                    source, linearizer.problem_(), intQuantsIn, cell, 0);
+            if constexpr (requires { LocalResidual::computeSource(source, linearizer.problem_(), cell, 0); }) {
+                if (linearizer.separateSparseSourceTerms_) {
+                    LocalResidual::computeSourceDense(source, linearizer.problem_(), cell, 0);
+                } else {
+                    LocalResidual::computeSource(source, linearizer.problem_(), cell, 0);
+                }
             } else {
-                LocalResidual::computeSource(source, linearizer.problem_(), intQuantsIn, cell, 0);
+                const auto& iq = linearizer.model_().intensiveQuantities(cell, 0);
+                if (linearizer.separateSparseSourceTerms_) {
+                    LocalResidual::computeSourceDense(source, linearizer.problem_(), iq, cell, 0);
+                } else {
+                    LocalResidual::computeSource(source, linearizer.problem_(), iq, cell, 0);
+                }
             }
             source *= -volume;
             VectorBlockCPU residualContribution(0.0);
