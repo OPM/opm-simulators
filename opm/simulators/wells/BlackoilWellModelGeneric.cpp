@@ -46,6 +46,7 @@
 #include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
 #include <opm/input/eclipse/Schedule/Network/Balance.hpp>
 #include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
+#include <opm/input/eclipse/Schedule/ResCoup/ReservoirCouplingInfo.hpp>
 #include <opm/input/eclipse/Schedule/Events.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>
@@ -679,6 +680,22 @@ checkGconsaleLimits(const Group& group,
     // gas injectors subordinate to the group. Without any, there is no
     // reinjection to adjust and the sales rate limits are not enforced.
     if (!this->hasOpenGasInjector(group, reportStepIdx)) {
+        // A gas rate target set by an earlier sales gas action no longer
+        // applies. The group falls back to its own production control,
+        // unless it has a gas rate limit of its own.
+        if (this->groupState().has_grat_sales_target(group.name())) {
+            this->groupState().clear_grat_sales_target(group.name());
+            const auto cmode = this->groupState().production_control(group.name());
+            if (cmode == Group::ProductionCMode::GRAT &&
+                !group.has_control(Group::ProductionCMode::GRAT))
+            {
+                const auto own_cmode = group.isProductionGroup()
+                    ? group.productionControls(summaryState_).cmode
+                    : Group::ProductionCMode::NONE;
+                this->groupState().production_control(group.name(), own_cmode);
+            }
+        }
+
         const bool limit_violated = sales_rate > gconsale.max_sales_rate
                                  || sales_rate < gconsale.min_sales_rate;
         if (limit_violated && comm_.rank() == 0) {
@@ -771,6 +788,12 @@ bool BlackoilWellModelGeneric<Scalar, IndexTraits>::
 hasOpenGasInjector(const Group& group,
                    const int reportStepIdx) const
 {
+    // The wells of a reservoir coupling slave are not part of this schedule.
+    // A master group is therefore assumed to have gas injectors available.
+    if (schedule()[reportStepIdx].rescoup().hasMasterGroup(group.name())) {
+        return true;
+    }
+
     const auto is_open_gas_injector = [this, reportStepIdx](const std::string& wellName)
     {
         const auto& well = schedule().getWell(wellName, reportStepIdx);

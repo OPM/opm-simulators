@@ -548,6 +548,7 @@ protected:
 
     /// Whether the group or any of its subordinate groups has a gas
     /// injector that is open in the schedule at the given report step.
+    /// Reservoir coupling master groups are assumed to have gas injectors.
     bool hasOpenGasInjector(const Group& group,
                             const int reportStepIdx) const;
 
