@@ -31,6 +31,7 @@
 #include <opm/models/parallel/threadmanager.hpp>
 #include <algorithm>
 #include <cmath>
+#include <exception>
 #include <stdexcept>
 
 #if HAVE_CUDA
@@ -178,17 +179,11 @@ namespace Amg
         VectorBlockType rhs(0.0);
         rhs[pressureVarIndex] = 1.0;
 
-        // Declare variables outside the loop to avoid repetitive allocation
-        MatrixBlockType block;
-        VectorBlockType bweights;
-        MatrixBlockType block_transpose;
-        Dune::FieldVector<Evaluation, numEq> storage;
-
         OPM_BEGIN_PARALLEL_TRY_CATCH();
-#ifdef _OPENMP
-#pragma omp parallel for private(block, bweights, block_transpose, storage) if(enable_thread_parallel)
-#endif
-        for (const auto& chunk : element_chunks) {
+        const auto computeChunk = [&](const auto& chunk) {
+            VectorBlockType bweights;
+            MatrixBlockType block_transpose;
+            Dune::FieldVector<Evaluation, numEq> storage;
             const std::size_t thread_id = ThreadManager::threadId();
             ElementContext localElemCtx(elemCtx.simulator());
 
@@ -212,46 +207,69 @@ namespace Amg
                         }
                     }
                 }
-                try {
-                    block_transpose.solve(bweights, rhs);
-                }
-                catch (const Dune::FMatrixError&) {
-                    // Rank-deficient storage derivatives: no combination of the
-                    // mass balances has a storage term that depends on pressure
-                    // alone, so there is no weight vector to compute here.
-                    //
-                    // Deliberately no fallback value.  bweights is indexed by
-                    // equation while rhs is indexed by primary variable, so
-                    // substituting rhs would put unit weight on whichever
-                    // equation happens to share the pressure variable's index -
-                    // an arbitrary choice that goes on to make the CPR pressure
-                    // system itself singular.  Name the cell instead, so the
-                    // cause can be found.
+                // A rank-deficient solve cannot supply a pressure equation.
+                // Substituting rhs would pick an arbitrary conservation equation.
+                const auto reportInvalidWeights = [&localElemCtx]() {
                     const auto globalDofIdx =
                         localElemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
 
                     throw std::runtime_error {
-                        fmt::format("Singular storage matrix when forming the CPR "
+                        fmt::format("Singular storage matrix or invalid solution when forming the CPR "
                                     "pressure weights for cell {} (Cartesian index "
-                                    "{}).  The storage derivatives of that cell are "
-                                    "rank deficient, so the pressure equation cannot "
-                                    "be formed there.",
+                                    "{}). The pressure equation cannot be formed there.",
                                     globalDofIdx,
                                     localElemCtx.simulator().vanguard()
                                         .cartesianIndex(globalDofIdx))
                     };
+                };
+                try {
+                    block_transpose.solve(bweights, rhs);
+                }
+                catch (const Dune::FMatrixError&) {
+                    reportInvalidWeights();
                 }
 
-                const double abs_max =
-                    *std::ranges::max_element(bweights,
-                                              [](double a, double b)
-                                              { return std::fabs(a) < std::fabs(b); });
-                // probably a scaling which could give approximately total compressibility would be better
-                bweights /=  std::fabs(abs_max); // given normal densities this scales weights to about 1.
+                // Small-block singularity checks can be disabled in Dune.
+                double maxAbs = 0.0;
+                for (const auto weight : bweights) {
+                    if (!std::isfinite(weight)) {
+                        reportInvalidWeights();
+                    }
+                    maxAbs = std::max(maxAbs, std::fabs(static_cast<double>(weight)));
+                }
+                if (maxAbs == 0.0) {
+                    reportInvalidWeights();
+                }
+                bweights /= maxAbs;
 
                 const auto index = localElemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
                 weights[index] = bweights;
             }
+        };
+
+        // OpenMP requires exceptions to be caught inside the region even
+        // when the runtime if clause runs the loop with one thread.
+        std::exception_ptr failure;
+#ifdef _OPENMP
+#pragma omp parallel for if(enable_thread_parallel)
+#endif
+        for (const auto& chunk : element_chunks) {
+            try {
+                computeChunk(chunk);
+            }
+            catch (...) {
+#ifdef _OPENMP
+#pragma omp critical(opmTrueImpesWeightFailure)
+#endif
+                {
+                    if (!failure) {
+                        failure = std::current_exception();
+                    }
+                }
+            }
+        }
+        if (failure) {
+            std::rethrow_exception(failure);
         }
         OPM_END_PARALLEL_TRY_CATCH("getTrueImpesWeights() failed: ", elemCtx.simulator().vanguard().grid().comm());
     }
