@@ -138,3 +138,42 @@ add_rc_m2_test(gaslift TEST2A_GL_WD_OWN_FLOW T2A_GL_WD_OWN_MOD1_FLOW
 # group has the water injection flag BOTH without a GCONINJE of its own.
 add_rc_m2_test(gaslift TEST2A_GL_WD_INJ_FLOW T2A_GL_WD_INJ_MOD1_FLOW
                REFERENCE_SUBDIR TEST2A_GL_WD_INJ_FLOW)
+
+# The master has a reservoir and wells of its own beside its master groups, and runs on
+# two ranks, with its wells on both. RES-1 runs on three ranks, so that the test needs
+# six processes in all.
+add_test_compare_rescoup_simulation(
+  CASENAME
+    rc_m2_masterwells_test2a_mw_flow
+  DIR
+    rescoup/rc_m2/masterwells
+  MASTER_DIR
+    master
+  FILENAME
+    TEST2A_MW_FLOW
+  SLAVE_FILENAMES
+    T2A_MOD1_FLOW
+    T2A_MOD2_FLOW
+  # SLAVES item 5 of each slave above
+  SLAVE_PROCS
+    3
+    1
+  MASTER_PROCS
+    2
+  SHARED_DIRS
+    rescoup/common
+    rescoup/rc_m2/t2a
+  MPIEXEC
+    ${_rescoup_mpiexec}
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${rel_tol}
+  TEST_ARGS
+    --parsing-strictness=low
+    --enable-tuning=true
+)
