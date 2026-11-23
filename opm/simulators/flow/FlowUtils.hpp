@@ -23,6 +23,7 @@
 #define OPM_FLOW_UTILS_HEADER_INCLUDED
 
 #include <functional>
+#include <optional>
 #include <set>
 #include <string_view>
 
@@ -52,6 +53,12 @@ int eclPositionalParameter(std::function<void(const std::string&,
                            std::string& errorMsg,
                            const char** argv,
                            int paramIdx);
+
+//! \brief Parses an OMP_NUM_THREADS value, a comma-separated list of
+//!        positive integers with one entry per nesting level. Whitespace
+//!        around the entries is ignored.
+//! \return The first entry, or nothing if the value is not such a list.
+std::optional<int> parseOmpNumThreads(std::string_view value);
 
 } // namespace Opm::detail
 

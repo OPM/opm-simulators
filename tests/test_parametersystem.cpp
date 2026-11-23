@@ -25,6 +25,10 @@
 #define BOOST_TEST_MODULE ParameterSystemTest
 #include <boost/test/unit_test.hpp>
 
+#include <string_view>
+#include <utility>
+#include <vector>
+
 namespace Opm::Parameters {
 
 struct SimpleParamBool { static constexpr bool value = false; };
@@ -271,4 +275,27 @@ BOOST_FIXTURE_TEST_CASE(SetDefaultKeepsPrecision, PrecisionFixture)
 {
     BOOST_CHECK_EQUAL(Opm::Parameters::Get<Opm::Parameters::SimpleParamDouble>(),
                       8388608.25);
+}
+
+BOOST_AUTO_TEST_CASE(ParseOmpNumThreads)
+{
+    // A list of positive integers, one per nesting level, of which the first
+    // is returned. Whitespace around the entries is allowed.
+    const std::vector<std::pair<std::string_view, int>> valid {
+        {"1", 1}, {"8", 8}, {"1,1", 1}, {"4,2", 4}, {"4,2,1", 4},
+        {" 1 ", 1}, {"\t2\n", 2}, {"4 , 2", 4},
+    };
+    for (const auto& [value, threads] : valid) {
+        BOOST_CHECK_MESSAGE(Opm::detail::parseOmpNumThreads(value) == threads,
+                            "'" << value << "' should give " << threads);
+    }
+
+    const std::vector<std::string_view> invalid {
+        "", " ", "0", "-1", "0,1", "1,0", "1,", ",1", "1,,1",
+        "1junk", "1,junk", "99999999999",
+    };
+    for (const auto& value : invalid) {
+        BOOST_CHECK_MESSAGE(!Opm::detail::parseOmpNumThreads(value),
+                            "'" << value << "' should be rejected");
+    }
 }
