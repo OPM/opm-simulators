@@ -49,7 +49,7 @@ test $? -eq 0 || exit 1
 
 # Without this line the GPU path could silently fall back to the CPU and
 # the comparison would pass trivially.
-grep -q "GpuBlackoilIntensiveQuantitiesDispatcher\] initialized" ${RESULT_PATH}/gpu/${FILENAME}.PRT \
+grep -Eq "(GpuBlackoilNohystIntensiveQuantities|GpuBlackoilIntensiveQuantitiesDispatcher)\] initialized" ${RESULT_PATH}/gpu/${FILENAME}.PRT \
   || { echo "The GPU run did not use the GPU intensive-quantities dispatcher"; exit 1; }
 
 ecode=0
