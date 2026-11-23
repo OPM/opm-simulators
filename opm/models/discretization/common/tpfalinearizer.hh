@@ -1001,7 +1001,12 @@ private:
     template <class SubDomainType>
     void linearize_source_terms(unsigned int numCells, const SubDomainType& domain)
     {
-        prepareHostIntensiveQuantitiesForParallelRead_(numCells);
+        // The sparse GPU path has already prepared just the source cells.
+        if constexpr (!requires (ADVectorBlockCPU& source, unsigned cell) {
+            LocalResidual::computeSource(source, problem_(), cell, 0);
+        }) {
+            prepareHostIntensiveQuantitiesForParallelRead_(numCells);
+        }
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
