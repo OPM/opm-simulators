@@ -690,10 +690,11 @@ static void runProductionDispatcherTest(const std::string& deckPath)
 {
     using IntensiveQuantities =
         Opm::GetPropType<ProductionTypeTag, Opm::Properties::IntensiveQuantities>;
+    using PrimaryVariables = Opm::GetPropType<ProductionTypeTag, Opm::Properties::PrimaryVariables>;
     const auto sim = makeProductionSimulator(deckPath);
 
     const auto& problem = sim->problem();
-    const auto& solution = problem.model().solution(/*timeIdx=*/0);
+    const auto solution = problem.model().solution(/*timeIdx=*/0);
     const std::size_t numCells = problem.model().numGridDof();
     BOOST_REQUIRE_EQUAL(solution.size(), numCells);
 
@@ -831,12 +832,12 @@ static void runProductionDispatcherTest(const std::string& deckPath)
     for (std::size_t cell = 0; cell < numCells; ++cell) {
         Dune::FieldVector<Evaluation, numEq> storage;
         Opm::BlackOilLocalResidualTPFA<ProductionTypeTag>::template computeStorage<Evaluation>(
-            storage, *intensiveQuantities[cell]);
+            storage, changedReference[cell]);
         Dune::FieldMatrix<double, numEq, numEq> transpose;
         Dune::FieldVector<double, numEq> rhs(0.0), expected;
         rhs[pressureIndex] = 1.0;
         const double scale = sim->model().dofTotalVolume(cell)
-            * intensiveQuantities[cell]->extrusionFactor() / dt;
+            * changedReference[cell].extrusionFactor() / dt;
         for (int eq = 0; eq < numEq; ++eq) {
             for (int pv = 0; pv < numEq; ++pv) {
                 transpose[pv][eq] = storage[eq].derivative(pv) / scale;
@@ -874,6 +875,7 @@ static void runProductionDispatcherTest(const std::string& deckPath)
                               FluidSystem::waterPhaseIdx)),
                           1e-6);
     }
+    dispatcher.update(problem, solution, 0);
     // Compact records must match their full host counterparts without another
     // IQ/PV download, and retain the accepted previous solution for changes.
     const auto iqDownloads = dispatcher.bridge().transferCounters().intensiveQuantityDownloads;
@@ -895,14 +897,14 @@ static void runProductionDispatcherTest(const std::string& deckPath)
         BOOST_CHECK_CLOSE(rockState[cell * 2 + 1], asDouble(fs.saturation(FluidSystem::waterPhaseIdx)), 1e-6);
         BOOST_CHECK_EQUAL(unchanged[cell * 2], 0.0);
     }
-    auto changedSolution = solution;
-    changedSolution[0][Indices::pressureSwitchIdx] += 100.0;
-    dispatcher.update(problem, changedSolution, 0);
+    auto perturbedSolution = solution;
+    perturbedSolution[0][Indices::pressureSwitchIdx] += 100.0;
+    dispatcher.update(problem, perturbedSolution, 0);
     const auto changed = dispatcher.compactRelativeChange();
     BOOST_CHECK_CLOSE(changed[0], 10000.0, 1e-6);
-    const auto pressure = changedSolution[0][Indices::pressureSwitchIdx];
-    const auto water = changedSolution[0].primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw
-        ? changedSolution[0][Indices::waterSwitchIdx] : 0.0;
+    const auto pressure = perturbedSolution[0][Indices::pressureSwitchIdx];
+    const auto water = perturbedSolution[0].primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw
+        ? perturbedSolution[0][Indices::waterSwitchIdx] : 0.0;
     BOOST_CHECK_CLOSE(changed[1], pressure * pressure + water * water, 1e-6);
     BOOST_CHECK_EQUAL(dispatcher.bridge().transferCounters().intensiveQuantityDownloads, iqDownloads);
     BOOST_CHECK_EQUAL(dispatcher.bridge().transferCounters().primaryVariableDownloads, pvDownloads);
