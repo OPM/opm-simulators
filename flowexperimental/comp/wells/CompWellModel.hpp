@@ -133,6 +133,12 @@ public:
     void endEpisode() {}
 
     void computeTotalRatesForDof(RateVector& /*rate*/, unsigned /*globalIdx*/) const;
+
+    // Adds the well sources to the residual and the diagonal Jacobian blocks in
+    // one pass, which the TPFA linearizer does with --separate-sparse-source-terms.
+    void addReservoirSourceTerms(GlobalEqVector& residual,
+                                 const std::vector<typename SparseMatrixAdapter::MatrixBlock*>&
+                                     diagMatAddress) const;
     //
     [[nodiscard]] data::Wells wellData() const;
 

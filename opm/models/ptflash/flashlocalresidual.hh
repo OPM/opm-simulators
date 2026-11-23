@@ -82,7 +82,15 @@ public:
                          unsigned timeIdx,
                          unsigned phaseIdx) const
     {
-        const IntensiveQuantities& intQuants = elemCtx.intensiveQuantities(dofIdx, timeIdx);
+        addPhaseStorage<LhsEval>(storage, elemCtx.intensiveQuantities(dofIdx, timeIdx), phaseIdx);
+    }
+
+    //! Add the storage term of one phase in a single cell, per unit bulk volume.
+    template <class LhsEval>
+    static void addPhaseStorage(Dune::FieldVector<LhsEval, numEq>& storage,
+                                const IntensiveQuantities& intQuants,
+                                unsigned phaseIdx)
+    {
         const auto& fs = intQuants.fluidState();
 
         // compute water storage term
@@ -105,7 +113,7 @@ public:
             }
         }
 
-        EnergyModule::addPhaseStorage(storage, elemCtx.intensiveQuantities(dofIdx, timeIdx), phaseIdx);
+        EnergyModule::addPhaseStorage(storage, intQuants, phaseIdx);
     }
 
     /*!
@@ -117,12 +125,20 @@ public:
                         unsigned dofIdx,
                         unsigned timeIdx) const
     {
+        computeStorage<LhsEval>(storage, elemCtx.intensiveQuantities(dofIdx, timeIdx));
+    }
+
+    //! Compute the storage term of a single cell, per unit bulk volume.
+    template <class LhsEval>
+    static void computeStorage(Dune::FieldVector<LhsEval, numEq>& storage,
+                               const IntensiveQuantities& intQuants)
+    {
         storage = 0;
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            addPhaseStorage(storage, elemCtx, dofIdx, timeIdx, phaseIdx);
+            addPhaseStorage<LhsEval>(storage, intQuants, phaseIdx);
         }
 
-        EnergyModule::addSolidEnergyStorage(storage, elemCtx.intensiveQuantities(dofIdx, timeIdx));
+        EnergyModule::addSolidEnergyStorage(storage, intQuants);
     }
 
     /*!

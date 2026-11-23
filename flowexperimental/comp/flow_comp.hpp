@@ -23,7 +23,9 @@
 #include <opm/material/fluidsystems/GenericOilGasWaterFluidSystem.hpp>
 
 #include <opm/models/discretization/common/baseauxiliarymodule.hh>
+#include <opm/models/discretization/common/tpfalinearizer.hh>
 #include <opm/models/nonlinear/newtonmethod.hh>
+#include <opm/models/ptflash/flashlocalresidualtpfa.hh>
 #include <opm/models/ptflash/flashmodel.hh>
 
 #include <opm/simulators/flow/Main.hpp>
@@ -162,6 +164,23 @@ struct TracerModel<TypeTag, TTag::FlowCompProblem<NumComp, EnableWater>> {
 template<class TypeTag, int NumComp, bool EnableWater>
 struct FluxModule<TypeTag, TTag::FlowCompProblem<NumComp, EnableWater>>
 { using type = NewTranFluxModule<TypeTag>; };
+
+template<class TypeTag, int NumComp, bool EnableWater>
+struct Linearizer<TypeTag, TTag::FlowCompProblem<NumComp, EnableWater>>
+{ using type = TpfaLinearizer<TypeTag>; };
+
+template<class TypeTag, int NumComp, bool EnableWater>
+struct LocalResidual<TypeTag, TTag::FlowCompProblem<NumComp, EnableWater>>
+{ using type = FlashLocalResidualTPFA<TypeTag>; };
+
+//! The TPFA linearizer assembles total rates, not rates per unit volume
+template<class TypeTag, int NumComp, bool EnableWater>
+struct UseVolumetricResidual<TypeTag, TTag::FlowCompProblem<NumComp, EnableWater>>
+{ static constexpr bool value = false; };
+
+template<class TypeTag, int NumComp, bool EnableWater>
+struct RunAssemblyOnGpu<TypeTag, TTag::FlowCompProblem<NumComp, EnableWater>>
+{ static constexpr bool value = false; };
 
 template <class TypeTag, int NumComp, bool EnableWater>
 struct FlashSolver<TypeTag, TTag::FlowCompProblem<NumComp, EnableWater>> {

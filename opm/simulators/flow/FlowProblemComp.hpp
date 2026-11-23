@@ -52,6 +52,7 @@
 
 #include <opm/input/eclipse/EclipseState/Aquifer/NumericalAquifer/NumericalAquifers.hpp>
 #include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
+#include <opm/input/eclipse/Schedule/BCState.hpp>
 #include <opm/input/eclipse/Schedule/RPTConfig.hpp>
 
 #include <dune/grid/common/rangegenerators.hh>
@@ -68,6 +69,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace Opm::Parameters {
@@ -196,6 +198,10 @@ public:
             throw std::runtime_error("Rock compaction (ROCKCOMP) is not supported "
                                      "by compositional modeling yet");
         }
+        if (eclState.getSimulationConfig().bcconfig().size() > 0) {
+            throw std::runtime_error("Boundary conditions (BCCON) are not supported "
+                                     "by compositional modeling yet");
+        }
         this->initializeModelProperties_();
 
         // write the static output files (EGRID, INIT)
@@ -322,10 +328,20 @@ public:
             return;
 
         values.setNoFlow();
+    }
 
-        if (this->nonTrivialBoundaryConditions()) {
-            throw std::logic_error("boundary condition is not supported by compostional modeling yet");
-        }
+    //! Boundary conditions are not supported; finishInit() rejects decks with BCCON.
+    std::pair<BCType, RateVector>
+    boundaryCondition(const unsigned int /* globalSpaceIdx */, const int /* directionId */) const
+    {
+        return { BCType::NONE, RateVector(0.0) };
+    }
+
+    typename IntensiveQuantities::ScalarFluidState
+    boundaryFluidState(unsigned /* globalDofIdx */, const int /* directionId */) const
+    {
+        throw std::logic_error("Boundary conditions are not supported "
+                               "by compositional modeling yet");
     }
 
     /*!

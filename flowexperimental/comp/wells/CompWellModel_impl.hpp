@@ -429,6 +429,31 @@ computeTotalRatesForDof(RateVector& rate,
     }
 }
 
+template <typename TypeTag>
+void
+CompWellModel<TypeTag>::
+addReservoirSourceTerms(GlobalEqVector& residual,
+                        const std::vector<typename SparseMatrixAdapter::MatrixBlock*>&
+                            diagMatAddress) const
+{
+    // Not parallelised with OpenMP: a cell perforated by several wells would be
+    // written by more than one thread.
+    for (const auto& well : well_container_) {
+        const auto& cells = well->cells();
+        const auto& rates = well->connectionRates();
+        for (std::size_t con = 0; con < rates.size(); ++con) {
+            const auto cellIdx = cells[con];
+            auto rate = rates[con];
+            rate *= -1.0;
+            VectorBlockType res(0.0);
+            typename SparseMatrixAdapter::MatrixBlock bMat(0.0);
+            simulator_.model().linearizer().setResAndJacobi(res, bMat, rate);
+            residual[cellIdx] += res;
+            *diagMatAddress[cellIdx] += bMat;
+        }
+    }
+}
+
 template<typename TypeTag>
 void
 CompWellModel<TypeTag>::

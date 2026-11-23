@@ -107,6 +107,8 @@ class FlashIntensiveQuantities
 public:
     //! The type of the object returned by the fluidState() method
     using FluidState = CompositionalFluidState<Evaluation, FluidSystem, enableEnergy>;
+    //! Fluid state without derivatives, e.g. for boundary conditions
+    using ScalarFluidState = CompositionalFluidState<Scalar, FluidSystem, enableEnergy>;
 
     /// Minimum overall mole fraction of a component; the flash needs every
     /// component present.
