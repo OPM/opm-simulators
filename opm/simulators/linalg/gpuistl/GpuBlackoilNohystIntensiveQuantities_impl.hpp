@@ -63,6 +63,7 @@
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 
+#include <algorithm>
 #include <cstddef>
 #include <memory>
 #include <optional>
@@ -209,16 +210,11 @@ void validateBlackoilNohyst(const Problem& problem)
     }
     GpuManagerFor<GpuTag>::validate(materialLawManager);
 
-    // Plain DRSDT is supported: the dispatcher refreshes the mixing limits on
-    // every call. DRSDTCON needs the convective-mixing quantities, which the
-    // GPU intensive quantities do not compute, and VAPPARS needs the maximum
-    // oil saturation history in a form that has not been verified on the GPU.
+    // DRSDTCON needs the convective-mixing quantities, which the GPU
+    // intensive quantities do not compute.
     const auto& schedule = problem.simulator().vanguard().schedule();
     for (std::size_t reportStep = 0; reportStep < schedule.size(); ++reportStep) {
         const auto& oilVaporization = schedule[reportStep].oilvap();
-        if (oilVaporization.getType() == OilVaporizationProperties::OilVaporization::VAPPARS) {
-            OPM_THROW(std::logic_error, "VAPPARS is not supported on the GPU");
-        }
         if (oilVaporization.drsdtConvective()) {
             OPM_THROW(std::logic_error,
                       "DRSDTCON (convective DRSDT) is not supported on the GPU");
@@ -336,8 +332,11 @@ struct ImplFor final : GpuBlackoilNohystIntensiveQuantities<CpuTypeTag>::Impl
     std::optional<GpuIntensiveQuantities> prototype;
     // The constructor reads the mixing limits, so the first update() need not.
     bool mixingLimitsCurrent = true;
-    std::vector<GetPropType<CpuTypeTag, Properties::Scalar>> lastGasDissolution;
-    std::vector<GetPropType<CpuTypeTag, Properties::Scalar>> lastOilVaporization;
+    using Scalar = GetPropType<CpuTypeTag, Properties::Scalar>;
+    std::vector<Scalar> lastGasDissolution;
+    std::vector<Scalar> lastOilVaporization;
+    std::vector<Scalar> lastMaxOilSaturation;
+    std::pair<Scalar, Scalar> vaporizationParameters{};
     std::vector<GpuPrimaryVariables> hostPriVars;
     std::vector<GpuIntensiveQuantities> hostIQ;
     GpuBuffer<GpuPrimaryVariables> devicePriVars;
@@ -408,9 +407,23 @@ struct ImplFor final : GpuBlackoilNohystIntensiveQuantities<CpuTypeTag>::Impl
                 unsigned timeIdx) override
     {
         const auto numDof = solution.size();
+        const auto episode = std::max(0, cpuProblem.episodeIndex());
+        const auto& oilVap = cpuProblem.simulator().vanguard().schedule()[episode].oilvap();
+        const bool useVappars = oilVap.getType() == OilVaporizationProperties::OilVaporization::VAPPARS;
+        const std::pair<Scalar, Scalar> parameters =
+            useVappars ? std::pair<Scalar, Scalar>{oilVap.vap1(), oilVap.vap2()}
+                       : std::pair<Scalar, Scalar>{};
+        if (parameters != vaporizationParameters) {
+            // The fluid-system view owns these scalars. Its PVT table views
+            // still point at the original device allocations.
+            managedFluidSystemView->setVapPars(parameters.first, parameters.second);
+            vaporizationParameters = parameters;
+        }
         if (!mixingLimitsCurrent) {
-            // VAPPARS is rejected during validation, so max oil saturation
-            // stays zero. Publish a rate limit only when its values change.
+            if (useVappars || !lastMaxOilSaturation.empty()) {
+                refreshLimit(problemBuf->maxOilSaturationStorage(), lastMaxOilSaturation,
+                             numDof, [&](unsigned cell) { return cpuProblem.maxOilSaturation(cell); });
+            }
             if (CpuFluidSystem::enableDissolvedGas()) {
                 refreshLimit(problemBuf->maxGasDissolutionFactorStorage(), lastGasDissolution,
                              numDof, [&](unsigned cell) {
