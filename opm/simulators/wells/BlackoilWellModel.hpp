@@ -77,6 +77,7 @@
 #include <opm/simulators/wells/rescoup/RescoupProxy.hpp>
 
 #include <cstddef>
+#include <functional>
 #include <map>
 #include <memory>
 #include <optional>
@@ -269,6 +270,10 @@ template<class Scalar> class WellContributions;
             // add source from wells to the reservoir matrix
             void addReservoirSourceTerms(GlobalEqVector& residual,
                                          const std::vector<typename SparseMatrixAdapter::MatrixBlock*>& diagMatAddress) const;
+
+            using ReservoirSourceSink = std::function<void(unsigned, const VectorBlockType&,
+                                                           const typename SparseMatrixAdapter::MatrixBlock&)>;
+            void addReservoirSourceTerms(const ReservoirSourceSink& addSource) const;
 
             // called at the beginning of a report step
             void beginReportStep(const int time_step);

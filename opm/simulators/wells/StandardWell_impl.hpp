@@ -1979,6 +1979,12 @@ namespace Opm
         this->linSys_.extract(jacobian);
     }
 
+    template<typename TypeTag>
+    void StandardWell<TypeTag>::addWellContributions(typename Base::MatrixSink& jacobian) const
+    {
+        this->linSys_.extract(jacobian);
+    }
+
 
     template <typename TypeTag>
     void

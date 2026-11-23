@@ -848,6 +848,12 @@ macro(opm-simulators_targets_hook)
     solvent_foam
   )
 
+  if(CONVERT_CUDA_TO_HIP)
+    set_source_files_properties(flow/flow_blackoil_nohyst.cpp PROPERTIES LANGUAGE HIP)
+  elseif(CUDA_FOUND)
+    set_source_files_properties(flow/flow_blackoil_nohyst.cpp PROPERTIES LANGUAGE CUDA)
+  endif()
+
   foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS} ${FLOW_VARIANT_MODELS})
     opm_add_library(
       TARGET

@@ -1715,6 +1715,16 @@ namespace Opm {
     addReservoirSourceTerms(GlobalEqVector& residual,
                             const std::vector<typename SparseMatrixAdapter::MatrixBlock*>& diagMatAddress) const
     {
+        addReservoirSourceTerms([&](unsigned cell, const auto& res, const auto& bMat) {
+            residual[cell] += res;
+            *diagMatAddress[cell] += bMat;
+        });
+    }
+
+    template <typename TypeTag>
+    void BlackoilWellModel<TypeTag>::
+    addReservoirSourceTerms(const ReservoirSourceSink& addSource) const
+    {
         // NB this loop may write multiple times to the same element
         // if a cell is perforated by more than one well, so it should
         // not be OpenMP-parallelized.
@@ -1732,8 +1742,7 @@ namespace Opm {
                 using MatrixBlockType = typename SparseMatrixAdapter::MatrixBlock;
                 MatrixBlockType bMat(0.0);
                 simulator_.model().linearizer().setResAndJacobi(res, bMat, rate);
-                residual[cellIdx] += res;
-                *diagMatAddress[cellIdx] += bMat;
+                addSource(cellIdx, res, bMat);
             }
         }
     }

@@ -32,6 +32,7 @@
 
 namespace Opm {
 template <class TypeTag> class TpfaLinearizerGpuParams;
+namespace Properties::TTag { struct FlowProblemNohyst; }
 }
 
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
@@ -88,26 +89,22 @@ __global__ void apply_source_deltas(const unsigned* indices,
 /*!
  * \ingroup FiniteVolumeDiscretizations
  *
- * \brief Owns assembly buffers across linearizations.
+ * \brief Owns the device stencil, residual, and source buffers across linearizations.
  *
- * Topology, matrix and residual storage persist. Assembly borrows device IQ
- * views from the model-owned property bridge when available; CPU-property
- * fallback retains its own IQ buffers. Boundary data is refreshed each pass.
+ * Both reservoir assembly paths use the same matrix destinations and residual
+ * storage. The model and its fluid system are bound by the typed stencil.
  */
 template <class TypeTag>
-class TpfaLinearizerGpuParams
+class TpfaLinearizerGpuBuffers
 {
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
     using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
     using LocalResidual = GetPropType<TypeTag, Properties::LocalResidual>;
-    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
-    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
-    using Model = GetPropType<TypeTag, Properties::Model>;
-    using Problem = GetPropType<TypeTag, Properties::Problem>;
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
 
+protected:
     using MatrixBlockCPU = typename SparseMatrixAdapter::MatrixBlock;
     using VectorBlockCPU = Dune::FieldVector<Scalar, numEq>;
     using MatrixBlockGPU = gpuistl::MiniMatrix<Scalar, numEq>;
@@ -117,45 +114,7 @@ class TpfaLinearizerGpuParams
     using NeighborInfoCPU = NeighborInfoStruct<ResidualNBInfo, MatrixBlockCPU>;
     using NeighborInfoGPU = NeighborInfoStruct<ResidualNBInfo, MatrixBlockGPU>;
 
-    using ScalarFluidState = typename IntensiveQuantities::ScalarFluidState;
-    using BoundaryConditionDataCPU = BoundaryConditionData<VectorBlockCPU, ScalarFluidState>;
-    using BoundaryInfoCPU = BoundaryInfo<BoundaryConditionDataCPU>;
-
-    // Fluid system buffer/view/ptr types derived without spelling out the fluid-system
-    // template parameters explicitly.
-    using NonStaticFluidSystem = std::decay_t<decltype(FluidSystem::getNonStaticInstance())>;
-    // The PVT classes on the GPU are chosen by the fluid system of the GPU type tag.
-    using GpuPvtApproaches = typename GetPropType<
-        ::Opm::Properties::TTag::to_gpu_type_t<TypeTag, gpuistl::GpuView>,
-        Properties::FluidSystem>::PvtApproachesType;
-    using GpuFluidSystemBuffer = std::decay_t<decltype(::Opm::gpuistl::copy_to_gpu<GpuPvtApproaches>(
-        std::declval<NonStaticFluidSystem&>()))>;
-    using GpuFluidSystemView
-        = std::decay_t<decltype(::Opm::gpuistl::make_view(std::declval<GpuFluidSystemBuffer&>()))>;
-    using GpuFluidSystemPtr = std::shared_ptr<GpuFluidSystemView>;
-
-public:
-    // Type aliases required by callers to instantiate the GPU kernel templates.
-    using CorrectTypeTagView =
-        typename ::Opm::Properties::TTag::to_gpu_type_t<TypeTag, gpuistl::GpuView>;
-
-    // GPUBOIQ and LocalResidualGPU are not taken from typetag as we need the
-    // outer class to template correctly here
-    using GPUBOIQ = BlackOilIntensiveQuantities<CorrectTypeTagView>;
-    using LocalResidualGPU = BlackOilLocalResidualTPFA<CorrectTypeTagView>;
-
 private:
-    using GpuScalarFluidState = typename GPUBOIQ::ScalarFluidState;
-    using BoundaryConditionDataGPU = BoundaryConditionData<VectorBlockGPU, GpuScalarFluidState>;
-    using BoundaryInfoGPU = BoundaryInfo<BoundaryConditionDataGPU>;
-
-    using GpuModelBufferType = SimpleFIBlackOilModel<CorrectTypeTagView, gpuistl::GpuBuffer>;
-    using GpuFlowProblemBufferType = ThermalGasWaterFlowProblem<Scalar, gpuistl::GpuBuffer>;
-
-    using GpuModel = GetPropType<TypeTag, Properties::GpuFIBlackOilModel>;
-    using PropertyAssemblyBridge =
-        gpuistl::GpuFlowGasWaterEnergyBridge<TypeTag, CorrectTypeTagView>;
-
     FullDomain<gpuistl::GpuBuffer<int>> domainBuffer_;
     SparseTable<NeighborInfoGPU, gpuistl::GpuBuffer> neighborInfoBuffer_;
     // diagMatAddressView_ is non-owning: the underlying buffer lives in TpfaLinearizer.
@@ -172,180 +131,31 @@ private:
     gpuistl::GpuBuffer<unsigned> sourceIndices_;
     gpuistl::GpuBuffer<VectorBlockGPU> sourceResidualDeltas_;
     gpuistl::GpuBuffer<MatrixBlockGPU> sourceJacobianDeltas_;
-    // Fallback-only IQ and fluid-system owners. The direct path borrows
-    // these views from the model-owned propertyAssemblyBridge_.
-    std::optional<GpuFluidSystemBuffer> dynamicGpuFluidSystemBuffer_;
-    GpuFluidSystemPtr dynamicGpuFluidSystemPtr_;
-    std::optional<GpuModelBufferType> gpuModelBuffer_;
-    std::optional<GpuFlowProblemBufferType> gpuFlowProblemBuffer_;
-    const PropertyAssemblyBridge* propertyAssemblyBridge_{nullptr};
-    gpuistl::GpuBuffer<BoundaryInfoGPU> boundaryInfoBuffer_;
-    std::array<std::vector<GPUBOIQ>, 2> intensiveQuantityStaging_;
     std::vector<VectorBlockGPU> sourceResidualStaging_;
     std::vector<MatrixBlockGPU> sourceJacobianStaging_;
     std::size_t sourceCapacity_{0};
 
-    bool bindPropertyAssemblyBridge_(Model& model)
-    {
-        // Custom model TypeTags may support assembly without a property dispatcher.
-        if constexpr (requires { model.gpuPropertyAssemblyBridge(); }) {
-            if (model.hasGpuPropertyAssemblyBridge()) {
-                propertyAssemblyBridge_ = &model.gpuPropertyAssemblyBridge();
-                return true;
-            }
-        }
-        propertyAssemblyBridge_ = nullptr;
-        return false;
-    }
-
 public:
-    /*!
-     * \brief Construct and populate all GPU buffers needed for one linearization pass.
-     *
-     * \param domain                  The full domain (CPU).
-     * \param neighborInfo            CPU neighbor-info sparse table.
-     * \param gpuJacobian             Persistent GPU sparse-matrix wrapper (owned by
-     * TpfaLinearizer).
-     * \param gpuBufferDiagMatAddress Persistent GPU diagonal-pointer buffer (owned by
-     * TpfaLinearizer).
-     * \param cpuJacobian             CPU ISTL matrix (used to compute GPU pointer offsets).
-     * \param residual                CPU residual vector (read to initialise the GPU residual
-     * buffer).
-     * \param boundaryInfo            CPU boundary-condition info.
-     * \param model                   CPU model (provides intensive quantities and volumes).
-     * \param problem                 CPU problem (provides thermal transmissibilities and module
-     * params).
-     * \param numCells                Number of cells in the domain.
-     */
-    TpfaLinearizerGpuParams(const FullDomain<>& domain,
-                            const SparseTable<NeighborInfoCPU>& neighborInfo,
-                            gpuistl::GpuSparseMatrixWrapper<Scalar>& gpuJacobian,
-                            gpuistl::GpuBuffer<MatrixBlockGPU*>& gpuBufferDiagMatAddress,
-                            typename SparseMatrixAdapter::IstlMatrix& cpuJacobian,
-                            GlobalEqVector& residual,
-                            const std::vector<BoundaryInfoCPU>& boundaryInfo,
-                            Model& model,
-                            const Problem& problem,
-                            unsigned int numCells)
+    TpfaLinearizerGpuBuffers(const FullDomain<>& domain,
+                             const SparseTable<NeighborInfoCPU>& neighborInfo,
+                             gpuistl::GpuSparseMatrixWrapper<Scalar>& gpuJacobian,
+                             gpuistl::GpuBuffer<MatrixBlockGPU*>& gpuBufferDiagMatAddress,
+                             typename SparseMatrixAdapter::IstlMatrix& cpuJacobian,
+                             const GlobalEqVector& residual)
         : domainBuffer_(copy_to_gpu(domain))
         , neighborInfoBuffer_(
               gpuistl::copy_to_gpu<MatrixBlockGPU>(neighborInfo, gpuJacobian, cpuJacobian))
         , diagMatAddressView_(gpuistl::make_view(gpuBufferDiagMatAddress))
         , gpuJacobian_(&gpuJacobian)
-        , residualBuffer_(gpuistl::copy_to_gpu_residual<GlobalEqVector, VectorBlockGPU>(residual))
+        , residualBuffer_(residual.size())
         , residualView_(gpuistl::make_view(residualBuffer_))
         , flattenedResidual_(residualBuffer_.size() * numEq)
-    {
-        static_assert(std::is_same_v<typename PropertyAssemblyBridge::DeviceTypeTagPublic,
-                                     CorrectTypeTagView>);
+    {}
 
-        gpuFlowProblemBuffer_.emplace([&]() -> GpuFlowProblemBufferType {
-            std::vector<Scalar> alpha0(numCells);
-            std::vector<Scalar> alpha1(numCells);
-            std::vector<Scalar> alpha2(numCells);
-            std::vector<Scalar> alpha3(numCells);
-            std::vector<Scalar> alpha4(numCells);
-            std::vector<Scalar> alpha5(numCells);
-            const auto& thermalHalfTransBoundary
-                = problem.eclTransmissibilities().getThermalHalfTransBoundary();
-            for (const auto& [key, value] : thermalHalfTransBoundary) {
-                const unsigned cell = key.first;
-                const unsigned dir = key.second;
-                if (dir == 0) {
-                    alpha0[cell] = value;
-                } else if (dir == 1) {
-                    alpha1[cell] = value;
-                } else if (dir == 2) {
-                    alpha2[cell] = value;
-                } else if (dir == 3) {
-                    alpha3[cell] = value;
-                } else if (dir == 4) {
-                    alpha4[cell] = value;
-                } else if (dir == 5) {
-                    alpha5[cell] = value;
-                } else {
-                    OPM_THROW(std::logic_error,
-                              "Invalid direction for thermal half transmissibility: "
-                                  + std::to_string(dir));
-                }
-            }
-            ThermalGasWaterFlowProblem<Scalar> gpuFlowProblem(
-                alpha0, alpha1, alpha2, alpha3, alpha4, alpha5, problem.moduleParams());
-            return gpuistl::copy_to_gpu(gpuFlowProblem);
-        }());
-
-        if (bindPropertyAssemblyBridge_(model)) {
-            propertyAssemblyBridge_->waitForAssembly(/*timeIdx=*/0);
-            boundaryInfoBuffer_
-                = gpuistl::copy_to_gpu<VectorBlockGPU, GpuScalarFluidState, BoundaryInfoGPU>(
-                    boundaryInfo, propertyAssemblyBridge_->deviceFluidSystem());
-            return;
-        }
-
-        dynamicGpuFluidSystemBuffer_.emplace(
-            ::Opm::gpuistl::copy_to_gpu<GpuPvtApproaches>(FluidSystem::getNonStaticInstance()));
-        dynamicGpuFluidSystemPtr_ =
-            gpuistl::make_gpu_shared_ptr(::Opm::gpuistl::make_view(*dynamicGpuFluidSystemBuffer_));
-        gpuModelBuffer_.emplace([&]() -> GpuModelBufferType {
-            std::vector<Scalar> volumes(numCells);
-            for (unsigned i = 0; i < numCells; ++i) {
-                volumes[domain.cells[i]] = model.dofTotalVolume(domain.cells[i]);
-            }
-            GpuModel gpuModel(
-                model.intensiveQuantityCache()[0], model.intensiveQuantityCache()[1], volumes);
-            return gpuistl::copy_to_gpu(gpuModel, *dynamicGpuFluidSystemPtr_.get());
-        }());
-        boundaryInfoBuffer_ =
-            gpuistl::copy_to_gpu<VectorBlockGPU, GpuScalarFluidState, BoundaryInfoGPU>(
-                boundaryInfo, *dynamicGpuFluidSystemPtr_.get());
-    }
-
-    void refreshForLinearization(Model& model,
-                                  const std::vector<BoundaryInfoCPU>& boundaryInfo,
-                                  unsigned numCells)
+    void resetResidual(unsigned numCells)
     {
         if (numCells != residualBuffer_.size()) {
             OPM_THROW(std::logic_error, "GPU assembly topology changed without erasing the matrix");
-        }
-        if (bindPropertyAssemblyBridge_(model)) {
-            propertyAssemblyBridge_->waitForAssembly(/*timeIdx=*/0);
-            boundaryInfoBuffer_ =
-                gpuistl::copy_to_gpu<VectorBlockGPU, GpuScalarFluidState, BoundaryInfoGPU>(
-                    boundaryInfo, propertyAssemblyBridge_->deviceFluidSystem());
-        } else {
-            propertyAssemblyBridge_ = nullptr;
-            // A runtime fallback can require owners that were absent when the
-            // persistent assembly parameters were first constructed.
-            if (!dynamicGpuFluidSystemBuffer_) {
-                dynamicGpuFluidSystemBuffer_.emplace(
-                    ::Opm::gpuistl::copy_to_gpu<GpuPvtApproaches>(FluidSystem::getNonStaticInstance()));
-                dynamicGpuFluidSystemPtr_ = gpuistl::make_gpu_shared_ptr(
-                    ::Opm::gpuistl::make_view(*dynamicGpuFluidSystemBuffer_));
-                std::vector<Scalar> volumes(numCells);
-                for (unsigned cell = 0; cell < numCells; ++cell) {
-                    volumes[cell] = model.dofTotalVolume(cell);
-                }
-                GpuModel gpuModel(
-                    model.intensiveQuantityCache()[0], model.intensiveQuantityCache()[1], volumes);
-                gpuModelBuffer_.emplace(
-                    gpuistl::copy_to_gpu(gpuModel, *dynamicGpuFluidSystemPtr_));
-            }
-            for (unsigned timeIdx = 0; timeIdx < 2; ++timeIdx) {
-                const auto& cache = model.intensiveQuantityCache()[timeIdx];
-                auto& staging = intensiveQuantityStaging_[timeIdx];
-                staging.clear();
-                staging.reserve(cache.size());
-                for (const auto& iq : cache) {
-                    staging.push_back(iq.template withOtherFluidSystem<CorrectTypeTagView>(
-                        *dynamicGpuFluidSystemPtr_));
-                }
-                auto& target = timeIdx == 0 ? gpuModelBuffer_->cachedIntensiveQuantities0_
-                                            : gpuModelBuffer_->cachedIntensiveQuantities1_;
-                target.copyFromHost(staging);
-            }
-            boundaryInfoBuffer_ =
-                gpuistl::copy_to_gpu<VectorBlockGPU, GpuScalarFluidState, BoundaryInfoGPU>(
-                    boundaryInfo, *dynamicGpuFluidSystemPtr_);
         }
         gpuistl::detail::gpuMemsetZero(residualBuffer_.data(),
                                      residualBuffer_.size() * sizeof(VectorBlockGPU));
@@ -438,6 +248,256 @@ public:
         return residualView_;
     }
 
+    /*!
+     * \brief Copy the GPU residual buffer back to the CPU residual vector.
+     *
+     * Must be called after all GPU kernels have completed (the synchronous cudaMemcpy
+     * inside guarantees the GPU has finished).
+     */
+    void copyResidualToHost(GlobalEqVector& residual, unsigned numCells)
+    {
+        static_assert(sizeof(VectorBlockCPU) == sizeof(VectorBlockGPU));
+        residualBuffer_.copyToHost(reinterpret_cast<VectorBlockGPU*>(residual.data()), numCells);
+    }
+
+    /*!
+     * \brief Copy the GPU Jacobian non-zero values back to the CPU ISTL matrix.
+     *
+     * Must be called after all GPU kernels have completed.
+     */
+    void copyJacobianToHost(SparseMatrixAdapter& jacobian,
+                            gpuistl::GpuSparseMatrixWrapper<Scalar>& gpuJacobian)
+    {
+        auto gpuJacobianNonZeroes = gpuJacobian.getNonZeroValues().asStdVector();
+        auto& cpuJacobian = jacobian.istlMatrix();
+        const std::size_t totalMatrixSize = cpuJacobian.nonzeroes() * numEq * numEq;
+        std::memcpy(&(cpuJacobian[0][0][0][0]),
+                    gpuJacobianNonZeroes.data(),
+                    totalMatrixSize * sizeof(Scalar));
+    }
+};
+
+// The thermal stencil can borrow the property bridge or stage CPU IQs.
+template <class TypeTag>
+class TpfaLinearizerGpuParams : public TpfaLinearizerGpuBuffers<TypeTag>
+{
+    using Base = TpfaLinearizerGpuBuffers<TypeTag>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
+    using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Model = GetPropType<TypeTag, Properties::Model>;
+    using Problem = GetPropType<TypeTag, Properties::Problem>;
+    using typename Base::MatrixBlockGPU;
+    using typename Base::NeighborInfoCPU;
+    using typename Base::VectorBlockCPU;
+    using typename Base::VectorBlockGPU;
+
+    using ScalarFluidState = typename IntensiveQuantities::ScalarFluidState;
+    using BoundaryConditionDataCPU = BoundaryConditionData<VectorBlockCPU, ScalarFluidState>;
+    using BoundaryInfoCPU = BoundaryInfo<BoundaryConditionDataCPU>;
+
+    // Fluid system buffer/view/ptr types derived without spelling out the fluid-system
+    // template parameters explicitly.
+    using NonStaticFluidSystem = std::decay_t<decltype(FluidSystem::getNonStaticInstance())>;
+    // The PVT classes on the GPU are chosen by the fluid system of the GPU type tag.
+    using GpuPvtApproaches = typename GetPropType<
+        ::Opm::Properties::TTag::to_gpu_type_t<TypeTag, gpuistl::GpuView>,
+        Properties::FluidSystem>::PvtApproachesType;
+    using GpuFluidSystemBuffer = std::decay_t<decltype(::Opm::gpuistl::copy_to_gpu<GpuPvtApproaches>(
+        std::declval<NonStaticFluidSystem&>()))>;
+    using GpuFluidSystemView
+        = std::decay_t<decltype(::Opm::gpuistl::make_view(std::declval<GpuFluidSystemBuffer&>()))>;
+    using GpuFluidSystemPtr = std::shared_ptr<GpuFluidSystemView>;
+
+public:
+    // Type aliases required by callers to instantiate the GPU kernel templates.
+    using CorrectTypeTagView =
+        typename ::Opm::Properties::TTag::to_gpu_type_t<TypeTag, gpuistl::GpuView>;
+
+    // GPUBOIQ and LocalResidualGPU are not taken from typetag as we need the
+    // outer class to template correctly here
+    using GPUBOIQ = BlackOilIntensiveQuantities<CorrectTypeTagView>;
+    using LocalResidualGPU = BlackOilLocalResidualTPFA<CorrectTypeTagView>;
+
+private:
+    using GpuScalarFluidState = typename GPUBOIQ::ScalarFluidState;
+    using BoundaryConditionDataGPU = BoundaryConditionData<VectorBlockGPU, GpuScalarFluidState>;
+    using BoundaryInfoGPU = BoundaryInfo<BoundaryConditionDataGPU>;
+
+    using GpuModelBufferType = SimpleFIBlackOilModel<CorrectTypeTagView, gpuistl::GpuBuffer>;
+    using GpuFlowProblemBufferType = ThermalGasWaterFlowProblem<Scalar, gpuistl::GpuBuffer>;
+
+    using GpuModel = GetPropType<TypeTag, Properties::GpuFIBlackOilModel>;
+    using PropertyAssemblyBridge =
+        gpuistl::GpuFlowGasWaterEnergyBridge<TypeTag, CorrectTypeTagView>;
+
+    // Fallback-only IQ and fluid-system owners. The direct path borrows
+    // these views from the model-owned propertyAssemblyBridge_.
+    std::optional<GpuFluidSystemBuffer> dynamicGpuFluidSystemBuffer_;
+    GpuFluidSystemPtr dynamicGpuFluidSystemPtr_;
+    std::optional<GpuModelBufferType> gpuModelBuffer_;
+    std::optional<GpuFlowProblemBufferType> gpuFlowProblemBuffer_;
+    const PropertyAssemblyBridge* propertyAssemblyBridge_{nullptr};
+    gpuistl::GpuBuffer<BoundaryInfoGPU> boundaryInfoBuffer_;
+    std::array<std::vector<GPUBOIQ>, 2> intensiveQuantityStaging_;
+    bool bindPropertyAssemblyBridge_(Model& model)
+    {
+        // Custom model TypeTags may support assembly without a property dispatcher.
+        if constexpr (requires { model.gpuPropertyAssemblyBridge(); }) {
+            if (model.hasGpuPropertyAssemblyBridge()) {
+                propertyAssemblyBridge_ = &model.gpuPropertyAssemblyBridge();
+                return true;
+            }
+        }
+        propertyAssemblyBridge_ = nullptr;
+        return false;
+    }
+
+public:
+    /*!
+     * \brief Construct and populate all GPU buffers needed for one linearization pass.
+     *
+     * \param domain                  The full domain (CPU).
+     * \param neighborInfo            CPU neighbor-info sparse table.
+     * \param gpuJacobian             Persistent GPU sparse-matrix wrapper (owned by
+     * TpfaLinearizer).
+     * \param gpuBufferDiagMatAddress Persistent GPU diagonal-pointer buffer (owned by
+     * TpfaLinearizer).
+     * \param cpuJacobian             CPU ISTL matrix (used to compute GPU pointer offsets).
+     * \param residual                CPU residual vector (read to initialise the GPU residual
+     * buffer).
+     * \param boundaryInfo            CPU boundary-condition info.
+     * \param model                   CPU model (provides intensive quantities and volumes).
+     * \param problem                 CPU problem (provides thermal transmissibilities and module
+     * params).
+     * \param numCells                Number of cells in the domain.
+     */
+    TpfaLinearizerGpuParams(const FullDomain<>& domain,
+                            const SparseTable<NeighborInfoCPU>& neighborInfo,
+                            gpuistl::GpuSparseMatrixWrapper<Scalar>& gpuJacobian,
+                            gpuistl::GpuBuffer<MatrixBlockGPU*>& gpuBufferDiagMatAddress,
+                            typename SparseMatrixAdapter::IstlMatrix& cpuJacobian,
+                            GlobalEqVector& residual,
+                            const std::vector<BoundaryInfoCPU>& boundaryInfo,
+                            Model& model,
+                            const Problem& problem,
+                            unsigned int numCells)
+        : Base(domain, neighborInfo, gpuJacobian, gpuBufferDiagMatAddress, cpuJacobian, residual)
+    {
+        this->resetResidual(numCells);
+        static_assert(std::is_same_v<typename PropertyAssemblyBridge::DeviceTypeTagPublic,
+                                     CorrectTypeTagView>);
+
+        gpuFlowProblemBuffer_.emplace([&]() -> GpuFlowProblemBufferType {
+            std::vector<Scalar> alpha0(numCells);
+            std::vector<Scalar> alpha1(numCells);
+            std::vector<Scalar> alpha2(numCells);
+            std::vector<Scalar> alpha3(numCells);
+            std::vector<Scalar> alpha4(numCells);
+            std::vector<Scalar> alpha5(numCells);
+            const auto& thermalHalfTransBoundary
+                = problem.eclTransmissibilities().getThermalHalfTransBoundary();
+            for (const auto& [key, value] : thermalHalfTransBoundary) {
+                const unsigned cell = key.first;
+                const unsigned dir = key.second;
+                if (dir == 0) {
+                    alpha0[cell] = value;
+                } else if (dir == 1) {
+                    alpha1[cell] = value;
+                } else if (dir == 2) {
+                    alpha2[cell] = value;
+                } else if (dir == 3) {
+                    alpha3[cell] = value;
+                } else if (dir == 4) {
+                    alpha4[cell] = value;
+                } else if (dir == 5) {
+                    alpha5[cell] = value;
+                } else {
+                    OPM_THROW(std::logic_error,
+                              "Invalid direction for thermal half transmissibility: "
+                                  + std::to_string(dir));
+                }
+            }
+            ThermalGasWaterFlowProblem<Scalar> gpuFlowProblem(
+                alpha0, alpha1, alpha2, alpha3, alpha4, alpha5, problem.moduleParams());
+            return gpuistl::copy_to_gpu(gpuFlowProblem);
+        }());
+
+        if (bindPropertyAssemblyBridge_(model)) {
+            propertyAssemblyBridge_->waitForAssembly(/*timeIdx=*/0);
+            boundaryInfoBuffer_
+                = gpuistl::copy_to_gpu<VectorBlockGPU, GpuScalarFluidState, BoundaryInfoGPU>(
+                    boundaryInfo, propertyAssemblyBridge_->deviceFluidSystem());
+            return;
+        }
+
+        dynamicGpuFluidSystemBuffer_.emplace(
+            ::Opm::gpuistl::copy_to_gpu<GpuPvtApproaches>(FluidSystem::getNonStaticInstance()));
+        dynamicGpuFluidSystemPtr_ =
+            gpuistl::make_gpu_shared_ptr(::Opm::gpuistl::make_view(*dynamicGpuFluidSystemBuffer_));
+        gpuModelBuffer_.emplace([&]() -> GpuModelBufferType {
+            std::vector<Scalar> volumes(numCells);
+            for (unsigned i = 0; i < numCells; ++i) {
+                volumes[domain.cells[i]] = model.dofTotalVolume(domain.cells[i]);
+            }
+            GpuModel gpuModel(
+                model.intensiveQuantityCache()[0], model.intensiveQuantityCache()[1], volumes);
+            return gpuistl::copy_to_gpu(gpuModel, *dynamicGpuFluidSystemPtr_.get());
+        }());
+        boundaryInfoBuffer_ =
+            gpuistl::copy_to_gpu<VectorBlockGPU, GpuScalarFluidState, BoundaryInfoGPU>(
+                boundaryInfo, *dynamicGpuFluidSystemPtr_.get());
+    }
+
+    void refreshForLinearization(Model& model,
+                                  const std::vector<BoundaryInfoCPU>& boundaryInfo,
+                                  unsigned numCells)
+    {
+        this->resetResidual(numCells);
+        if (bindPropertyAssemblyBridge_(model)) {
+            propertyAssemblyBridge_->waitForAssembly(/*timeIdx=*/0);
+            boundaryInfoBuffer_ =
+                gpuistl::copy_to_gpu<VectorBlockGPU, GpuScalarFluidState, BoundaryInfoGPU>(
+                    boundaryInfo, propertyAssemblyBridge_->deviceFluidSystem());
+        } else {
+            propertyAssemblyBridge_ = nullptr;
+            // A runtime fallback can require owners that were absent when the
+            // persistent assembly parameters were first constructed.
+            if (!dynamicGpuFluidSystemBuffer_) {
+                dynamicGpuFluidSystemBuffer_.emplace(
+                    ::Opm::gpuistl::copy_to_gpu<GpuPvtApproaches>(FluidSystem::getNonStaticInstance()));
+                dynamicGpuFluidSystemPtr_ = gpuistl::make_gpu_shared_ptr(
+                    ::Opm::gpuistl::make_view(*dynamicGpuFluidSystemBuffer_));
+                std::vector<Scalar> volumes(numCells);
+                for (unsigned cell = 0; cell < numCells; ++cell) {
+                    volumes[cell] = model.dofTotalVolume(cell);
+                }
+                GpuModel gpuModel(
+                    model.intensiveQuantityCache()[0], model.intensiveQuantityCache()[1], volumes);
+                gpuModelBuffer_.emplace(
+                    gpuistl::copy_to_gpu(gpuModel, *dynamicGpuFluidSystemPtr_));
+            }
+            for (unsigned timeIdx = 0; timeIdx < 2; ++timeIdx) {
+                const auto& cache = model.intensiveQuantityCache()[timeIdx];
+                auto& staging = intensiveQuantityStaging_[timeIdx];
+                staging.clear();
+                staging.reserve(cache.size());
+                for (const auto& iq : cache) {
+                    staging.push_back(iq.template withOtherFluidSystem<CorrectTypeTagView>(
+                        *dynamicGpuFluidSystemPtr_));
+                }
+                auto& target = timeIdx == 0 ? gpuModelBuffer_->cachedIntensiveQuantities0_
+                                            : gpuModelBuffer_->cachedIntensiveQuantities1_;
+                target.copyFromHost(staging);
+            }
+            boundaryInfoBuffer_ =
+                gpuistl::copy_to_gpu<VectorBlockGPU, GpuScalarFluidState, BoundaryInfoGPU>(
+                    boundaryInfo, *dynamicGpuFluidSystemPtr_);
+        }
+    }
+
     bool usesGpuPropertyAssemblyBridge() const
     {
         return propertyAssemblyBridge_ != nullptr;
@@ -465,34 +525,19 @@ public:
     {
         return boundaryInfoBuffer_.size();
     }
+};
 
-    /*!
-     * \brief Copy the GPU residual buffer back to the CPU residual vector.
-     *
-     * Must be called after all GPU kernels have completed (the synchronous cudaMemcpy
-     * inside guarantees the GPU has finished).
-     */
-    void copyResidualToHost(GlobalEqVector& residual, unsigned numCells)
-    {
-        auto cpuResidualFromGpu = residualBuffer_.asStdVector();
-        std::memcpy(residual.data(), cpuResidualFromGpu.data(), numCells * numEq * sizeof(Scalar));
-    }
+// Dry- and wet-gas dispatchers instantiate their own typed stencil. The
+// sparsity, destination buffers and block-delta handling are shared.
+template <class TypeTag>
+    requires std::is_same_v<TypeTag, Properties::TTag::FlowProblemNohyst>
+class TpfaLinearizerGpuParams<TypeTag> : public TpfaLinearizerGpuBuffers<TypeTag>
+{
+    using Base = TpfaLinearizerGpuBuffers<TypeTag>;
 
-    /*!
-     * \brief Copy the GPU Jacobian non-zero values back to the CPU ISTL matrix.
-     *
-     * Must be called after all GPU kernels have completed.
-     */
-    void copyJacobianToHost(SparseMatrixAdapter& jacobian,
-                            gpuistl::GpuSparseMatrixWrapper<Scalar>& gpuJacobian)
-    {
-        auto gpuJacobianNonZeroes = gpuJacobian.getNonZeroValues().asStdVector();
-        auto& cpuJacobian = jacobian.istlMatrix();
-        const std::size_t totalMatrixSize = cpuJacobian.nonzeroes() * numEq * numEq;
-        std::memcpy(&(cpuJacobian[0][0][0][0]),
-                    gpuJacobianNonZeroes.data(),
-                    totalMatrixSize * sizeof(Scalar));
-    }
+public:
+    using Base::Base;
+    bool usesGpuPropertyAssemblyBridge() const { return true; }
 };
 
 } // namespace Opm

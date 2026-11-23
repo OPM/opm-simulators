@@ -50,6 +50,7 @@ namespace Opm {
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
+#include <opm/simulators/wells/WellMatrixSink.hpp>
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
@@ -90,6 +91,7 @@ public:
     using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
     using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using MatrixSink = WellMatrixSink<typename SparseMatrixAdapter::MatrixBlock>;
     using GasLiftSingleWell = ::Opm::GasLiftSingleWell<TypeTag>;
     using GLiftEclWells = typename GasLiftGroupInfo<Scalar, IndexTraits>::GLiftEclWells;
 
@@ -293,6 +295,7 @@ public:
 
     // Add well contributions to matrix
     virtual void addWellContributions(SparseMatrixAdapter&) const = 0;
+    virtual void addWellContributions(MatrixSink&) const = 0;
 
     virtual void addWellPressureEquations(PressureMatrix& mat,
                                           const BVector& x,

@@ -180,6 +180,7 @@ namespace Opm {
                                  const int openConnIdx) const override;
 
         void addWellContributions(SparseMatrixAdapter& jacobian) const override;
+        void addWellContributions(typename Base::MatrixSink& jacobian) const override;
 
         void addWellPressureEquations(PressureMatrix& mat,
                                       const BVector& x,

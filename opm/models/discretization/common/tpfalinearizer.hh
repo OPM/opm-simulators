@@ -130,17 +130,15 @@ class TpfaLinearizer
     enum { historySize = getPropValue<TypeTag, Properties::TimeDiscHistorySize>() };
     enum { dimWorld = GridView::dimensionworld };
 
-    constexpr static bool runAssemblyOnGpu = getPropValue<TypeTag, Properties::RunAssemblyOnGpu>();
-
     using MatrixBlockCPU = typename SparseMatrixAdapter::MatrixBlock;
     using VectorBlockCPU = Dune::FieldVector<Scalar, numEq>;
     using ADVectorBlockCPU = GetPropType<TypeTag, Properties::RateVector>;
 
     using GpuLinearizer = TpfaLinearizerGpu<TypeTag>;
     friend GpuLinearizer;
-    using MatrixBlock = typename GpuLinearizer::MatrixBlock;
-    using VectorBlock = typename GpuLinearizer::VectorBlock;
-    using ADVectorBlock = typename GpuLinearizer::ADVectorBlock;
+    using MatrixBlock = MatrixBlockCPU;
+    using VectorBlock = VectorBlockCPU;
+    using ADVectorBlock = ADVectorBlockCPU;
 
     static constexpr bool linearizeNonLocalElements =
         getPropValue<TypeTag, Properties::LinearizeNonLocalElements>();
@@ -169,7 +167,7 @@ public:
     static void registerParameters()
     {
         Parameters::Register<Parameters::EnableGpuAssemblySolverBridge>
-            ("Pass source-only serial GPU assembly directly to gpuISTL.");
+            ("Pass serial GPU assembly directly to gpuISTL, including explicit well contributions.");
         Parameters::Register<Parameters::SeparateSparseSourceTerms>
             ("Treat well source terms all in one go, instead of on a cell by cell basis.");
     }
@@ -305,6 +303,9 @@ public:
     decltype(auto) gpuJacobian() { return gpuLinearizer_.gpuJacobian(); }
     decltype(auto) gpuResidual() { return gpuLinearizer_.gpuResidual(); }
     decltype(auto) flattenedGpuResidual() { return gpuLinearizer_.flattenedGpuResidual(); }
+
+    auto linearizeGpuWellContributions()
+    { return gpuLinearizer_.linearizeWellContributions(*this); }
 
     /*!
      * \brief Linearize the part of the non-linear system of equations that is associated
@@ -459,6 +460,14 @@ public:
     }
 
 private:
+    bool useGpuReservoirAssembly_() const
+    {
+        if constexpr (requires { model_().useGpuReservoirAssembly(); }) {
+            return model_().useGpuReservoirAssembly();
+        }
+        return getPropValue<TypeTag, Properties::RunAssemblyOnGpu>();
+    }
+
     Simulator& simulator_()
     { return *simulatorPtr_; }
 
@@ -620,7 +629,9 @@ private:
 
         // The helper allocates GPU storage only when RunAssemblyOnGpu is true.
         // CPU assembly can call this unconditionally without GPU support.
-        gpuLinearizer_.createMatrix(*jacobian_);
+        if (useGpuReservoirAssembly_()) {
+            gpuLinearizer_.createMatrix(*jacobian_);
+        }
 
         // Create dummy full domain.
         fullDomain_.cells.resize(numCells);
@@ -630,12 +641,14 @@ private:
     // reset the global linear system of equations.
     void resetSystem_()
     {
-        residual_ = 0.0;
-        // zero all matrix entries
-        jacobian_->clear();
-
-        // No-op unless RunAssemblyOnGpu requests a GPU matrix.
-        gpuLinearizer_.resetSystem();
+        if (useGpuReservoirAssembly_()) {
+            // The GPU path resets its own system. Host fallback replaces all
+            // numerical values before adding its source and well contributions.
+            gpuLinearizer_.resetSystem();
+        } else {
+            residual_ = 0.0;
+            jacobian_->clear();
+        }
     }
 
     // Initialize the flows, flores, and velocity sparse tables
@@ -870,7 +883,8 @@ private:
     {
         constexpr bool run_assembly_on_gpu = getPropValue<TypeTag, Properties::RunAssemblyOnGpu>();
         // Returns false without accessing a GPU when RunAssemblyOnGpu is false.
-        const bool useAssemblyLinearsolveBridge = gpuLinearizer_.updateSolverBridge(*this);
+        const bool runOnGpu = useGpuReservoirAssembly_();
+        const bool useAssemblyLinearsolveBridge = runOnGpu && gpuLinearizer_.updateSolverBridge(*this);
 
         // This check should be removed once this is addressed by
         // for example storing the previous timesteps' values for
@@ -891,7 +905,12 @@ private:
         const bool dispersionActive = simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion();
         const unsigned int numCells = domain.cells.size();
 
-        if constexpr (!run_assembly_on_gpu) {
+        if constexpr (run_assembly_on_gpu) {
+            if (runOnGpu) {
+                gpuLinearizer_.linearize(*this, domain, numCells, dt, dispersionActive);
+            }
+        }
+        if (!runOnGpu) {
             linearize_parallelization_wrapper(
                 numCells /*numCells*/,
                 domain,
@@ -904,14 +923,10 @@ private:
 
             linearize_bc<IntensiveQuantities, Model, LocalResidual>(
                 diagMatAddress_, residual_, boundaryInfo_);
-        } else {
-            // Reached only when GPU assembly is requested; the helper throws
-            // if the required GPU support is unavailable.
-            gpuLinearizer_.linearize(*this, domain, numCells, dt, dispersionActive);
         }
 
-        // Source evaluation remains CPU-side because it uses problem_().  The
-        // source-only GPU/gpuISTL path uploads just the resulting block deltas.
+        // Source evaluation remains CPU-side because it uses problem_(). The
+        // resident GPU path uploads the resulting sparse block deltas.
         if (!useAssemblyLinearsolveBridge) {
             linearize_source_terms(numCells, domain);
         }
@@ -1072,6 +1087,11 @@ public:
     {
 #if OPM_IS_INSIDE_HOST_FUNCTION
         OPM_TIMEBLOCK_LOCAL(linearizationForEachCell, Subsystem::Assembly);
+#endif
+#if HAVE_CUDA
+        using VectorBlock = std::conditional_t<useGPU, typename GpuLinearizer::VectorBlockGPU, VectorBlockCPU>;
+        using MatrixBlock = std::conditional_t<useGPU, typename GpuLinearizer::MatrixBlockGPU, MatrixBlockCPU>;
+        using ADVectorBlock = std::conditional_t<useGPU, typename GpuLinearizer::ADVectorBlockGPU, ADVectorBlockCPU>;
 #endif
         const unsigned globI = domain.cells[ii];
         const auto& nbInfos = neighborInfo[globI];

@@ -195,7 +195,7 @@ public:
 
     /// Solve the Jacobian system Jx = r where J is the Jacobian and
     /// r is the residual.
-    void solveJacobianSystem(BVector& x);
+    void solveJacobianSystem(BVector& x, const char* initialSystemOutputDir = nullptr);
 
     /// Get solution update vector as a PrimaryVariable
     bool shouldStoreSolutionUpdate() const override;

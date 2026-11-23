@@ -23,6 +23,7 @@
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/wells/StandardWellEquations.hpp>
+#include <opm/simulators/wells/WellMatrixSink.hpp>
 
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
 
@@ -444,6 +445,8 @@ sumDistributed(Parallel::Communication comm)
     template class StandardWellEquations<T,BlackOilDefaultFluidSystemIndices,N>;                                        \
     template void StandardWellEquations<T,BlackOilDefaultFluidSystemIndices,N>::                                        \
         extract(Linear::IstlSparseMatrixAdapter<MatrixBlock<T,N,N>>&) const;          \
+    template void StandardWellEquations<T,BlackOilDefaultFluidSystemIndices,N>::                       \
+        extract(WellMatrixSink<MatrixBlock<T,N,N>>&) const;                              \
     template void StandardWellEquations<T,BlackOilDefaultFluidSystemIndices,N>::                                        \
         extractCPRPressureMatrix(Dune::BCRSMatrix<MatrixBlock<T,1,1>>&,               \
                                  const typename StandardWellEquations<T,BlackOilDefaultFluidSystemIndices,N>::BVector&, \

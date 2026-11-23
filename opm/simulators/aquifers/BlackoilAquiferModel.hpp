@@ -71,6 +71,9 @@ public:
     void endTimeStep();
     void endEpisode();
 
+    bool hasAquifers() const
+    { return !aquifers.empty(); }
+
     data::Aquifers aquiferData() const;
 
     template <class Restarter>

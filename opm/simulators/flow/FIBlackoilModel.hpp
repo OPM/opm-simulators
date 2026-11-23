@@ -66,6 +66,14 @@
 #include <type_traits>
 #include <utility>
 
+namespace Opm::Parameters {
+
+struct ExperimentalAssembleReservoirOnGpu {
+    static constexpr bool value = false;
+};
+
+} // namespace Opm::Parameters
+
 namespace Opm {
 
 template <typename TypeTag>
@@ -111,6 +119,17 @@ public:
         const bool computePropertiesOnGpu =
             Parameters::Get<Parameters::ExperimentalComputePropertiesOnGpu>(
                 /*errorIfNotRegistered=*/false);
+        if constexpr (gpuistl::GpuBlackoilNohystIntensiveQuantitiesSupport<TypeTag>::value) {
+            useGpuReservoirAssembly_ = Parameters::Get<Parameters::ExperimentalAssembleReservoirOnGpu>();
+            if (useGpuReservoirAssembly_ && !computePropertiesOnGpu) {
+                OPM_THROW(std::invalid_argument,
+                          "GPU reservoir assembly requires --experimental-compute-properties-on-gpu=true");
+            }
+        } else if (Parameters::Get<Parameters::ExperimentalAssembleReservoirOnGpu>(
+                       /*errorIfNotRegistered=*/false)) {
+            OPM_THROW(std::invalid_argument,
+                      "--experimental-assemble-reservoir-on-gpu is only supported for non-hysteretic three-phase black oil");
+        }
         if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value
                       || gpuistl::GpuBlackoilNohystIntensiveQuantitiesSupport<TypeTag>::value) {
             useGpuIntensiveQuantitiesDispatcher_ = computePropertiesOnGpu;
@@ -147,6 +166,8 @@ public:
         // Registered for every TypeTag: flow parses the command line with a
         // placeholder TypeTag before it selects the model, and aborts on
         // parameters that TypeTag does not know.
+        Parameters::Register<Parameters::ExperimentalAssembleReservoirOnGpu>
+            ("Experimental: assemble the non-hysteretic three-phase reservoir on the GPU.");
         Parameters::Register<Parameters::ExperimentalComputePropertiesOnGpu>
             ("Experimental: compute the intensive quantities on the GPU. Supported "
              "for CO2STORE (gas-water with energy) and for three-phase black-oil "
@@ -156,6 +177,27 @@ public:
              "hysteresis. Other decks are rejected at initialization.");
 #endif
     }
+
+    bool useGpuReservoirAssembly() const
+    {
+#if HAVE_CUDA
+        if constexpr (gpuistl::GpuBlackoilNohystIntensiveQuantitiesSupport<TypeTag>::value) {
+            return useGpuReservoirAssembly_;
+        }
+#endif
+        return getPropValue<TypeTag, Properties::RunAssemblyOnGpu>();
+    }
+
+#if HAVE_CUDA
+    const auto& nohystGpuProperties() const
+        requires gpuistl::GpuBlackoilNohystIntensiveQuantitiesSupport<TypeTag>::value
+    {
+        if (!gpuNohystIntensiveQuantities_) {
+            OPM_THROW(std::logic_error, "GPU reservoir assembly requires initialized properties");
+        }
+        return *gpuNohystIntensiveQuantities_;
+    }
+#endif
 
     // Publish host mirrors once before a read-only output traversal.
     // The callback must join all workers before returning.
@@ -301,6 +343,9 @@ public:
             // problem only holds the current time level, so timeIdx != 0
             // (restart load) stays on the CPU.
             if constexpr (gpuistl::GpuBlackoilNohystIntensiveQuantitiesSupport<TypeTag>::value) {
+                if (timeIdx == 1 && useGpuReservoirAssembly_ && gpuNohystIntensiveQuantities_) {
+                    gpuNohystIntensiveQuantities_->invalidatePrevious();
+                }
                 if (useGpuIntensiveQuantitiesDispatcher_ && timeIdx == 0) {
                     if (!gpuNohystIntensiveQuantities_) {
                         gpuNohystIntensiveQuantities_ =
@@ -679,6 +724,11 @@ public:
 #endif
         ParentType::advanceTimeLevel();
 #if HAVE_CUDA
+        if constexpr (gpuistl::GpuBlackoilNohystIntensiveQuantitiesSupport<TypeTag>::value) {
+            if (useGpuReservoirAssembly_ && gpuNohystIntensiveQuantities_) {
+                gpuNohystIntensiveQuantities_->advanceTimeLevel();
+            }
+        }
         if constexpr (Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
             if (gpuIntensiveQuantitiesDispatcher_) {
                 gpuIntensiveQuantitiesDispatcher_->bridge().advanceTimeLevel();
@@ -761,6 +811,7 @@ protected:
     std::optional<ElementChunks<GridView, Dune::Partitions::Interior>> interior_element_chunks_;
 
 #if HAVE_CUDA
+    bool useGpuReservoirAssembly_ = false;
     bool useGpuIntensiveQuantitiesDispatcher_{false};
     using GpuDispatcherStorage = std::conditional_t<
         Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value,

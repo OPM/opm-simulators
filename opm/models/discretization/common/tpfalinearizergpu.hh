@@ -31,16 +31,27 @@
 #include <opm/simulators/flow/SimpleFIBlackOilModel.hpp>
 #include <opm/simulators/flow/ThermalGasWaterFlowProblem.hpp>
 #include <opm/simulators/linalg/gpuistl_assembly_if_available.hpp>
+#if OPM_IS_COMPILING_WITH_GPU_COMPILER
+#if USE_HIP
+#include <opm/simulators/linalg/gpuistl_hip/detail/gpusparse_matrix_utilities.hpp>
+#else
+#include <opm/simulators/linalg/gpuistl/detail/gpusparse_matrix_utilities.hpp>
+#endif
+#endif
+#include <opm/simulators/wells/WellMatrixSink.hpp>
 #endif
 
 #include <opm/common/Exceptions.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/utility/gpuDecorators.hpp>
 
 #include <dune/common/fvector.hh>
 
 #include <cassert>
 #include <cstddef>
+#include <map>
 #include <memory>
+#include <set>
 #include <stdexcept>
 #include <type_traits>
 #include <vector>
@@ -56,6 +67,46 @@ namespace Opm
 {
 template <class TypeTag>
 class TpfaLinearizer;
+
+#if HAVE_CUDA
+namespace detail {
+
+template<class Block>
+struct GpuWellSystemEntry
+{
+    std::size_t index;
+    Block value;
+};
+
+#if OPM_IS_COMPILING_WITH_GPU_COMPILER
+template<int numEq, class Scalar, class MatrixBlock, class VectorBlock>
+__global__ void applyGpuWellContributions(
+    const GpuWellSystemEntry<MatrixBlock>* matrixDeltas,
+    std::size_t matrixCount,
+    const GpuWellSystemEntry<VectorBlock>* residualEntries,
+    std::size_t residualCount,
+    Scalar* matrix,
+    VectorBlock* residual)
+{
+    const std::size_t i = std::size_t(blockIdx.x) * blockDim.x + threadIdx.x;
+    if (i < matrixCount) {
+        const auto& [blockIndex, block] = matrixDeltas[i];
+        auto* values = matrix + blockIndex * numEq * numEq;
+        for (int row = 0; row < numEq; ++row) {
+            for (int col = 0; col < numEq; ++col) {
+                values[row * numEq + col] += block[row][col];
+            }
+        }
+    }
+    if (i < residualCount) {
+        const auto& [cell, value] = residualEntries[i];
+        residual[cell] = value;
+    }
+}
+#endif
+
+} // namespace detail
+#endif
 
 // Owns the GPU assembly lifecycle. The layout is identical in host and device
 // translation units; only GPU compilers instantiate kernel-dependent methods.
@@ -86,6 +137,11 @@ public:
     using ADVectorBlock = ADVectorBlockCPU;
 #endif
 
+    struct WellContributionCounts {
+        std::size_t matrixBlocks = 0;
+        std::size_t residualRows = 0;
+    };
+
     void eraseMatrix()
     {
 #if HAVE_CUDA
@@ -101,8 +157,9 @@ public:
         if constexpr (runAssemblyOnGpu) {
             requireGpuSupport();
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+            const auto [columns, rows] = gpuistl::detail::extractSparsityPattern(jacobian.istlMatrix());
             gpuJacobian_ = std::make_unique<gpuistl::GpuSparseMatrixWrapper<Scalar>>(
-                gpuistl::GpuSparseMatrixWrapper<Scalar>::fromMatrix(jacobian.istlMatrix()));
+                gpuistl::GpuVector<int>(rows), gpuistl::GpuVector<int>(columns), numEq);
             gpuBufferDiagMatAddress_ = std::make_unique<gpuistl::GpuBuffer<MatrixBlockGPU*>>(
                 gpuistl::detail::getDiagPtrsTyped<MatrixBlockGPU>(*gpuJacobian_));
 #endif
@@ -168,6 +225,7 @@ public:
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
             if (gpuSystemActive_) {
                 gpuParams_->copyJacobianToHost(jacobian, *gpuJacobian_);
+                OpmLog::debug("[GPU TPFA] full Jacobian transfer for system export");
             }
 #endif
         }
@@ -179,15 +237,88 @@ public:
         if constexpr (runAssemblyOnGpu) {
             requireGpuSupport();
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
-            // The bridge requires a serial run without wells and a GPU linear solver.
             // Multiple ranks still need a host matrix for makeOverlapRowsInvalid.
+            const auto& wellModel = linearizer.problem_().wellModel();
+            bool supportsWellSystem = wellModel.numLocalWellsEnd() == 0;
+            if constexpr (requires {
+                linearizer.model_().nohystGpuProperties();
+                wellModel.empty();
+                wellModel.addMatrixContributions();
+            }) {
+                supportsWellSystem = wellModel.empty() || wellModel.addMatrixContributions();
+            }
             gpuSystemActive_ = Parameters::Get<Parameters::EnableGpuAssemblySolverBridge>()
+                && !getPropValue<TypeTag, Properties::EnableConstraints>()
                 && linearizer.simulator_().gridView().comm().size() == 1
-                && linearizer.problem_().wellModel().numLocalWellsEnd() == 0
+                && supportsWellSystem
                 && linearizer.simulator_().model().newtonMethod().linearSolver().hasGpuSolver();
 #endif
         }
         return gpuSystemActive_;
+    }
+
+    WellContributionCounts linearizeWellContributions(
+        [[maybe_unused]] TpfaLinearizer<TypeTag>& linearizer)
+    {
+        requireGpuSupport();
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+        auto& wellModel = linearizer.problem_().wellModel();
+        using Sink = WellMatrixSink<MatrixBlockCPU>;
+        if constexpr (requires(Sink& sink, std::set<unsigned>& rows) {
+            wellModel.linearizeWithMatrixSink(sink, linearizer.residual_, rows);
+            wellModel.empty();
+        }) {
+            if (wellModel.empty()) {
+                return {};
+            }
+
+            // GPU BSR has the same block order as the contiguous Dune BCRS
+            // storage used to create it and to map the TPFA face blocks.
+            const auto& matrix = linearizer.jacobian_->istlMatrix();
+            const auto* firstBlock = &*matrix[0].begin();
+            std::map<std::size_t, MatrixBlockCPU> matrixDeltas;
+            Sink sink([&](std::size_t row, std::size_t col, const MatrixBlockCPU& value) {
+                const auto entry = matrix[row].find(col);
+                if (entry == matrix[row].end()) {
+                    OPM_THROW(std::logic_error, "Missing TPFA matrix block for a well contribution");
+                }
+                const std::size_t index = &*entry - firstBlock;
+                auto& block = matrixDeltas.try_emplace(index, Scalar{0}).first->second;
+                block += value;
+            });
+
+            std::set<unsigned> residualRows;
+            wellModel.linearizeWithMatrixSink(sink, linearizer.residual_, residualRows);
+            if (matrixDeltas.empty() && residualRows.empty()) {
+                return {};
+            }
+
+            wellMatrixStaging_.clear();
+            wellMatrixStaging_.reserve(matrixDeltas.size());
+            for (const auto& [index, block] : matrixDeltas) {
+                wellMatrixStaging_.push_back({index, MatrixBlockGPU(block)});
+            }
+            wellResidualStaging_.clear();
+            wellResidualStaging_.reserve(residualRows.size());
+            for (const auto cell : residualRows) {
+                wellResidualStaging_.push_back({cell, VectorBlockGPU(linearizer.residual_[cell])});
+            }
+
+            uploadWellEntries(wellMatrixStaging_, wellMatrixEntries_);
+            uploadWellEntries(wellResidualStaging_, wellResidualEntries_);
+
+            constexpr unsigned blockSize = 256;
+            const auto workItems = std::max(matrixDeltas.size(), residualRows.size());
+            detail::applyGpuWellContributions<numEq>
+                <<<(workItems + blockSize - 1) / blockSize, blockSize>>>(
+                    wellMatrixEntries_.data(), matrixDeltas.size(),
+                    wellResidualEntries_.data(), residualRows.size(),
+                    gpuJacobian_->getNonZeroValues().data(), gpuParams_->residualBuffer().data());
+            OPM_CUDA_CHECK_LAST_ERROR;
+            return {matrixDeltas.size(), residualRows.size()};
+        }
+#endif
+        return {};
     }
 
     template <class SubDomainType>
@@ -203,53 +334,70 @@ public:
         // GPU assembly currently supports only the full domain.
         if constexpr (std::is_same_v<SubDomainType, FullDomain<>>) {
 
-            int constexpr blockSize = 256; // Experimentally this is a good value for multiple
-                                           // GPUs. Autotune this later.
-
-            if (!gpuParams_) {
-                auto params = std::make_unique<GpuParams>(domain,
-                                                          linearizer.neighborInfo_,
-                                                          *gpuJacobian_,
-                                                          *gpuBufferDiagMatAddress_,
-                                                          linearizer.jacobian_->istlMatrix(),
-                                                          linearizer.residual_,
-                                                          linearizer.boundaryInfo_,
-                                                          linearizer.model_(),
-                                                          linearizer.problem_(),
-                                                          numCells);
-                gpuParams_ = GpuParamsOwner(params.release(), [](GpuParams* ptr) {
-                    std::default_delete<GpuParams> {}(ptr);
-                });
+            if constexpr (requires { linearizer.model_().nohystGpuProperties(); }) {
+                if (dispersionActive || !linearizer.boundaryInfo_.empty()) {
+                    OPM_THROW(std::logic_error,
+                              "Three-phase GPU reservoir assembly requires no dispersion or nontrivial boundary conditions.");
+                }
+                if (!gpuParams_) {
+                    auto params = std::make_unique<GpuParams>(
+                        domain, linearizer.neighborInfo_, *gpuJacobian_, *gpuBufferDiagMatAddress_,
+                        linearizer.jacobian_->istlMatrix(), linearizer.residual_);
+                    gpuParams_ = GpuParamsOwner(params.release(), [](GpuParams* ptr) {
+                        std::default_delete<GpuParams> {}(ptr);
+                    });
+                }
+                gpuParams_->resetResidual(numCells);
+                linearizer.model_().nohystGpuProperties().assemble(*gpuParams_, linearizer.problem_(), dt);
             } else {
-                gpuParams_->refreshForLinearization(
-                    linearizer.model_(), linearizer.boundaryInfo_, numCells);
-            }
+                int constexpr blockSize = 256; // Experimentally this is a good value for multiple
+                                               // GPUs. Autotune this later.
 
-            linearizer.prepare_source_intensive_quantities_gpu(numCells, domain);
+                if (!gpuParams_) {
+                    auto params = std::make_unique<GpuParams>(domain,
+                                                              linearizer.neighborInfo_,
+                                                              *gpuJacobian_,
+                                                              *gpuBufferDiagMatAddress_,
+                                                              linearizer.jacobian_->istlMatrix(),
+                                                              linearizer.residual_,
+                                                              linearizer.boundaryInfo_,
+                                                              linearizer.model_(),
+                                                              linearizer.problem_(),
+                                                              numCells);
+                    gpuParams_ = GpuParamsOwner(params.release(), [](GpuParams* ptr) {
+                        std::default_delete<GpuParams> {}(ptr);
+                    });
+                } else {
+                    gpuParams_->refreshForLinearization(
+                        linearizer.model_(), linearizer.boundaryInfo_, numCells);
+                }
 
-            launchLinearization<typename GpuParams::LocalResidualGPU>(
-                numCells,
-                gpuParams_->domainView(),
-                gpuParams_->neighborInfoView(),
-                gpuParams_->diagMatAddressView(),
-                gpuParams_->residualView(),
-                gpuParams_->modelView(),
-                dt,
-                dispersionActive,
-                gpuParams_->flowProblemView());
+                linearizer.prepare_source_intensive_quantities_gpu(numCells, domain);
 
-            if (gpuParams_->boundaryInfoSize() > 0) {
-                auto boundaryInfoView = gpuParams_->boundaryInfoView();
-                linearize_bc_threadsafe<TpfaLinearizerGpu<TypeTag>,
-                                        typename GpuParams::GPUBOIQ,
-                                        decltype(gpuParams_->modelView()),
-                                        typename GpuParams::LocalResidualGPU>
-                    <<<((gpuParams_->boundaryInfoSize() + blockSize - 1) / blockSize), blockSize>>>(
-                        gpuParams_->diagMatAddressView(),
-                        gpuParams_->residualView(),
-                        boundaryInfoView,
-                        gpuParams_->modelView(),
-                        gpuParams_->flowProblemView());
+                launchLinearization<typename GpuParams::LocalResidualGPU>(
+                    numCells,
+                    gpuParams_->domainView(),
+                    gpuParams_->neighborInfoView(),
+                    gpuParams_->diagMatAddressView(),
+                    gpuParams_->residualView(),
+                    gpuParams_->modelView(),
+                    dt,
+                    dispersionActive,
+                    gpuParams_->flowProblemView());
+
+                if (gpuParams_->boundaryInfoSize() > 0) {
+                    auto boundaryInfoView = gpuParams_->boundaryInfoView();
+                    linearize_bc_threadsafe<TpfaLinearizerGpu<TypeTag>,
+                                            typename GpuParams::GPUBOIQ,
+                                            decltype(gpuParams_->modelView()),
+                                            typename GpuParams::LocalResidualGPU>
+                        <<<((gpuParams_->boundaryInfoSize() + blockSize - 1) / blockSize), blockSize>>>(
+                            gpuParams_->diagMatAddressView(),
+                            gpuParams_->residualView(),
+                            boundaryInfoView,
+                            gpuParams_->modelView(),
+                            gpuParams_->flowProblemView());
+                }
             }
 
             if (useAssemblyLinearsolveBridge) {
@@ -261,6 +409,7 @@ public:
             } else {
                 gpuParams_->copyResidualToHost(linearizer.residual_, numCells);
                 gpuParams_->copyJacobianToHost(*linearizer.jacobian_, *gpuJacobian_);
+                OpmLog::debug("[GPU TPFA] full Jacobian transfer for solver fallback");
             }
         } else {
             OPM_THROW(std::logic_error, "Only FullDomain is supported on GPU");
@@ -379,7 +528,20 @@ private:
         indices.reserve(reservedSize);
         residualContributions.reserve(reservedSize);
         jacobianContributions.reserve(reservedSize);
-        for (unsigned ii = 0; ii < numCells; ++ii) {
+        const bool needsDenseSources = [&] {
+            if constexpr (!getPropValue<TypeTag, Properties::EnableBioeffects>()
+                          && requires { linearizer.problem_().aquiferModel().hasAquifers(); }) {
+                if (linearizer.separateSparseSourceTerms_) {
+                    const auto& simulator = linearizer.simulator_();
+                    const auto& schedule = simulator.vanguard().schedule();
+                    return linearizer.problem_().aquiferModel().hasAquifers()
+                        || schedule[simulator.episodeIndex()].source().size() != 0;
+                }
+            }
+            return true;
+        }();
+        const auto denseCellCount = needsDenseSources ? numCells : 0u;
+        for (unsigned ii = 0; ii < denseCellCount; ++ii) {
             const unsigned cell = domain.cells[ii];
             ADVectorBlockCPU source(0.0);
             const double volume = linearizer.model_().dofTotalVolume(cell);
@@ -416,10 +578,54 @@ private:
             }
         }
         gpuParams_->applySourceContributions(indices, residualContributions, jacobianContributions);
+
+        // Dense source evaluation excludes wells in the sparse mode. Accumulate
+        // shared completion cells before uploading, so each device row has one writer.
+        const auto& wellModel = linearizer.problem_().wellModel();
+        const auto addSparseSource = [&](unsigned cell, const VectorBlockCPU& residual,
+                                         const MatrixBlockCPU& jacobian) {
+            auto& blocks = wellSourceEntries_.try_emplace(cell, Scalar{0}, Scalar{0}).first->second;
+            blocks.first += residual;
+            blocks.second += jacobian;
+        };
+        if constexpr (requires { wellModel.addReservoirSourceTerms(addSparseSource); }) {
+            if (linearizer.separateSparseSourceTerms_) {
+                wellSourceEntries_.clear();
+                wellModel.addReservoirSourceTerms(addSparseSource);
+                indices.clear();
+                residualContributions.clear();
+                jacobianContributions.clear();
+                for (const auto& [cell, blocks] : wellSourceEntries_) {
+                    indices.push_back(cell);
+                    residualContributions.push_back(blocks.first);
+                    jacobianContributions.push_back(blocks.second);
+                }
+                gpuParams_->applySourceContributions(indices, residualContributions, jacobianContributions);
+            }
+        }
+    }
+
+    template<class Entry>
+    static void uploadWellEntries(const std::vector<Entry>& staging, gpuistl::GpuBuffer<Entry>& buffer)
+    {
+        if (!staging.empty()) {
+            if (buffer.size() < staging.size()) {
+                buffer = gpuistl::GpuBuffer<Entry>(staging.size());
+            }
+            buffer.copyFromHost(staging.data(), staging.size());
+        }
     }
 #endif
 
 #if HAVE_CUDA
+    using WellMatrixEntry = detail::GpuWellSystemEntry<MatrixBlockGPU>;
+    using WellResidualEntry = detail::GpuWellSystemEntry<VectorBlockGPU>;
+    std::vector<WellMatrixEntry> wellMatrixStaging_;
+    std::vector<WellResidualEntry> wellResidualStaging_;
+    gpuistl::GpuBuffer<WellMatrixEntry> wellMatrixEntries_;
+    gpuistl::GpuBuffer<WellResidualEntry> wellResidualEntries_;
+    std::map<unsigned, std::pair<VectorBlockCPU, MatrixBlockCPU>> wellSourceEntries_;
+
     std::unique_ptr<gpuistl::GpuSparseMatrixWrapper<Scalar>> gpuJacobian_;
     std::unique_ptr<gpuistl::GpuBuffer<MatrixBlockGPU*>> gpuBufferDiagMatAddress_;
     // Type-erased destruction permits an incomplete state in host translation units.

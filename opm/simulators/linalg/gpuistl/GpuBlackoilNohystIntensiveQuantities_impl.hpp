@@ -52,6 +52,7 @@
 
 #include <opm/models/blackoil/blackoilintensivequantities.hh>
 #include <opm/models/blackoil/blackoilprimaryvariables.hh>
+#include <opm/models/discretization/common/tpfalinearizergpukernels.hh>
 #include <opm/models/utils/propertysystem.hh>
 
 #include <opm/simulators/flow/FlowProblemBlackoil.hpp>
@@ -341,6 +342,10 @@ struct ImplFor final : GpuBlackoilNohystIntensiveQuantities<CpuTypeTag>::Impl
     std::vector<GpuIntensiveQuantities> hostIQ;
     GpuBuffer<GpuPrimaryVariables> devicePriVars;
     GpuBuffer<GpuIntensiveQuantities> deviceIQ;
+    GpuBuffer<GpuIntensiveQuantities> previousDeviceIQ;
+    GpuBuffer<Scalar> deviceVolumes;
+    bool previousIqValid = false;
+
 
     explicit ImplFor(const Problem& cpuProblem)
     {
@@ -380,6 +385,69 @@ struct ImplFor final : GpuBlackoilNohystIntensiveQuantities<CpuTypeTag>::Impl
     const char* name() const override
     {
         return Traits::name;
+    }
+
+    void invalidatePrevious() override
+    {
+        previousIqValid = false;
+    }
+
+    void advanceTimeLevel() override
+    {
+        if (previousDeviceIQ.size() != 0) {
+            publishPrevious();
+        }
+    }
+
+    void publishPrevious()
+    {
+        OPM_GPU_SAFE_CALL(cudaMemcpyAsync(previousDeviceIQ.data(), deviceIQ.data(),
+                                         deviceIQ.size() * sizeof(GpuIntensiveQuantities),
+                                         cudaMemcpyDeviceToDevice));
+        previousIqValid = true;
+    }
+
+    void assemble(TpfaLinearizerGpuParams<CpuTypeTag>& buffers,
+                  const Problem& cpuProblem, Scalar dt) override
+    {
+        const auto& model = cpuProblem.model();
+        const auto numDof = deviceIQ.size();
+        if (deviceVolumes.size() == 0) {
+            std::vector<Scalar> volumes(numDof);
+            for (std::size_t cell = 0; cell < numDof; ++cell) {
+                volumes[cell] = model.dofTotalVolume(cell);
+            }
+            deviceVolumes = GpuBuffer<Scalar>(volumes);
+            previousDeviceIQ = GpuBuffer<GpuIntensiveQuantities>(numDof);
+        }
+
+        if (model.enableStorageCache() && cpuProblem.recycleFirstIterationStorage()
+            && cpuProblem.iterationContext().isFirstGlobalIteration()) {
+            publishPrevious();
+        } else if (!previousIqValid) {
+#ifdef _OPENMP
+#pragma omp parallel for if(numDof >= 16384)
+#endif
+            for (std::size_t cell = 0; cell < numDof; ++cell) {
+                hostIQ[cell] = model.intensiveQuantityCache()[1][cell]
+                    .template withOtherFluidSystem<GpuTag>(*managedFluidSystemView);
+            }
+            previousDeviceIQ.copyFromHost(hostIQ);
+            previousIqValid = true;
+        }
+
+        const SimpleFIBlackOilModel<GpuTag, GpuView> modelView(
+            make_view(deviceIQ), make_view(previousDeviceIQ), make_view(deviceVolumes));
+        ThermalGasWaterFlowProblem<Scalar, GpuView> fluxProblem{};
+        fluxProblem.moduleParams().saturationWeightedDensity =
+            cpuProblem.moduleParams().saturationWeightedDensity;
+        constexpr unsigned blockSize = 256;
+        kernel_linearize<TpfaLinearizer<CpuTypeTag>, decltype(modelView),
+                         BlackOilLocalResidualTPFA<GpuTag>>
+            <<<(numDof + blockSize - 1) / blockSize, blockSize>>>(
+                numDof, buffers.domainView(), buffers.neighborInfoView(),
+                buffers.diagMatAddressView(), buffers.residualView(), modelView, dt, fluxProblem);
+        OPM_GPU_SAFE_CALL(cudaGetLastError());
     }
 
     template <class Scalar, class ReadLimit>

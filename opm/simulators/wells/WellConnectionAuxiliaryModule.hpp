@@ -28,6 +28,8 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
+#include <set>
+
 #if HAVE_MPI
 #include <opm/simulators/utils/MPISerializer.hpp>
 #endif
@@ -107,6 +109,20 @@ public:
         OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::linearize failed: ", lin_comm_);
     }
 
+    template<class MatrixSink>
+    void linearizeWithMatrixSink(MatrixSink& jacobian,
+                                 GlobalEqVector& res,
+                                 std::set<unsigned>& residualRows)
+    {
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+        for (const auto& well : model_) {
+            this->linearizeSingleWell(jacobian, res, well);
+            const auto& cells = well->cells();
+            residualRows.insert(cells.begin(), cells.end());
+        }
+        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::linearize failed: ", lin_comm_);
+    }
+
     void postSolve(GlobalEqVector& deltaX) override
     {
         model_.recoverWellSolutionAndUpdateWellState(deltaX);
@@ -149,8 +165,8 @@ public:
     }
 
 private:
-    template<class WellType>
-    void linearizeSingleWell(SparseMatrixAdapter& jacobian,
+    template<class MatrixSink, class WellType>
+    void linearizeSingleWell(MatrixSink& jacobian,
                              GlobalEqVector& res,
                              const WellType& well)
     {

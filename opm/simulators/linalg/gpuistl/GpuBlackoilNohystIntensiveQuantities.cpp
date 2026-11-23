@@ -211,6 +211,25 @@ void GpuBlackoilNohystIntensiveQuantities<CpuTypeTag>::update(
     impl_->update(cpuProblem, solution, outIQ, timeIdx);
 }
 
+template <class CpuTypeTag>
+void GpuBlackoilNohystIntensiveQuantities<CpuTypeTag>::assemble(
+    TpfaLinearizerGpuParams<CpuTypeTag>& buffers, const Problem& cpuProblem, Scalar dt) const
+{
+    impl_->assemble(buffers, cpuProblem, dt);
+}
+
+template <class CpuTypeTag>
+void GpuBlackoilNohystIntensiveQuantities<CpuTypeTag>::invalidatePrevious()
+{
+    impl_->invalidatePrevious();
+}
+
+template <class CpuTypeTag>
+void GpuBlackoilNohystIntensiveQuantities<CpuTypeTag>::advanceTimeLevel()
+{
+    impl_->advanceTimeLevel();
+}
+
 template class GpuBlackoilNohystIntensiveQuantities<Properties::TTag::FlowProblemNohyst>;
 
 } // namespace Opm::gpuistl

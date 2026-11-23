@@ -909,6 +909,14 @@ namespace Opm
         this->linSys_.extract(jacobian);
     }
 
+    template<typename TypeTag>
+    void MultisegmentWell<TypeTag>::addWellContributions(typename Base::MatrixSink& jacobian) const
+    {
+        if (this->number_of_local_perforations_ != 0) {
+            this->linSys_.extract(jacobian);
+        }
+    }
+
 
    template<typename TypeTag>
     void

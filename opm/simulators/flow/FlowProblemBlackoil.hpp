@@ -1914,6 +1914,9 @@ private:
     void checkGpuAssemblySchedule_() const
     {
         if constexpr (getPropValue<TypeTag, Properties::RunAssemblyOnGpu>()) {
+            if (!this->model().useGpuReservoirAssembly()) {
+                return;
+            }
             // Persistent GPU assembly buffers do not refresh these coefficients.
             // This restriction also applies when the assembly/solver bridge is off.
             const auto& state = this->simulator().vanguard().schedule()[this->episodeIndex()];

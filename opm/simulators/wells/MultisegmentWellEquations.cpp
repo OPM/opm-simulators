@@ -21,6 +21,7 @@
 
 #include <config.h>
 #include <opm/simulators/wells/MultisegmentWellEquations.hpp>
+#include <opm/simulators/wells/WellMatrixSink.hpp>
 
 #include <dune/istl/umfpack.hh>
 
@@ -478,6 +479,8 @@ sumDistributed(Parallel::Communication comm)
     template class MultisegmentWellEquations<T,BlackOilDefaultFluidSystemIndices,numWellEq,numEq>;                               \
     template void MultisegmentWellEquations<T,BlackOilDefaultFluidSystemIndices,numWellEq,numEq>::                               \
         extract(Linear::IstlSparseMatrixAdapter<MatrixBlock<T,numEq,numEq>>&) const;           \
+    template void MultisegmentWellEquations<T,BlackOilDefaultFluidSystemIndices,numWellEq,numEq>::     \
+        extract(WellMatrixSink<MatrixBlock<T,numEq,numEq>>&) const;                      \
     template void MultisegmentWellEquations<T, BlackOilDefaultFluidSystemIndices, numWellEq,numEq>::                               \
         extractCPRPressureMatrix(Dune::BCRSMatrix<MatrixBlock<T,1,1>>&,                        \
                                  const MultisegmentWellEquations<T,BlackOilDefaultFluidSystemIndices,numWellEq,numEq>::BVector&, \

@@ -56,6 +56,12 @@ template<class TypeTag>
 struct LocalResidual<TypeTag, TTag::FlowProblemNohyst>
 { using type = BlackOilLocalResidualTPFA<TypeTag>; };
 
+#if HAVE_CUDA
+template<>
+struct RunAssemblyOnGpu<TTag::FlowProblemNohyst, TTag::FlowProblemNohyst>
+{ static constexpr bool value = true; };
+#endif
+
 template<class TypeTag>
 struct EnableDiffusion<TypeTag, TTag::FlowProblemNohyst>
 { static constexpr bool value = false; };

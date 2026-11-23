@@ -33,6 +33,10 @@ namespace Opm::Properties::TTag {
     struct FlowProblemNohyst;
 }
 
+namespace Opm {
+template <class TypeTag> class TpfaLinearizerGpuParams;
+}
+
 namespace Opm::gpuistl {
 
 namespace dispatcher_detail {
@@ -83,7 +87,8 @@ template <class CpuTypeTag>
 class GpuBlackoilNohystIntensiveQuantities
 {
 public:
-    using Problem            = Opm::GetPropType<CpuTypeTag, Opm::Properties::Problem>;
+    using Scalar = Opm::GetPropType<CpuTypeTag, Opm::Properties::Scalar>;
+    using Problem = Opm::GetPropType<CpuTypeTag, Opm::Properties::Problem>;
     using SolutionVector = Opm::GetPropType<CpuTypeTag, Opm::Properties::SolutionVector>;
     using IntensiveQuantities = Opm::GetPropType<CpuTypeTag, Opm::Properties::IntensiveQuantities>;
 
@@ -101,6 +106,16 @@ public:
                 std::span<IntensiveQuantities> outIQ,
                 unsigned timeIdx);
 
+    /// Assemble the reservoir from the dispatcher-owned current and previous IQs.
+    void assemble(TpfaLinearizerGpuParams<CpuTypeTag>& buffers,
+                  const Problem& cpuProblem, Scalar dt) const;
+
+    /// Refresh the previous slot after the host recomputes its history, for example on restart.
+    void invalidatePrevious();
+
+    /// Publish the accepted current IQs as the previous timestep's state.
+    void advanceTimeLevel();
+
     /// The name of the chosen configuration, or \c nullptr before the first
     /// call to \c update().
     const char* configurationName() const;
@@ -113,6 +128,10 @@ private:
                             const SolutionVector& solution,
                             std::span<IntensiveQuantities> outIQ,
                             unsigned timeIdx) = 0;
+        virtual void assemble(TpfaLinearizerGpuParams<CpuTypeTag>& buffers,
+                              const Problem& cpuProblem, Scalar dt) = 0;
+        virtual void invalidatePrevious() = 0;
+        virtual void advanceTimeLevel() = 0;
         virtual const char* name() const = 0;
     };
 

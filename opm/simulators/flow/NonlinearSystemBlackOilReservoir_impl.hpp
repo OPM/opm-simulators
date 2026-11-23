@@ -35,10 +35,12 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/simulators/flow/countGlobalCells.hpp>
+#include <opm/simulators/linalg/exportSystem.hpp>
 #include <opm/simulators/linalg/LinearSolverAcceleratorType.hpp>
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <filesystem>
 #include <functional>
 #include <iomanip>
@@ -50,6 +52,7 @@
 #include <string>
 #include <string_view>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -89,7 +92,13 @@ NonlinearSystemBlackOilReservoir(Simulator& simulator,
     // TODO: remember to fix!
     if (this->param_.nonlinear_solver_ == "nldd") {
         if constexpr (getPropValue<TypeTag, Properties::RunAssemblyOnGpu>()) {
-            OPM_THROW(std::invalid_argument, "GPU assembly does not support NLDD.");
+            bool gpuAssembly = true;
+            if constexpr (requires { simulator.model().useGpuReservoirAssembly(); }) {
+                gpuAssembly = simulator.model().useGpuReservoirAssembly();
+            }
+            if (gpuAssembly) {
+                OPM_THROW(std::invalid_argument, "GPU assembly does not support NLDD.");
+            }
         }
         if (terminal_output) {
             OpmLog::info("Using Non-Linear Domain Decomposition solver (nldd).");
@@ -330,10 +339,26 @@ nonlinearIterationNewton(const SimulatorTimerInterface& timer,
 #endif
         BVector x(residentUpdate && !shouldStoreSolutionUpdate() ? 0 : nc);
 
+        const char* initialSystemOutputDir = nullptr;
+        if (timer.reportStepNum() == 0 && timer.currentStepNum() == 0
+            && this->simulator_.problem().iterationContext().isFirstGlobalIteration()
+            && this->grid_.comm().size() == 1 && !this->wellModel().empty())
+        {
+            initialSystemOutputDir = std::getenv("OPM_EXPORT_INITIAL_WELL_SYSTEM");
+        }
+
         linear_solve_setup_time_ = 0.0;
         try {
-            this->wellModel().linearize(this->simulator().model().linearizer().jacobian(),
-                                        this->simulator().model().linearizer().residual());
+            auto& linearizer = this->simulator().model().linearizer();
+            bool gpuSystemActive = false;
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+            if constexpr (getPropValue<TypeTag, Properties::RunAssemblyOnGpu>()) {
+                gpuSystemActive = linearizer.gpuSystemActive();
+            }
+#endif
+            if (!gpuSystemActive) {
+                this->wellModel().linearize(linearizer.jacobian(), linearizer.residual());
+            }
 
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
             if constexpr (getPropValue<TypeTag, Properties::RunAssemblyOnGpu>()
@@ -348,12 +373,12 @@ nonlinearIterationNewton(const SimulatorTimerInterface& timer,
                     solver.solveGpu(bridge.correction());
                     bridge.orderUpdateAfterSolver();
                 } else {
-                    solveJacobianSystem(x);
+                    solveJacobianSystem(x, initialSystemOutputDir);
                 }
             } else
 #endif
             {
-                solveJacobianSystem(x);
+                solveJacobianSystem(x, initialSystemOutputDir);
             }
 
             report.linear_solve_setup_time += linear_solve_setup_time_;
@@ -569,37 +594,65 @@ relativeChange() const
 template <class TypeTag>
 void
 NonlinearSystemBlackOilReservoir<TypeTag>::
-solveJacobianSystem(BVector& x)
+solveJacobianSystem(BVector& x, const char* initialSystemOutputDir)
 {
-    auto& jacobian = this->simulator_.model().linearizer().jacobian().istlMatrix();
-    auto& residual = this->simulator_.model().linearizer().residual();
-    auto& linSolver = this->simulator_.model().newtonMethod().linearSolver();
+    auto& model = this->simulator_.model();
+    auto& linearizer = model.linearizer();
+    auto& jacobian = linearizer.jacobian().istlMatrix();
+    auto& residual = linearizer.residual();
+    auto& linSolver = model.newtonMethod().linearSolver();
+
+    std::string exportTag;
+    const auto exportCoupledSystem = [&] {
+        if constexpr (std::is_same_v<Scalar, double> && requires {
+            linearizer.exportSystem(0, exportTag, initialSystemOutputDir);
+        }) {
+            if (initialSystemOutputDir && *initialSystemOutputDir) {
+                std::filesystem::create_directories(initialSystemOutputDir);
+                linearizer.exportSystem(0, exportTag, initialSystemOutputDir);
+            }
+        }
+    };
+    const auto exportCorrection = [&] {
+        if constexpr (std::is_same_v<Scalar, double>) {
+            if (!exportTag.empty()) {
+                const auto path = (std::filesystem::path(initialSystemOutputDir) / "x").string();
+                Opm::exportVector(x, exportTag.c_str(), path.c_str());
+            }
+        }
+    };
 
 #if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
     if constexpr (getPropValue<TypeTag, Properties::RunAssemblyOnGpu>()) {
-        if (this->simulator_.model().linearizer().gpuSystemActive()) {
-            auto& linearizer = this->simulator_.model().linearizer();
+        if (linearizer.gpuSystemActive()) {
             Dune::Timer perfTimer;
             perfTimer.start();
+            const auto wellContributions = linearizer.linearizeGpuWellContributions();
+            exportCoupledSystem();
             if (linSolver.prepareGpu(linearizer.gpuJacobian(),
                                      linearizer.flattenedGpuResidual()))
             {
                 this->linear_solve_setup_time_ = perfTimer.stop();
-                x = 0.0;
-                linSolver.solveGpu(x);
+                if (linSolver.solveGpu(x) && wellContributions.residualRows != 0) {
+                    OpmLog::debug(fmt::format(
+                        "[GPU wells] resident solve: {} sparse matrix blocks, {} residual rows",
+                        wellContributions.matrixBlocks, wellContributions.residualRows));
+                }
                 if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
-                    auto& model = this->simulator_.model();
                     if (model.hasGpuPropertyAssemblyBridge()) {
                         model.gpuNewtonDispatcher().bridge().recordCompatibilityCorrectionDownload(
                             x.dim() * sizeof(Scalar));
                     }
                 }
+                exportCorrection();
                 return;
             }
+            OPM_THROW(std::logic_error, "GPU solver selection changed after TPFA assembly");
         }
     }
 #endif
 
+    exportCoupledSystem();
     const int numSolvers = linSolver.numAvailableSolvers();
     if (numSolvers > 1 && (linSolver.getSolveCount() % 100 == 0)) {
         if (this->terminal_output_) {
@@ -649,6 +702,7 @@ solveJacobianSystem(BVector& x)
         // consistent, this is not relevant for OPM-flow...
         linSolver.solve(x);
     }
+    exportCorrection();
 }
 
 template <class TypeTag>
