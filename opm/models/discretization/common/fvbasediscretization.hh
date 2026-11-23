@@ -1280,6 +1280,12 @@ public:
     Scalar gridTotalVolume() const
     { return gridTotalVolume_; }
 
+    template <class Func>
+    void withHostStateForOutput(unsigned, Func&& func) const
+    {
+        std::forward<Func>(func)();
+    }
+
     /*!
      * \brief Reference to the solution at a given history index as a block vector.
      *
