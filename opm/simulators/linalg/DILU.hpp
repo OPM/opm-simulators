@@ -207,10 +207,11 @@ private:
 
     void parallelUpdate()
     {
+        const std::size_t num_rows = A_.N();
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-        for (std::size_t row = 0; row != A_.N(); ++row) {
+        for (std::size_t row = 0; row < num_rows; ++row) {
             Dinv_[natural_to_reorder_[row]] = A_[row][row];
         }
 
