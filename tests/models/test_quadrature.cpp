@@ -49,6 +49,7 @@ using AluGrid = Dune::ALUGrid<dim, dim, elType, Dune::nonconforming, Dune::ALUGr
 #include <opm/models/discretization/vcfv/vcfvstencil.hh>
 
 #include <array>
+#include <stdexcept>
 
 const unsigned dim = 3;
 using Scalar = double;
@@ -106,7 +107,10 @@ void testIdenityMapping()
 
                 GlobalPosition diff(localPos);
                 diff -= globalPos;
-                assert(diff.two_norm() < 1e-10);
+                // Checked without assert(), which NDEBUG compiles out.
+                if (!(diff.two_norm() < 1e-10)) {
+                    throw std::runtime_error("The identity mapping moves a point");
+                }
             }
         }
     }
