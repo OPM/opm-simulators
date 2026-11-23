@@ -93,6 +93,11 @@ public:
                 const bool stop_or_zero_rate_target);
 
     //! \brief Update values from newton update vector.
+    //! \param dwells Newton update vector
+    //! \param relaxation_factor Relaxation factor
+    //! \param DFLimit Maximum change in fraction allowed
+    //! \param stop_or_zero_rate_target True to set rate to zero
+    //! \param max_pressure_change Maximum pressure change allowed
     //! \param controlled_phases Phases (canonical index) targeted by the current rate
     //!        control. The fraction updates of the top segment are damped such that the
     //!        sum of fractions of these phases is reduced by at most a factor 1/2,
