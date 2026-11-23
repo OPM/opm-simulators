@@ -55,6 +55,7 @@
 #include <opm/material/fluidmatrixinteractions/GpuEclMaterialLawManager.hpp>
 #include <opm/material/thermal/GpuEclThermalLawManager.hpp>
 #include <opm/simulators/flow/GpuFlowProblem.hpp>
+#include <opm/simulators/linalg/TrueImpesWeights.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
@@ -290,32 +291,11 @@ __global__ void trueImpesWeightsKernel(ModelView model,
     Scalar rhs[numEq] = {};
     Scalar result[numEq] = {};
     rhs[pressureIndex] = 1.0;
-    for (unsigned eq = 0; eq < numEq; ++eq) {
-        for (unsigned pv = 0; pv < numEq; ++pv) {
-            block[pv * numEq + eq] = storage[eq].derivative(pv) / storageScale;
-            if (pv == pressureIndex) {
-                block[pv * numEq + eq] *= 50e5;
-            }
-        }
-    }
-    if (!solveBlock<Scalar, numEq>(block, rhs, result)) {
+    Amg::detail::formTrueImpesStorageJacobian<numEq>(storage, storageScale,
+                                                     pressureIndex, block);
+    if (!solveBlock<Scalar, numEq>(block, rhs, result)
+        || !Amg::detail::normalizeTrueImpesWeights<numEq>(result, weights + cell * numEq)) {
         atomicExch(failed, 1);
-        return;
-    }
-    Scalar maxAbs = 0.0;
-    for (unsigned eq = 0; eq < numEq; ++eq) {
-        if (!isfinite(result[eq])) {
-            atomicExch(failed, 1);
-            return;
-        }
-        maxAbs = max(maxAbs, abs(result[eq]));
-    }
-    if (!(maxAbs > 0.0) || !isfinite(maxAbs)) {
-        atomicExch(failed, 1);
-        return;
-    }
-    for (unsigned eq = 0; eq < numEq; ++eq) {
-        weights[cell * numEq + eq] = result[eq] / maxAbs;
     }
 }
 

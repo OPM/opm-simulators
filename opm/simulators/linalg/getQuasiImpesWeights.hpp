@@ -29,6 +29,7 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/models/parallel/threadmanager.hpp>
+#include <opm/simulators/linalg/TrueImpesWeights.hpp>
 #include <algorithm>
 #include <cmath>
 #include <exception>
@@ -195,18 +196,9 @@ namespace Amg
 
                 auto extrusionFactor = localElemCtx.intensiveQuantities(0, /*timeIdx=*/0).extrusionFactor();
                 auto scvVolume = localElemCtx.stencil(/*timeIdx=*/0).subControlVolume(0).volume() * extrusionFactor;
-                auto storage_scale = scvVolume / localElemCtx.simulator().timeStepSize();
-                const double pressure_scale = 50e5;
-
-                // Build the transposed matrix directly to avoid separate transpose step
-                for (int ii = 0; ii < numEq; ++ii) {
-                    for (int jj = 0; jj < numEq; ++jj) {
-                        block_transpose[jj][ii] = storage[ii].derivative(jj)/storage_scale;
-                        if (jj == pressureVarIndex) {
-                            block_transpose[jj][ii] *= pressure_scale;
-                        }
-                    }
-                }
+                const auto storageScale = scvVolume / localElemCtx.simulator().timeStepSize();
+                detail::formTrueImpesStorageJacobian<numEq>(storage, storageScale,
+                                                            pressureVarIndex, block_transpose);
                 // A rank-deficient solve cannot supply a pressure equation.
                 // Substituting rhs would pick an arbitrary conservation equation.
                 const auto reportInvalidWeights = [&localElemCtx]() {
@@ -230,17 +222,9 @@ namespace Amg
                 }
 
                 // Small-block singularity checks can be disabled in Dune.
-                double maxAbs = 0.0;
-                for (const auto weight : bweights) {
-                    if (!std::isfinite(weight)) {
-                        reportInvalidWeights();
-                    }
-                    maxAbs = std::max(maxAbs, std::fabs(static_cast<double>(weight)));
-                }
-                if (maxAbs == 0.0) {
+                if (!detail::normalizeTrueImpesWeights<numEq>(bweights.data(), bweights.data())) {
                     reportInvalidWeights();
                 }
-                bweights /= maxAbs;
 
                 const auto index = localElemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
                 weights[index] = bweights;

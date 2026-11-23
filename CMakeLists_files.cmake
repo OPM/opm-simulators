@@ -1248,6 +1248,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/FlowLinearSolverParameters.hpp
   opm/simulators/linalg/foreignoverlapfrombcrsmatrix.hh
   opm/simulators/linalg/getQuasiImpesWeights.hpp
+  opm/simulators/linalg/TrueImpesWeights.hpp
   opm/simulators/linalg/globalindices.hh
   opm/simulators/linalg/gpuistl_assembly_if_available.hpp
   opm/simulators/linalg/GraphColoring.hpp
