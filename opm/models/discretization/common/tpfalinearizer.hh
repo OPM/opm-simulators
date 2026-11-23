@@ -795,6 +795,7 @@ public:
             return;
         }
         const unsigned int numCells = model_().numTotalDof();
+        prepareHostIntensiveQuantitiesForParallelRead_(numCells);
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
@@ -948,9 +949,20 @@ private:
         }
     }
 
+    void prepareHostIntensiveQuantitiesForParallelRead_(unsigned numCells)
+    {
+        if constexpr (requires { model_().ensureHostIntensiveQuantities(0); }) {
+            if (numCells != 0) {
+                // A failed allocation or GPU copy must propagate on the calling thread.
+                model_().ensureHostIntensiveQuantities(/*timeIdx=*/0);
+            }
+        }
+    }
+
     template <class SubDomainType>
     void linearize_source_terms(unsigned int numCells, const SubDomainType& domain)
     {
+        prepareHostIntensiveQuantitiesForParallelRead_(numCells);
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
