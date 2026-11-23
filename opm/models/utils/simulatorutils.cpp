@@ -29,10 +29,12 @@
 #include <opm/models/utils/parametersystem.hpp>
 
 #include <cmath>
+#include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <sstream>
-#include <sys/stat.h>
+#include <stdexcept>
+#include <system_error>
 #include <unistd.h>
 #include <vector>
 
@@ -124,12 +126,16 @@ std::string simulatorOutputDir()
         outputDir = ".";
     }
 
-    // TODO: replace this by std::filesystem once we require c++-2017
-    struct stat st;
-    if (::stat(outputDir.c_str(), &st) != 0)
-        throw std::runtime_error("Could not access output directory '" + outputDir + "':" +
-                                 strerror(errno));
-    if (!S_ISDIR(st.st_mode)) {
+    std::error_code ec;
+    const auto status = std::filesystem::status(outputDir, ec);
+    if (ec) {
+        throw std::runtime_error("Could not access output directory '" + outputDir + "': " +
+                                 ec.message());
+    }
+    if (!std::filesystem::exists(status)) {
+        throw std::runtime_error("Output directory '" + outputDir + "' does not exist");
+    }
+    if (!std::filesystem::is_directory(status)) {
         throw std::runtime_error("Path to output directory '" +outputDir +
                                  "' exists but is not a directory");
     }

@@ -71,7 +71,7 @@ void printDistributionSummary(const DomainInfo& info);
  * @param header Header in file
  * @param data Data to write to file
  */
-void writeNlddFile(const std::string& file,
+void writeNlddFile(const std::filesystem::path& file,
                    std::string_view header,
                    const std::vector<int>& data);
 

@@ -28,8 +28,10 @@
 #include <mpi.h>
 #endif
 
+#include <chrono>
 #include <csignal>
 #include <iostream>
+#include <thread>
 #include <unordered_map>
 #include <sys/ioctl.h>
 #include <unistd.h>
@@ -151,7 +153,7 @@ void resetTerminal()
 
     // it seems like some terminals sometimes takes their time to react, so let's
     // accommodate them.
-    usleep(/*usec=*/500*1000);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     // this requires the 'stty' command to be available in the command search path. on
     // most linux systems, is the case. (but even if the system() function fails, the
