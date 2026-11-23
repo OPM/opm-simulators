@@ -645,20 +645,6 @@ public:
 #endif
     }
 
-private:
-    // Out of line so the accessor above stays small enough to inline in the assembly loop.
-    [[noreturn]] static void throwIntensiveQuantityError_(bool cacheDisabled)
-    {
-        if (cacheDisabled) {
-            OPM_THROW(std::logic_error,
-                      "Intensive quantity cache is disabled; "
-                      "use --enable-intensive-quantity-cache=true");
-        }
-        OPM_THROW(std::logic_error, "Intensive quantites need to be updated in code");
-    }
-
-public:
-
 protected:
 
     template <EclMultiplexerApproach ApproachArg>

@@ -13,6 +13,7 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include <cmath>
 #include <config.h>
 
 // Tricks for older versions of ROCm that do not support alugrid or dune-fem
@@ -675,7 +676,8 @@ bool GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::computeTrueImpesWeigh
 {
     auto& owner = bridge();
     constexpr unsigned numEq = getPropValue<CpuTypeTag, Properties::NumEq>();
-    if (weights.dim() != owner.intensiveQuantitiesView(0).size() * numEq || !(timeStepSize > 0.0)) {
+    if (weights.dim() != owner.intensiveQuantitiesView(0).size() * numEq
+        || !(timeStepSize > 0.0) || !std::isfinite(timeStepSize)) {
         OPM_THROW(std::invalid_argument, "Invalid resident true-IMPES weights dimensions or timestep");
     }
     if (!impl_->trueImpesStatus) {
