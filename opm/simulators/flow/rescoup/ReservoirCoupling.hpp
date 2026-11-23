@@ -210,7 +210,8 @@ struct InjectionRates {
     [[nodiscard]] Scalar  operator[](Phase p) const noexcept { return rate[static_cast<std::size_t>(p)]; }
 };
 
-// Used to communicate potentials for oil, gas, and water rates between slave and master processes
+// Used to communicate potentials for oil, gas, and water rates between slave and master
+// processes. In SI, like the rates.
 template <class Scalar>
 struct Potentials {
     std::array<Scalar, static_cast<std::size_t>(Phase::Count)> rate{};
