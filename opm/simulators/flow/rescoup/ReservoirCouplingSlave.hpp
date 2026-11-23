@@ -112,6 +112,12 @@ public:
     ///   network this sync step.
     /// @details Delegates to ReservoirCouplingSlaveReportStep.
     bool connectedToMasterCoupledNetwork() const;
+    /// @brief Forget every master injection target held from an earlier receive
+    /// @details Delegates to ReservoirCouplingSlaveReportStep
+    void clearMasterInjectionTargets();
+    /// @brief Forget every master production target and limit held from an earlier receive
+    /// @details Delegates to ReservoirCouplingSlaveReportStep
+    void clearMasterProductionConstraints();
 
     ReservoirCoupling::Logger& logger() { return this->logger_; }
     ReservoirCoupling::Logger& logger() const { return this->logger_; }

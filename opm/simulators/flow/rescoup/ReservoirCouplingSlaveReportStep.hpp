@@ -177,6 +177,16 @@ public:
     bool lastReceivedMasterGroupNodePressuresIsFinal() const
     { return last_received_master_group_node_pressures_is_final_; }
 
+    /// @brief Forget every master injection target held from an earlier receive.
+    void clearMasterInjectionTargets() { this->master_injection_targets_.clear(); }
+
+    /// @brief Forget every master production target and limit held from an earlier receive.
+    void clearMasterProductionConstraints()
+    {
+        this->master_production_targets_.clear();
+        this->master_production_limits_.clear();
+    }
+
     /// @brief Whether this slave is connected to the master's cross-rescoup
     ///   network this sync step (i.e. at least one of its master groups is a
     ///   leaf node in the master network). Set by

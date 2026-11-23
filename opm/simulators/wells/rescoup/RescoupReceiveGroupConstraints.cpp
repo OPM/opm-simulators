@@ -46,11 +46,20 @@ receiveGroupConstraintsFromMaster()
     auto& rescoup_slave = this->reservoir_coupling_slave_;
     auto [num_inj_targets, num_prod_constraints, num_gas_lift_limits] =
         rescoup_slave.receiveNumGroupConstraintsFromMaster();
+    // The master sends a list only when it has something to put in it, and every
+    // send carries the complete lists.  An empty list therefore means that the
+    // master has no target or limit for any slave group: forget the ones held.
     if (num_inj_targets > 0) {
         rescoup_slave.receiveInjectionGroupTargetsFromMaster(num_inj_targets);
     }
+    else {
+        rescoup_slave.clearMasterInjectionTargets();
+    }
     if (num_prod_constraints > 0) {
         rescoup_slave.receiveProductionGroupConstraintsFromMaster(num_prod_constraints);
+    }
+    else {
+        rescoup_slave.clearMasterProductionConstraints();
     }
     // The master sends a record for every slave group with each constraint update, and
     // none when it has no master groups for this slave.  The records replace the limits
