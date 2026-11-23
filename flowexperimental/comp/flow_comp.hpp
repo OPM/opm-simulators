@@ -29,6 +29,7 @@
 #include <opm/models/ptflash/flashmodel.hh>
 
 #include <opm/simulators/flow/Main.hpp>
+#include <opm/simulators/flow/FICompositionalModel.hpp>
 #include <opm/simulators/flow/FlowProblemComp.hpp>
 #include <opm/simulators/flow/FlowProblemCompProperties.hpp>
 #include <opm/simulators/flow/NewTranFluxModule.hpp>
@@ -164,6 +165,10 @@ struct TracerModel<TypeTag, TTag::FlowCompProblem<NumComp, EnableWater>> {
 template<class TypeTag, int NumComp, bool EnableWater>
 struct FluxModule<TypeTag, TTag::FlowCompProblem<NumComp, EnableWater>>
 { using type = NewTranFluxModule<TypeTag>; };
+
+template<class TypeTag, int NumComp, bool EnableWater>
+struct Model<TypeTag, TTag::FlowCompProblem<NumComp, EnableWater>>
+{ using type = FICompositionalModel<TypeTag>; };
 
 template<class TypeTag, int NumComp, bool EnableWater>
 struct Linearizer<TypeTag, TTag::FlowCompProblem<NumComp, EnableWater>>
