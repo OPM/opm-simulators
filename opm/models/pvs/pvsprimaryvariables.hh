@@ -41,6 +41,7 @@
 #include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
 #include <opm/models/pvs/pvsproperties.hh>
 
+#include <bit>
 #include <cassert>
 #include <cmath>
 #include <ostream>
@@ -216,7 +217,12 @@ public:
      * \brief Returns the phase with the lowest index that is present.
      */
     unsigned lowestPresentPhaseIdx() const
-    { return static_cast<unsigned>(ffs(phasePresence_) - 1); }
+    {
+        if (phasePresence_ == 0) {
+            throw NumericalProblem("Phase state was 0, i.e., no fluid is present");
+        }
+        return static_cast<unsigned>(std::countr_zero(static_cast<unsigned short>(phasePresence_)));
+    }
 
     /*!
      * \brief Assignment operator from an other primary variables object
