@@ -37,6 +37,7 @@
 #include <opm/simulators/wells/WellConstraints.hpp>
 #include <opm/simulators/wells/WellGroupConstraints.hpp>
 #include <opm/simulators/wells/WellGroupControls.hpp>
+#include <opm/simulators/wells/WellHelpers.hpp>
 #include <opm/simulators/wells/GroupStateHelper.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
@@ -314,7 +315,7 @@ zeroGroupRateTarget(const GroupStateHelperType& groupStateHelper) const
                                               controls.injector_type,
                                               efficiencyFactor);
         if (target.has_value()) {
-            return target.value() == 0.0;
+            return wellhelpers::isZeroRateTarget(target.value());
         } else {
             return false;
         }
