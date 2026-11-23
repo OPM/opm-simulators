@@ -675,6 +675,22 @@ checkGconsaleLimits(const Group& group,
         production_target += consumption_rate;
     }
 
+    // Sales gas control works by reinjecting the surplus gas, which requires
+    // gas injectors subordinate to the group. Without any, there is no
+    // reinjection to adjust and the sales rate limits are not enforced.
+    if (!this->hasOpenGasInjector(group, reportStepIdx)) {
+        const bool limit_violated = sales_rate > gconsale.max_sales_rate
+                                 || sales_rate < gconsale.min_sales_rate;
+        if (limit_violated && comm_.rank() == 0) {
+            deferred_logger.warning("GCONSALE_NO_GAS_INJECTORS",
+                                    fmt::format("Group {} has a GCONSALE sales gas rate "
+                                                "limit violated, but no open gas injectors "
+                                                "in its subtree to control the sales gas rate. "
+                                                "No action is taken.", group.name()));
+        }
+        return;
+    }
+
     if (sales_rate > gconsale.max_sales_rate) {
         switch (gconsale.max_proc) {
         case GConSale::MaxProcedure::NONE: {
@@ -748,6 +764,28 @@ checkGconsaleLimits(const Group& group,
 
     if (!ss.empty() && comm_.rank() == 0)
         deferred_logger.info(ss);
+}
+
+template<typename Scalar, typename IndexTraits>
+bool BlackoilWellModelGeneric<Scalar, IndexTraits>::
+hasOpenGasInjector(const Group& group,
+                   const int reportStepIdx) const
+{
+    const auto is_open_gas_injector = [this, reportStepIdx](const std::string& wellName)
+    {
+        const auto& well = schedule().getWell(wellName, reportStepIdx);
+        return well.isInjector()
+            && (well.injectorType() == InjectorType::GAS)
+            && (well.getStatus() == Well::Status::OPEN);
+    };
+
+    return std::ranges::any_of(group.wells(), is_open_gas_injector)
+        || std::ranges::any_of(group.groups(),
+                               [this, reportStepIdx](const std::string& groupName)
+                               {
+                                   return this->hasOpenGasInjector(schedule().getGroup(groupName, reportStepIdx),
+                                                                   reportStepIdx);
+                               });
 }
 
 template<class Scalar, typename IndexTraits>
