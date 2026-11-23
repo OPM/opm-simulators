@@ -48,8 +48,6 @@
 #include <ranges>
 #include <stdexcept>
 #include <string_view>
-#include <sys/ioctl.h>
-#include <unistd.h>
 
 namespace {
 
