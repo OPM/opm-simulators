@@ -52,10 +52,11 @@
 #include <fmt/format.h>
 
 #include <algorithm>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <string>
-#include <unistd.h>
+#include <thread>
 #include <vector>
 
 namespace Opm::detail {
@@ -127,7 +128,7 @@ void checkAllMPIProcesses()
             std::size_t msgs = comm.size() - 1;
             for(std::size_t tries = 0; msgs >0 && tries < 3; ++tries)
             {
-                sleep(3);
+                std::this_thread::sleep_for(std::chrono::seconds(3));
                 int flag, idx;
                 for(auto left_msgs = msgs; left_msgs > 0; --left_msgs)
                 {
@@ -159,7 +160,7 @@ void checkAllMPIProcesses()
             bool completed = false;
             for(std::size_t tries = 0; !completed && tries < 3; tries++)
             {
-                sleep(3);
+                std::this_thread::sleep_for(std::chrono::seconds(3));
                 int flag;
                 if( auto error = MPI_Test(&request, &flag, MPI_STATUS_IGNORE);
                     error != MPI_SUCCESS) {
