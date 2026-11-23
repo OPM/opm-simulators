@@ -336,6 +336,8 @@ struct ImplFor final : GpuBlackoilNohystIntensiveQuantities<CpuTypeTag>::Impl
     std::optional<GpuIntensiveQuantities> prototype;
     // The constructor reads the mixing limits, so the first update() need not.
     bool mixingLimitsCurrent = true;
+    std::vector<GetPropType<CpuTypeTag, Properties::Scalar>> lastGasDissolution;
+    std::vector<GetPropType<CpuTypeTag, Properties::Scalar>> lastOilVaporization;
     std::vector<GpuPrimaryVariables> hostPriVars;
     std::vector<GpuIntensiveQuantities> hostIQ;
     GpuBuffer<GpuPrimaryVariables> devicePriVars;
@@ -381,17 +383,48 @@ struct ImplFor final : GpuBlackoilNohystIntensiveQuantities<CpuTypeTag>::Impl
         return Traits::name;
     }
 
+    template <class Scalar, class ReadLimit>
+    static void refreshLimit(GpuBuffer<Scalar>& device, std::vector<Scalar>& previous,
+                             std::size_t count, ReadLimit readLimit)
+    {
+        bool changed = previous.size() != count;
+        previous.resize(count);
+#ifdef _OPENMP
+#pragma omp parallel for reduction(||:changed) if(count >= 16384)
+#endif
+        for (std::size_t cell = 0; cell < count; ++cell) {
+            const Scalar value = readLimit(static_cast<unsigned>(cell));
+            changed |= previous[cell] != value;
+            previous[cell] = value;
+        }
+        if (changed) {
+            device.copyFromHost(previous);
+        }
+    }
+
     void update(const Problem& cpuProblem,
                 const SolutionVector& solution,
                 std::span<IntensiveQuantities> outIQ,
                 unsigned timeIdx) override
     {
+        const auto numDof = solution.size();
         if (!mixingLimitsCurrent) {
-            problemBuf->refreshMixingLimits(cpuProblem, timeIdx);
+            // VAPPARS is rejected during validation, so max oil saturation
+            // stays zero. Publish a rate limit only when its values change.
+            if (CpuFluidSystem::enableDissolvedGas()) {
+                refreshLimit(problemBuf->maxGasDissolutionFactorStorage(), lastGasDissolution,
+                             numDof, [&](unsigned cell) {
+                                 return cpuProblem.maxGasDissolutionFactor(timeIdx, cell);
+                             });
+            }
+            if (CpuFluidSystem::enableVaporizedOil()) {
+                refreshLimit(problemBuf->maxOilVaporizationFactorStorage(), lastOilVaporization,
+                             numDof, [&](unsigned cell) {
+                                 return cpuProblem.maxOilVaporizationFactor(timeIdx, cell);
+                             });
+            }
         }
         mixingLimitsCurrent = false;
-
-        const auto numDof = solution.size();
 #ifdef _OPENMP
 #pragma omp parallel for if(numDof >= 16384)
 #endif

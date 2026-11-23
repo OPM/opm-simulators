@@ -31,6 +31,7 @@
 
 #include <opm/material/fluidsystems/blackoilpvt/BlackOilPvtApproaches.hpp>
 
+#include <opm/simulators/flow/FlowProblemBlackoil.hpp>
 #include <opm/simulators/flow/FlowProblemBlackoilProperties.hpp>
 #include <opm/simulators/flow/FlowProblemNohystTypeTag.hpp>
 #include <opm/simulators/flow/FIBlackoilModel.hpp>
