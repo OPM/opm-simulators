@@ -721,6 +721,8 @@ static void runProductionDispatcherTest(const std::string& deckPath)
     Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcher<ProductionTypeTag> dispatcher;
     dispatcher.update(problem, solution, /*timeIdx=*/0);
     BOOST_CHECK(dispatcher.bridge().hasIntensiveQuantities(/*timeIdx=*/0));
+    BOOST_CHECK(dispatcher.bridge().hostPrimaryVariablesCurrent(0));
+    const auto firstGeneration = dispatcher.bridge().primaryVariablesGeneration(0);
     dispatcher.materializeHostIntensiveQuantities(
         /*timeIdx=*/0, intensiveQuantities.data(), numCells);
 
@@ -750,6 +752,8 @@ static void runProductionDispatcherTest(const std::string& deckPath)
     dispatcher.update(problem, changedSolution, /*timeIdx=*/0);
     BOOST_CHECK(currentIqData == dispatcher.bridge().intensiveQuantitiesView(0).data());
     BOOST_CHECK(previousIqData == dispatcher.bridge().intensiveQuantitiesView(1).data());
+    BOOST_CHECK_GT(dispatcher.bridge().primaryVariablesGeneration(0), firstGeneration);
+    BOOST_CHECK(dispatcher.bridge().hostPrimaryVariablesCurrent(0));
     dispatcher.bridge().waitForAssembly(/*timeIdx=*/0);
     dispatcher.materializeHostIntensiveQuantities(
         /*timeIdx=*/0, intensiveQuantities.data(), numCells);
@@ -779,12 +783,15 @@ static void runProductionDispatcherTest(const std::string& deckPath)
                               FluidSystem::waterPhaseIdx)),
                           1e-6);
     }
-    // The rejected current slot must not supply IQs to host reads or history.
-    dispatcher.bridge().invalidateIntensiveQuantities(0);
+    // A declared host edit invalidates only that slot; merely reading host
+    // state and downloading IQs above preserves the resident generation.
+    dispatcher.bridge().invalidateHostEditedPrimaryVariables(0);
+    BOOST_CHECK(!dispatcher.bridge().hasPrimaryVariables(0));
     BOOST_CHECK(!dispatcher.bridge().hasIntensiveQuantities(0));
     BOOST_CHECK(dispatcher.bridge().hasIntensiveQuantities(1));
 
     dispatcher.advanceTimeLevel();
+    BOOST_CHECK(!dispatcher.bridge().hasPrimaryVariables(1));
     BOOST_CHECK(!dispatcher.bridge().hasIntensiveQuantities(1));
 
     dispatcher.update(problem, solution, 0);

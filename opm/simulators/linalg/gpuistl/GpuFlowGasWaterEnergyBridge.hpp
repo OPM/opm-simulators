@@ -31,6 +31,7 @@
 #include <opm/simulators/linalg/gpuistl/gpu_resources.hpp>
 
 #include <array>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -55,6 +56,7 @@ class GpuFlowGasWaterEnergyBridge
     using CpuPrototypeTypeTag = Properties::TTag::FlowGasWaterEnergyCpuDeviceContract<CpuTypeTag>;
     using Scalar = GetPropType<CpuTypeTag, Properties::Scalar>;
     using Problem = GetPropType<CpuTypeTag, Properties::Problem>;
+    using HostPrimaryVariables = GetPropType<CpuTypeTag, Properties::PrimaryVariables>;
     using SolutionVector = GetPropType<CpuTypeTag, Properties::SolutionVector>;
     using HostIntensiveQuantities = GetPropType<CpuTypeTag, Properties::IntensiveQuantities>;
     using CpuFluidSystem = GetPropType<CpuTypeTag, Properties::FluidSystem>;
@@ -104,10 +106,42 @@ public:
         waitForLastWriter_();
     }
 
-    void invalidateIntensiveQuantities(unsigned timeIdx)
+    bool hasPrimaryVariables(unsigned timeIdx) const
+    { return timeIdx < numTimeSlots && primaryGeneration_[timeIdx] != 0; }
+
+    std::uint64_t primaryVariablesGeneration(unsigned timeIdx) const
+    { validateTimeIdx_(timeIdx); return primaryGeneration_[timeIdx]; }
+
+    bool hostPrimaryVariablesCurrent(unsigned timeIdx) const
+    { return hasPrimaryVariables(timeIdx) && hostPrimaryGeneration_[timeIdx] == primaryGeneration_[timeIdx]; }
+
+    void invalidateHostEditedPrimaryVariables(unsigned timeIdx)
     {
         validateTimeIdx_(timeIdx);
+        primaryGeneration_[timeIdx] = hostPrimaryGeneration_[timeIdx] = 0;
         deviceIqValid_[timeIdx] = false;
+        iqGeneration_[timeIdx] = 0;
+    }
+
+    void materializeHostPrimaryVariables(unsigned timeIdx, SolutionVector& destination)
+    {
+        validateReadySlot_(timeIdx);
+        if (!hasPrimaryVariables(timeIdx)) {
+            OPM_THROW(std::logic_error, "Invalid GPU primary-variable slot");
+        }
+        if (destination.size() != numDof_) {
+            OPM_THROW(std::invalid_argument, "Invalid host primary-variable destination size");
+        }
+        if (hostPrimaryVariablesCurrent(timeIdx)) {
+            return;
+        }
+        auto& mirror = hostPrimaryVariables_[timeIdx];
+        OPM_GPU_SAFE_CALL(cudaStreamSynchronize(stream_.get()));
+        primaryVariablesBuffer_[timeIdx]->copyToHost(mirror);
+        for (std::size_t i = 0; i < numDof_; ++i) {
+            destination[i] = HostPrimaryVariables(mirror[i]);
+        }
+        hostPrimaryGeneration_[timeIdx] = primaryGeneration_[timeIdx];
     }
 
     void updatePrimaryVariables(const Problem& cpuProblem,
@@ -131,6 +165,9 @@ public:
 
         detail::gpuMemcpyHostToDeviceAsync(primaryVariablesBuffer_[timeIdx]->data(),
                                            hostPrimaryVariables.data(), numDof_, stream_.get());
+        primaryGeneration_[timeIdx] = ++generation_;
+        hostPrimaryGeneration_[timeIdx] = primaryGeneration_[timeIdx];
+        iqGeneration_[timeIdx] = 0;
         deviceIqValid_[timeIdx] = false;
         lastWriterTimeIdx_ = timeIdx;
     }
@@ -156,6 +193,7 @@ public:
     {
         validateReadySlot_(timeIdx);
         recordEvent(propertyReady_, stream_.get());
+        iqGeneration_[timeIdx] = primaryGeneration_[timeIdx];
         deviceIqValid_[timeIdx] = true;
         lastWriterTimeIdx_ = timeIdx;
     }
@@ -206,12 +244,13 @@ public:
 
     bool hasModelView() const
     {
-        return deviceIqValid_[0] && deviceIqValid_[1];
+        return hasIntensiveQuantities(0) && hasIntensiveQuantities(1);
     }
 
     bool hasIntensiveQuantities(unsigned timeIdx) const
     {
-        return timeIdx < numTimeSlots && deviceIqValid_[timeIdx];
+        return timeIdx < numTimeSlots && deviceIqValid_[timeIdx]
+               && iqGeneration_[timeIdx] == primaryGeneration_[timeIdx];
     }
 
     /*!
@@ -250,13 +289,19 @@ public:
      */
     void advanceTimeLevel()
     {
-        if (!deviceIqValid_[0]) {
-            deviceIqValid_[1] = false;
+        if (!hasIntensiveQuantities(0)) {
+            invalidateHostEditedPrimaryVariables(/*timeIdx=*/1);
             return;
         }
         detail::gpuMemcpyDeviceToDeviceAsync(intensiveQuantitiesBuffer_[1]->data(),
                                              intensiveQuantitiesBuffer_[0]->data(),
                                              numDof_, stream_.get());
+        // CPU time-level advance has already copied its current solution to history.
+        detail::gpuMemcpyDeviceToDeviceAsync(primaryVariablesBuffer_[1]->data(),
+                                             primaryVariablesBuffer_[0]->data(),
+                                             numDof_, stream_.get());
+        primaryGeneration_[1] = primaryGeneration_[0];
+        hostPrimaryGeneration_[1] = primaryGeneration_[1];
         recordPropertyReady(/*timeIdx=*/1);
     }
 
@@ -329,8 +374,17 @@ private:
                 initialIq.emplace_back(
                     cached->template withOtherFluidSystem<DeviceTypeTag>(deviceFluidSystem()));
             }
+            const auto& previousSolution = cpuModel.solution(previousTimeIdx);
+            auto& previousPrimary = hostPrimaryVariables_[previousTimeIdx];
+            for (std::size_t i = 0; i < numDof_; ++i) {
+                previousPrimary[i] = DevicePrimaryVariables(previousSolution[i]);
+            }
+            primaryVariablesBuffer_[previousTimeIdx]->copyFromHost(previousPrimary);
+            primaryGeneration_[previousTimeIdx] = ++generation_;
+            hostPrimaryGeneration_[previousTimeIdx] = primaryGeneration_[previousTimeIdx];
             intensiveQuantitiesBuffer_[previousTimeIdx]->copyFromHost(initialIq);
             deviceIqValid_[previousTimeIdx] = true;
+            iqGeneration_[previousTimeIdx] = primaryGeneration_[previousTimeIdx];
         }
     }
 
@@ -353,7 +407,7 @@ private:
     void validateValidSlot_(unsigned timeIdx) const
     {
         validateReadySlot_(timeIdx);
-        if (!deviceIqValid_[timeIdx]) {
+        if (!hasIntensiveQuantities(timeIdx)) {
             OPM_THROW(std::logic_error,
                       "GPU property bridge attempted to consume an invalid intensive-quantity slot");
         }
@@ -371,6 +425,7 @@ private:
             intensiveQuantitiesBuffer_[timeIdx].reset();
             hostPrimaryVariables_[timeIdx].clear();
             deviceIqValid_[timeIdx] = false;
+            primaryGeneration_[timeIdx] = hostPrimaryGeneration_[timeIdx] = iqGeneration_[timeIdx] = 0;
         }
         volumesBuffer_.reset();
         problemBuffer_.reset();
@@ -386,6 +441,8 @@ private:
     GPUStream stream_;
     GPUEvent propertyReady_;
     std::size_t numDof_{0};
+    std::uint64_t generation_{0};
+    std::array<std::uint64_t, numTimeSlots> primaryGeneration_{}, hostPrimaryGeneration_{}, iqGeneration_{};
     std::array<std::unique_ptr<gpuistl::GpuBuffer<DevicePrimaryVariables>>, numTimeSlots>
         primaryVariablesBuffer_{};
     std::array<std::unique_ptr<gpuistl::GpuBuffer<DeviceIntensiveQuantities>>, numTimeSlots>

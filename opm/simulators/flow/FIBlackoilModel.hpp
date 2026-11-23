@@ -133,8 +133,10 @@ public:
 #if HAVE_CUDA
         if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
             if (gpuIntensiveQuantitiesDispatcher_ && gpuIntensiveQuantitiesDispatcher_->hasBridge()
+                && gpuIntensiveQuantitiesDispatcher_->bridge().hasPrimaryVariables(timeIdx)
                 && gpuIntensiveQuantitiesDispatcher_->bridge().hasIntensiveQuantities(timeIdx)) {
                 assert(!hostOutputTimeIdx_);
+                ensureHostPrimaryVariables(timeIdx);
                 ensureHostIntensiveQuantities(timeIdx);
                 struct Scope {
                     std::optional<unsigned>& slot;
@@ -277,14 +279,8 @@ public:
      */
     void updateFailed()
     {
-#if HAVE_CUDA
-        if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
-            if (gpuIntensiveQuantitiesDispatcher_ && gpuIntensiveQuantitiesDispatcher_->hasBridge()) {
-                // Prevent the CPU rollback from reloading IQs from the rejected step.
-                gpuIntensiveQuantitiesDispatcher_->bridge().invalidateIntensiveQuantities(/*timeIdx=*/0);
-            }
-        }
-#endif
+        // Prevent the CPU rollback from reloading IQs from the rejected step.
+        this->markHostPrimaryVariablesModified(/*timeIdx=*/0);
         ParentType::updateFailed();
         invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
     }
@@ -366,6 +362,33 @@ public:
                 timeIdx, outIqPtrs.data(), numCells);
             for (std::size_t i = 0; i < numCells; ++i) {
                 this->setIntensiveQuantitiesCacheEntryValidity(i, timeIdx, true);
+            }
+        }
+    }
+
+    void ensureHostPrimaryVariables(unsigned timeIdx) const
+    {
+        if (hostOutputTimeIdx_ == timeIdx) {
+            return;
+        }
+        if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            if (!gpuIntensiveQuantitiesDispatcher_ || !gpuIntensiveQuantitiesDispatcher_->hasBridge()) {
+                return;
+            }
+            std::lock_guard<std::mutex> lock(gpuHostPrimaryVariablesMutex_);
+            auto& bridge = gpuIntensiveQuantitiesDispatcher_->bridge();
+            if (bridge.hasPrimaryVariables(timeIdx)) {
+                bridge.materializeHostPrimaryVariables(timeIdx, this->mutableSolution(timeIdx));
+            }
+        }
+    }
+
+    void markHostPrimaryVariablesModified(unsigned timeIdx) const
+    {
+        assert(!hostOutputTimeIdx_);
+        if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            if (gpuIntensiveQuantitiesDispatcher_ && gpuIntensiveQuantitiesDispatcher_->hasBridge()) {
+                gpuIntensiveQuantitiesDispatcher_->bridge().invalidateHostEditedPrimaryVariables(timeIdx);
             }
         }
     }
@@ -483,6 +506,7 @@ protected:
         std::monostate>;
     mutable GpuDispatcherStorage gpuIntensiveQuantitiesDispatcher_{};
     mutable std::mutex gpuHostIntensiveQuantitiesMutex_;
+    mutable std::mutex gpuHostPrimaryVariablesMutex_;
     mutable std::optional<unsigned> hostOutputTimeIdx_;
 
     void runGpuIntensiveQuantitiesDispatcher_(const unsigned timeIdx) const

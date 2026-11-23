@@ -1280,6 +1280,12 @@ public:
     Scalar gridTotalVolume() const
     { return gridTotalVolume_; }
 
+    // Derived models may keep the authoritative primary variables on a device.
+    // Access only refreshes a CPU mirror; mutation is declared separately.
+    void ensureHostPrimaryVariables(unsigned) const {}
+    void markHostPrimaryVariablesModified(unsigned) const {}
+
+    // CPU-only and compositional models already expose current host state.
     template <class Func>
     void withHostStateForOutput(unsigned, Func&& func) const
     {
@@ -1292,13 +1298,19 @@ public:
      * \param timeIdx The index of the solution used by the time discretization.
      */
     const SolutionVector& solution(unsigned timeIdx) const
-    { return solution_[timeIdx]->blockVector(); }
+    {
+        asImp_().ensureHostPrimaryVariables(timeIdx);
+        return solution_[timeIdx]->blockVector();
+    }
 
     /*!
      * \copydoc solution(int) const
      */
     SolutionVector& solution(unsigned timeIdx)
-    { return solution_[timeIdx]->blockVector(); }
+    {
+        asImp_().ensureHostPrimaryVariables(timeIdx);
+        return solution_[timeIdx]->blockVector();
+    }
 
   protected:
     /*!
