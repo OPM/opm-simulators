@@ -460,7 +460,10 @@ macro(opm-simulators_config_hook)
 endmacro()
 
 macro(opm-simulators_tests_hook)
-  include(${CMAKE_CURRENT_SOURCE_DIR}/modelTests.cmake)
+  # These tests run the programs in examples/
+  if(BUILD_EXAMPLES)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/modelTests.cmake)
+  endif()
 
   # Look for the opm-tests repository; if found the variable
   # HAVE_OPM_TESTS will be set to true.
