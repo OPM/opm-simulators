@@ -63,4 +63,15 @@ namespace Opm
 #endif
     }
 
+    /// Return the CMake build configuration the module was compiled in,
+    /// for example "Release" or "Debug"; empty if it is not known.
+    std::string moduleBuildType()
+    {
+#ifdef OPM_BUILD_TYPE
+        return OPM_BUILD_TYPE;
+#else
+        return "";
+#endif
+    }
+
 } // namespace Opm
