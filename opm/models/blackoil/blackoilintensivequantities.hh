@@ -804,10 +804,6 @@ public:
     {
         // This is the version of update() that does not use any ElementContext.
         // It is limited by some modules that are not yet adapted to that.
-        // the foam update scales the solvent mobility, so it must be called after the solvent
-        // update
-        static_assert(!(enableFoam && enableSolvent),
-                      "Foam with solvent must be checked before enabling.");
         static_assert(!enableMICP);
         static_assert(!enableBrine);
         static_assert(!enableDiffusion);
@@ -827,6 +823,7 @@ public:
         if constexpr (enablePolymer) {
             asImp_().polymerPropertiesUpdate_(problem, priVars, globalSpaceIdx, timeIdx);
         }
+        // must come after the solvent update, since the foam update scales the solvent mobility
         if constexpr (enableFoam) {
             asImp_().foamPropertiesUpdate_(problem, priVars, globalSpaceIdx, timeIdx);
         }
