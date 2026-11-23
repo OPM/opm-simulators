@@ -43,7 +43,13 @@
 #include <opm/material/fluidmatrixinteractions/EclMultiplexerMaterialParams.hpp>
 
 #if HAVE_CUDA
+#if USE_HIP
+#include <opm/simulators/linalg/gpuistl_hip/GpuBlackoilIntensiveQuantitiesDispatcher.hpp>
+#include <opm/simulators/linalg/gpuistl_hip/GpuFlowGasWaterEnergyBridge.hpp>
+#else
 #include <opm/simulators/linalg/gpuistl/GpuBlackoilIntensiveQuantitiesDispatcher.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuFlowGasWaterEnergyBridge.hpp>
+#endif
 #include <memory>
 #include <variant>
 #include <vector>
@@ -51,6 +57,8 @@
 
 #include <chrono>
 #include <cstddef>
+#include <mutex>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -117,6 +125,30 @@ public:
 #endif
     }
 
+    // Publish host mirrors once before a read-only output traversal.
+    // The callback must join all workers before returning.
+    template <class Func>
+    void withHostStateForOutput(unsigned timeIdx, Func&& func) const
+    {
+#if HAVE_CUDA
+        if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            if (gpuIntensiveQuantitiesDispatcher_ && gpuIntensiveQuantitiesDispatcher_->hasBridge()
+                && gpuIntensiveQuantitiesDispatcher_->bridge().hasIntensiveQuantities(timeIdx)) {
+                assert(!hostOutputTimeIdx_);
+                ensureHostIntensiveQuantities(timeIdx);
+                struct Scope {
+                    std::optional<unsigned>& slot;
+                    ~Scope() { slot.reset(); }
+                } scope{hostOutputTimeIdx_};
+                hostOutputTimeIdx_ = timeIdx;
+                std::forward<Func>(func)();
+                return;
+            }
+        }
+#endif
+        std::forward<Func>(func)();
+    }
+
     void invalidateAndUpdateIntensiveQuantities(unsigned timeIdx) const
     {
         if (!this->enableIntensiveQuantityCache_) {
@@ -138,17 +170,11 @@ public:
                                   "GPU intensive quantities dispatcher does not support diffusion or dispersion");
                     }
                     runGpuIntensiveQuantitiesDispatcher_(timeIdx);
-                    // Retain the full CPU cache for existing host consumers.
-                    // Assembly borrows the device IQs independently of this mirror.
-                    const std::size_t numCells = this->intensiveQuantityCache_[timeIdx].size();
-                    std::vector<IntensiveQuantities*> outIqPtrs(numCells);
-                    for (std::size_t i = 0; i < numCells; ++i) {
-                        outIqPtrs[i] = &this->intensiveQuantityCache_[timeIdx][i];
-                    }
-                    gpuIntensiveQuantitiesDispatcher_->materializeHostIntensiveQuantities(
-                        timeIdx, outIqPtrs.data(), numCells);
-                    for (std::size_t i = 0; i < numCells; ++i) {
-                        this->setIntensiveQuantitiesCacheEntryValidity(i, timeIdx, true);
+                    if constexpr (!getPropValue<TypeTag, Properties::RunAssemblyOnGpu>()) {
+                        ensureHostIntensiveQuantities(timeIdx);
+                    } else if (!gpuIntensiveQuantitiesDispatcher_->hasDeviceModelView()) {
+                        // GPU assembly falls back to the host IQ cache when it cannot borrow both slots.
+                        ensureHostIntensiveQuantities(timeIdx);
                     }
                     return;
                 }
@@ -251,10 +277,14 @@ public:
      */
     void updateFailed()
     {
-        // Reset the current solution to the one of the
-        // previous time step so that we can start the next
-        // update at a physically meaningful solution.
-        // this->solution(/*timeIdx=*/0) = this->solution(/*timeIdx=*/1);
+#if HAVE_CUDA
+        if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            if (gpuIntensiveQuantitiesDispatcher_ && gpuIntensiveQuantitiesDispatcher_->hasBridge()) {
+                // Prevent the CPU rollback from reloading IQs from the rejected step.
+                gpuIntensiveQuantitiesDispatcher_->bridge().invalidateIntensiveQuantities(/*timeIdx=*/0);
+            }
+        }
+#endif
         ParentType::updateFailed();
         invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
     }
@@ -288,6 +318,58 @@ private:
 
 public:
 #if HAVE_CUDA
+    const IntensiveQuantities* cachedIntensiveQuantities(unsigned globalIdx, unsigned timeIdx) const
+    {
+        ensureHostIntensiveQuantities(timeIdx, globalIdx);
+        return ParentType::cachedIntensiveQuantities(globalIdx, timeIdx);
+    }
+
+    void ensureHostIntensiveQuantities(unsigned timeIdx,
+                                      std::optional<unsigned> globalIdx = std::nullopt) const
+    {
+        if (hostOutputTimeIdx_ == timeIdx) {
+            return;
+        }
+        if constexpr (Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            if (!gpuIntensiveQuantitiesDispatcher_ || !gpuIntensiveQuantitiesDispatcher_->hasBridge()
+                || !gpuIntensiveQuantitiesDispatcher_->bridge().hasIntensiveQuantities(timeIdx)) {
+                return;
+            }
+
+            // Output and diagnostics can request IQs from several OpenMP
+            // threads. Materialize a slot exactly once at that CPU boundary.
+            std::lock_guard<std::mutex> lock(gpuHostIntensiveQuantitiesMutex_);
+            const std::size_t numCells = this->intensiveQuantityCache_[timeIdx].size();
+            bool hostCacheIsValid = true;
+            if (globalIdx) {
+                // A per-cell consumer only needs this entry. Scanning the
+                // entire slot here makes a traversal of the grid quadratic.
+                // Keep the read under the lock: another output thread may
+                // still be publishing the materialized cache.
+                hostCacheIsValid = ParentType::cachedIntensiveQuantities(*globalIdx, timeIdx) != nullptr;
+            } else {
+                for (std::size_t i = 0; i < numCells; ++i) {
+                    if (ParentType::cachedIntensiveQuantities(i, timeIdx) == nullptr) {
+                        hostCacheIsValid = false;
+                        break;
+                    }
+                }
+            }
+            if (hostCacheIsValid) {
+                return;
+            }
+            std::vector<IntensiveQuantities*> outIqPtrs(numCells);
+            for (std::size_t i = 0; i < numCells; ++i) {
+                outIqPtrs[i] = &this->intensiveQuantityCache_[timeIdx][i];
+            }
+            gpuIntensiveQuantitiesDispatcher_->materializeHostIntensiveQuantities(
+                timeIdx, outIqPtrs.data(), numCells);
+            for (std::size_t i = 0; i < numCells; ++i) {
+                this->setIntensiveQuantitiesCacheEntryValidity(i, timeIdx, true);
+            }
+        }
+    }
+
     bool hasGpuPropertyAssemblyBridge() const
     {
         if constexpr (Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
@@ -400,6 +482,8 @@ protected:
         std::unique_ptr<Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcher<TypeTag>>,
         std::monostate>;
     mutable GpuDispatcherStorage gpuIntensiveQuantitiesDispatcher_{};
+    mutable std::mutex gpuHostIntensiveQuantitiesMutex_;
+    mutable std::optional<unsigned> hostOutputTimeIdx_;
 
     void runGpuIntensiveQuantitiesDispatcher_(const unsigned timeIdx) const
     {

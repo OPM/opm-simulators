@@ -878,34 +878,37 @@ private:
 
         OPM_BEGIN_PARALLEL_TRY_CATCH();
 
-        {
-            OPM_TIMEBLOCK(prepareCellBasedData);
+        simulator_.model().withHostStateForOutput(/*timeIdx=*/0, [&] {
+            {
+                OPM_TIMEBLOCK(prepareCellBasedData);
 
-            this->outputModule_->prepareDensityAccumulation();
-            this->outputModule_->setupExtractors(isSubStep, reportStepNum);
-            for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
-                elemCtx.updatePrimaryStencil(elem);
-                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                this->outputModule_->prepareDensityAccumulation();
+                this->outputModule_->setupExtractors(isSubStep, reportStepNum);
+                for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
+                    elemCtx.updatePrimaryStencil(elem);
+                    elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
-                this->outputModule_->processElement(elemCtx);
-                this->outputModule_->processElementBlockData(elemCtx);
+                    this->outputModule_->processElement(elemCtx);
+                    this->outputModule_->processElementBlockData(elemCtx);
+                }
+                this->outputModule_->clearExtractors();
             }
-            this->outputModule_->clearExtractors();
-        }
 
-        {
-            OPM_TIMEBLOCK(prepareFluidInPlace);
+            {
+                OPM_TIMEBLOCK(prepareFluidInPlace);
 
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-            for (int dofIdx = 0; dofIdx < num_interior; ++dofIdx) {
-                const auto& intQuants = simulator_.model().intensiveQuantities(dofIdx, /*timeIdx=*/0);
-                const auto totVolume = simulator_.model().dofTotalVolume(dofIdx);
+                for (int dofIdx = 0; dofIdx < num_interior; ++dofIdx) {
+                    const auto& intQuants = simulator_.model().intensiveQuantities(dofIdx, /*timeIdx=*/0);
+                    const auto totVolume = simulator_.model().dofTotalVolume(dofIdx);
 
-                this->outputModule_->updateFluidInPlace(dofIdx, intQuants, totVolume);
+                    this->outputModule_->updateFluidInPlace(dofIdx, intQuants, totVolume);
+                }
             }
-        }
+
+        });
 
         OPM_END_PARALLEL_TRY_CATCH("EclWriter::prepareLocalCellData() failed: ",
                                    this->simulator_.vanguard().grid().comm());

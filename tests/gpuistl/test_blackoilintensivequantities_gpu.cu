@@ -779,6 +779,19 @@ static void runProductionDispatcherTest(const std::string& deckPath)
                               FluidSystem::waterPhaseIdx)),
                           1e-6);
     }
+    // The rejected current slot must not supply IQs to host reads or history.
+    dispatcher.bridge().invalidateIntensiveQuantities(0);
+    BOOST_CHECK(!dispatcher.bridge().hasIntensiveQuantities(0));
+    BOOST_CHECK(dispatcher.bridge().hasIntensiveQuantities(1));
+
+    dispatcher.advanceTimeLevel();
+    BOOST_CHECK(!dispatcher.bridge().hasIntensiveQuantities(1));
+
+    dispatcher.update(problem, solution, 0);
+    BOOST_CHECK(dispatcher.bridge().hasIntensiveQuantities(0));
+    BOOST_CHECK(!dispatcher.hasDeviceModelView());
+    dispatcher.advanceTimeLevel();
+    BOOST_CHECK(dispatcher.hasDeviceModelView());
 }
 
 /// Check that the production dispatcher refuses \p deckPath before it does

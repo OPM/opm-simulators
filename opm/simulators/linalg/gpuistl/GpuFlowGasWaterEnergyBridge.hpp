@@ -104,6 +104,12 @@ public:
         waitForLastWriter_();
     }
 
+    void invalidateIntensiveQuantities(unsigned timeIdx)
+    {
+        validateTimeIdx_(timeIdx);
+        deviceIqValid_[timeIdx] = false;
+    }
+
     void updatePrimaryVariables(const Problem& cpuProblem,
                                 const SolutionVector& solution,
                                 unsigned timeIdx)
@@ -116,6 +122,8 @@ public:
                       "GPU property bridge received a solution with a mismatched number of DoFs");
         }
 
+        // Reuse staging storage only after its preceding upload completes.
+        OPM_GPU_SAFE_CALL(cudaStreamSynchronize(stream_.get()));
         auto& hostPrimaryVariables = hostPrimaryVariables_[timeIdx];
         for (std::size_t i = 0; i < numDof_; ++i) {
             hostPrimaryVariables[i] = DevicePrimaryVariables(solution[i]);
@@ -228,7 +236,9 @@ public:
         if (lastWriterTimeIdx_ != invalidTimeIdx) {
             synchronizeEvent(propertyReady_);
         }
-        hostIntensiveQuantities_.assign(numDof_, *prototype_);
+        if (hostIntensiveQuantities_.size() != numDof_) {
+            hostIntensiveQuantities_.assign(numDof_, *prototype_);
+        }
         intensiveQuantitiesBuffer_[timeIdx]->copyToHost(hostIntensiveQuantities_);
         for (std::size_t i = 0; i < numDof_; ++i) {
             destination[i]->overlayBlackOilFieldsFrom(hostIntensiveQuantities_[i]);

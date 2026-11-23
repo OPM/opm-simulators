@@ -124,6 +124,8 @@ public:
                                             IntensiveQuantities* const* destination,
                                             std::size_t numDof);
 
+    bool hasBridge() const;
+
     void advanceTimeLevel();
 
     bool hasDeviceModelView() const;
