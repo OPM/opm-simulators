@@ -47,12 +47,9 @@
 
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 
-#include <cuda_runtime.h>
+#include "GpuTestHelpers.hpp"
 
-#include <algorithm>
-#include <cmath>
 #include <concepts>
 #include <cstddef>
 #include <memory>
@@ -64,6 +61,11 @@
 #include <vector>
 
 namespace {
+
+using Opm::gpuistl::test::evaluateOnCpu;
+using Opm::gpuistl::test::evaluateOnGpu;
+using Opm::gpuistl::test::evaluateOnGpuThroughConstPointer;
+using Opm::gpuistl::test::makeVariable;
 
 // One derivative, with respect to pressure. DryGasPvt depends on the pressure only.
 template <class Scalar>
@@ -80,21 +82,10 @@ using GpuViewPvt = Opm::DryGasPvt<Scalar, Opm::gpuistl::GpuView, Opm::gpuistl::G
 // FLOW_INSTANTIATE_FLOAT, so both types are always tested.
 using Scalars = boost::mpl::list<double, float>;
 
-template <class Scalar>
-struct CheckCopySemantics {
-    // The views in the owning GPU object point into the tables of its device table owner,
-    // so a copy would have views into the tables of the original. The owning GPU object
-    // must be move-only.
-    static_assert(!std::is_copy_constructible_v<GpuBufPvt<Scalar>>);
-    static_assert(!std::is_copy_assignable_v<GpuBufPvt<Scalar>>);
-    static_assert(std::is_move_constructible_v<GpuBufPvt<Scalar>>);
-    static_assert(std::is_move_assignable_v<GpuBufPvt<Scalar>>);
-    // The CPU object is still copied by GasPvtMultiplexer, and the view is passed by value.
-    static_assert(std::is_copy_constructible_v<CpuPvt<Scalar>>);
-    static_assert(std::is_trivially_copyable_v<GpuViewPvt<Scalar>>);
-};
-template struct CheckCopySemantics<double>;
-template struct CheckCopySemantics<float>;
+// The views in the owning GPU object point into the tables of its device table owner, so
+// it must be move-only. The CPU object is still copied by GasPvtMultiplexer.
+static_assert(Opm::gpuistl::test::hasGpuPortCopySemantics<CpuPvt<double>, GpuBufPvt<double>, GpuViewPvt<double>>());
+static_assert(Opm::gpuistl::test::hasGpuPortCopySemantics<CpuPvt<float>, GpuBufPvt<float>, GpuViewPvt<float>>());
 
 // Two PVT regions with different table sizes (3 and 7 pressure points). With three
 // points, Tabulated1DFunction::findSegmentIndex() never bisects; with seven points the
@@ -189,18 +180,6 @@ struct InvBAndMu {
     Evaluation<Scalar> invB;
     Evaluation<Scalar> mu;
 };
-
-//! \p value as an \c Eval: the plain value if \c Eval is a scalar type, otherwise an AD
-//! variable with index \p varIdx.
-template <class Eval, class Scalar>
-OPM_HOST_DEVICE Eval makeVariable(Scalar value, int varIdx)
-{
-    if constexpr (std::is_same_v<Eval, Scalar>) {
-        return value;
-    } else {
-        return Eval::createVariable(value, varIdx);
-    }
-}
 
 // Functors evaluating one DryGasPvt method. They are templated on the PVT type, so the
 // same functor is used for the CPU reference and in the kernel. The functors templated
@@ -306,97 +285,17 @@ concept CallableOnConstView = requires(const GpuViewPvt<Scalar>& pvt,
 static_assert(CallableOnConstView<double>);
 static_assert(CallableOnConstView<float>);
 
-template <class Functor, class Pvt, class Point, class Result>
-__global__ void evaluateKernel(Functor f, Pvt pvt, const Point* points, Result* results, std::size_t n)
-{
-    const std::size_t i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i < n) {
-        results[i] = f(pvt, points[i]);
-    }
-}
-
-//! As evaluateKernel(), but with the PVT object in device memory, accessed through a
-//! pointer to const (as when it is a member of a fluid system in device memory).
-template <class Functor, class Pvt, class Point, class Result>
-__global__ void evaluateThroughConstPointerKernel(Functor f, const Pvt* pvt, const Point* points,
-                                                  Result* results, std::size_t n)
-{
-    const std::size_t i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i < n) {
-        results[i] = f(*pvt, points[i]);
-    }
-}
-
-constexpr unsigned threadsPerBlock = 128;
-
-unsigned numBlocks(std::size_t n)
-{ return static_cast<unsigned>((n + threadsPerBlock - 1) / threadsPerBlock); }
-
-template <class Functor, class Pvt, class Point>
-auto evaluateOnCpu(Functor f, const Pvt& pvt, const std::vector<Point>& points)
-{
-    using Result = decltype(f(pvt, points.front()));
-    std::vector<Result> results;
-    results.reserve(points.size());
-    for (const auto& pt : points) {
-        results.push_back(f(pvt, pt));
-    }
-    return results;
-}
-
-template <class Functor, class Pvt, class Point>
-auto evaluateOnGpu(Functor f, Pvt pvt, const std::vector<Point>& points)
-{
-    using Result = decltype(f(pvt, points.front()));
-    const Opm::gpuistl::GpuBuffer<Point> gpuPoints(points);
-    Opm::gpuistl::GpuBuffer<Result> gpuResults(points.size());
-
-    evaluateKernel<<<numBlocks(points.size()), threadsPerBlock>>>(f, pvt, gpuPoints.data(),
-                                                                  gpuResults.data(), points.size());
-    OPM_GPU_SAFE_CALL(cudaPeekAtLastError());
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-
-    return gpuResults.asStdVector();
-}
-
-template <class Functor, class Pvt, class Point>
-auto evaluateOnGpuThroughConstPointer(Functor f, Pvt pvt, const std::vector<Point>& points)
-{
-    using Result = decltype(f(pvt, points.front()));
-    const Opm::gpuistl::GpuBuffer<Pvt> gpuPvt(std::vector<Pvt>{pvt});
-    const Opm::gpuistl::GpuBuffer<Point> gpuPoints(points);
-    Opm::gpuistl::GpuBuffer<Result> gpuResults(points.size());
-
-    evaluateThroughConstPointerKernel<<<numBlocks(points.size()), threadsPerBlock>>>(
-        f, gpuPvt.data(), gpuPoints.data(), gpuResults.data(), points.size());
-    OPM_GPU_SAFE_CALL(cudaPeekAtLastError());
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-
-    return gpuResults.asStdVector();
-}
-
 template <std::integral T>
 bool isClose(T a, T b)
 { return a == b; }
 
 template <std::floating_point Scalar>
 bool isClose(Scalar a, Scalar b)
-{
-    if (a == b) {
-        return true;
-    }
-    return std::abs(a - b) <= relTol<Scalar> * std::max(std::abs(a), std::abs(b));
-}
+{ return Opm::gpuistl::test::isRelClose(a, b, relTol<Scalar>); }
 
 template <class Scalar>
 bool isClose(const Evaluation<Scalar>& a, const Evaluation<Scalar>& b)
-{
-    bool close = isClose(a.value(), b.value());
-    for (int varIdx = 0; varIdx < Evaluation<Scalar>::numVars; ++varIdx) {
-        close = close && isClose(a.derivative(varIdx), b.derivative(varIdx));
-    }
-    return close;
-}
+{ return Opm::gpuistl::test::isRelClose(a, b, relTol<Scalar>); }
 
 template <class Scalar>
 bool isClose(const InvBAndMu<Scalar>& a, const InvBAndMu<Scalar>& b)
@@ -410,6 +309,12 @@ std::ostream& operator<<(std::ostream& os, const InvBAndMu<Scalar>& result)
     return os << "(" << result.invB << ", " << result.mu << ")";
 }
 
+template <class Scalar>
+std::ostream& operator<<(std::ostream& os, const TestPoint<Scalar>& pt)
+{
+    return os << "region " << pt.regionIdx << ", p = " << pt.p;
+}
+
 //! Checks that each GPU result is close to its CPU result. Result is a scalar, an
 //! Evaluation or InvBAndMu.
 template <class Result, class Scalar>
@@ -418,13 +323,9 @@ void checkResults(const std::vector<Result>& cpu,
                   const std::vector<TestPoint<Scalar>>& points,
                   const std::string& name)
 {
-    BOOST_REQUIRE_EQUAL(cpu.size(), gpu.size());
-    for (std::size_t i = 0; i < cpu.size(); ++i) {
-        BOOST_CHECK_MESSAGE(isClose(cpu[i], gpu[i]),
-                            name << " at point " << i << " (region " << points[i].regionIdx
-                                 << ", p = " << points[i].p << "): CPU = " << cpu[i]
-                                 << ", GPU = " << gpu[i]);
-    }
+    Opm::gpuistl::test::checkResults(
+        cpu, gpu, [](const Result& a, const Result& b) { return isClose(a, b); },
+        [&points](std::size_t i) { return points[i]; }, name);
 }
 
 template <class Functor, class Scalar>
