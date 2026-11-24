@@ -494,6 +494,17 @@ macro(opm-simulators_tests_hook)
     target_link_libraries(test_HyprePreconditionerCPU PRIVATE HYPRE::HYPRE)
   endif()
 
+  # The hipified GPU tests include hipified test helper headers, which are generated
+  # by the hipified_headers target.
+  if(CONVERT_CUDA_TO_HIP)
+    foreach(hip_test IN LISTS TEST_SOURCE_FILES_HIPIFIED)
+      get_filename_component(hip_test_target ${hip_test} NAME_WE)
+      if(TARGET ${hip_test_target})
+        add_dependencies(${hip_test_target} hipified_headers)
+      endif()
+    endforeach()
+  endif()
+
   if(CUDA_FOUND OR hip_FOUND)
     # CUISTL
     set(gpu_label "gpu_cuda")
