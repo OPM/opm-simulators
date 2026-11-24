@@ -1569,6 +1569,7 @@ reportConnectionFracture(const std::size_t well_index,
         fracture.inj_pressure = data.inj_pressure[i];
         fracture.inj_bhp = data.inj_bhp[i];
         fracture.inj_wellrate = data.inj_wellrate[i];
+        fracture.open_area = data.open_area[i];
 
         connections[i].rates.set(fractureRateOption<IndexTraits>(data.injected_phase),
                                  data.injected_rate[i]);

@@ -43,6 +43,7 @@ struct ConnFractureData {
         serializer(inj_pressure);
         serializer(inj_bhp);
         serializer(inj_wellrate);
+        serializer(open_area);
         serializer(injected_rate);
         serializer(injected_phase);
     }
@@ -63,6 +64,8 @@ struct ConnFractureData {
     std::vector<Scalar> inj_pressure;
     std::vector<Scalar> inj_bhp;
     std::vector<Scalar> inj_wellrate;
+    //! Area of the fracture cells that are open (not in contact).
+    std::vector<Scalar> open_area;
     //! Surface rate of the injected phase routed into the fracture.
     std::vector<Scalar> injected_rate;
     //! Canonical index of the injected phase, -1 until a fracture split
