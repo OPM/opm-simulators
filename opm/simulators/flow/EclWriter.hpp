@@ -410,15 +410,19 @@ public:
             allocBuffers(num_interior, 0, false, false,
                          /*forceRestartFieldAllocation=*/false);
 
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+        simulator_.model().withHostIntensiveQuantities(/*timeIdx=*/0, [&] {
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-        for (int dofIdx = 0; dofIdx < num_interior; ++dofIdx) {
-            const auto& intQuants = simulator_.model().intensiveQuantities(dofIdx, /*timeIdx=*/0);
-            const auto totVolume = simulator_.model().dofTotalVolume(dofIdx);
+            for (int dofIdx = 0; dofIdx < num_interior; ++dofIdx) {
+                const auto& intQuants = simulator_.model().intensiveQuantities(dofIdx, /*timeIdx=*/0);
+                const auto totVolume = simulator_.model().dofTotalVolume(dofIdx);
 
-            this->outputModule_->updateFluidInPlace(dofIdx, intQuants, totVolume);
-        }
+                this->outputModule_->updateFluidInPlace(dofIdx, intQuants, totVolume);
+            }
+        });
+        OPM_END_PARALLEL_TRY_CATCH("EclWriter::writeInitialFIPReport() failed: ", gridView.comm());
 
         // We always calculate the initial fip values as it may be used by various
         // keywords in the Schedule, e.g. FIP=2 in RPTSCHED but no FIP in RPTSOL
