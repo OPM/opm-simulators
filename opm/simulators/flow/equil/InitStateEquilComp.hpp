@@ -182,6 +182,50 @@ private:
 
 } // namespace Details
 
+/// Lower each FACTLI that the input leaves to its default where the gas an
+/// equilibration region starts with would otherwise be labelled liquid, to
+/// just below the smallest temperature over Li critical temperature of that
+/// gas. \p startingGas gives the composition of a cell's initial gas, or none
+/// for a cell without gas; \p states give the cell temperatures. Returns
+/// whether any factor was lowered.
+template <class Scalar, class FluidSystem, class FluidState, class StartingGas>
+bool lowerDefaultedLiFactors(std::vector<Scalar>& factors,
+                             const CompositionalConfig& compConfig,
+                             const std::vector<FluidState>& states,
+                             const std::vector<int>& regionOfCell,
+                             const StartingGas& startingGas,
+                             const Parallel::Communication& comm)
+{
+    if (!FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+        return false;
+    }
+    // The lowered factor labels that gas as gas with a 1% margin.
+    constexpr Scalar margin{0.99};
+
+    std::vector<Scalar> smallestRatio(factors.size(), std::numeric_limits<Scalar>::max());
+    for (std::size_t cell = 0; cell < states.size(); ++cell) {
+        if (const auto gas = startingGas(cell); gas.has_value()) {
+            auto& smallest = smallestRatio[regionOfCell[cell]];
+            smallest = std::min(smallest, states[cell].temperature(0)
+                                / PTFlash<Scalar, FluidSystem>::li_critical_temperature(*gas));
+        }
+    }
+    comm.min(smallestRatio.data(), static_cast<int>(smallestRatio.size()));
+
+    bool lowered = false;
+    for (std::size_t r = 0; r < factors.size(); ++r) {
+        if (compConfig.liCorrelationFactorGiven(r) || !(smallestRatio[r] < factors[r])) {
+            continue;
+        }
+        factors[r] = margin * smallestRatio[r];
+        lowered = true;
+        OpmLog::info(fmt::format("Equilibration region {}: FACTLI lowered to {:.7f} so that "
+                                 "the gas the region starts with is labelled gas.",
+                                 r + 1, factors[r]));
+    }
+    return lowered;
+}
+
 /*!
  * \brief Computes the initial state of a compositional model from hydrostatic
  *        equilibrium (the EQUIL and ZMFVD or COMPVD keywords).
@@ -352,6 +396,20 @@ public:
                 twoPhaseCheckRegions_[cell] = eqlnum[cell];
             }
         }
+
+        lowerDefaultedLiFactors<Scalar, FluidSystem>(
+            liCorrelationFactors_, inputState.compositionalConfig(), fluidStates_, eqlnum,
+            [this, &eqlnum, &cellCenterDepth](const std::size_t cell) -> std::optional<CompVec> {
+                if (!startsAsGas(regions_[eqlnum[cell]], cellCenterDepth[cell])) {
+                    return std::nullopt;
+                }
+                CompVec z{};
+                for (int c = 0; c < numComponents; ++c) {
+                    z[c] = fluidStates_[cell].moleFraction(c);
+                }
+                return z;
+            },
+            comm);
     }
 
     std::vector<FluidState>& fluidStates()
@@ -438,7 +496,8 @@ public:
 
     /// FACTLI of each equilibration region: as given, or else fitted to the
     /// composition at a type-1 gas-oil contact among the region's hydrocarbon
-    /// cells, or 1.
+    /// cells, or 1, and then lowered where the gas the region starts with would
+    /// be labelled liquid.
     const std::vector<Scalar>& liCorrelationFactors() const
     { return liCorrelationFactors_; }
 
@@ -1418,6 +1477,17 @@ private:
             return true;
         }
         return ((reg.initType == 3) || reg.twoZone) && (depth < reg.zgoc);
+    }
+
+    /// Whether a cell at \p depth starts as gas: in the gas zone or above the
+    /// gas-oil contact, and in the hydrocarbon above the water-oil contact. The
+    /// nominal phase of a single-zone region does not decide this.
+    static bool startsAsGas(const Region& reg, const Scalar depth)
+    {
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && (depth > reg.zwoc)) {
+            return false;
+        }
+        return isInGasZone(reg, depth) || (depth < reg.zgoc);
     }
 
     Scalar assignCell(FluidState& fs, const Region& reg, const unsigned pvtRegion,

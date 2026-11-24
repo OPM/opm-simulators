@@ -604,10 +604,6 @@ protected:
         const auto& vanguard = simulator.vanguard();
         const auto& eclState = vanguard.eclState();
         const auto& fp = eclState.fieldProps();
-        if (const auto& compConfig = eclState.compositionalConfig();
-            compConfig.liCorrelationFactorsSpecified()) {
-            setLiCorrelationFactors_(equilRegions_(), compConfig.liCorrelationFactors());
-        }
         const bool has_pressure = fp.has_double("PRESSURE");
         if (!has_pressure)
             throw std::runtime_error("The ECL input file requires the presence of the PRESSURE "
@@ -789,6 +785,30 @@ protected:
                             "largest absolute deviation of their input sum from 1: {:.6g}",
                             globalNormalizedCellCount,
                             globalMaxDeviation));
+        }
+
+        // FACTLI of each equilibration region, lowered where the region's initial
+        // gas (SGAS, of composition YMF or ZMF) would be labelled liquid.
+        const auto& compConfig = eclState.compositionalConfig();
+        std::vector<Scalar> liFactors(compConfig.liCorrelationFactors().begin(),
+                                      compConfig.liCorrelationFactors().end());
+        const std::vector<int> eqlnum = equilRegions_();
+        const bool lowered = EQUIL::Comp::lowerDefaultedLiFactors<Scalar, FluidSystem>(
+            liFactors, compConfig, initialFluidStates_, eqlnum,
+            [this](const std::size_t cell) -> std::optional<std::array<Scalar, numComponents>> {
+                const auto& fs = initialFluidStates_[cell];
+                if (!(fs.saturation(FluidSystem::gasPhaseIdx) > 0.0)) {
+                    return std::nullopt;
+                }
+                std::array<Scalar, numComponents> y{};
+                for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
+                    y[compIdx] = fs.moleFraction(FluidSystem::gasPhaseIdx, compIdx);
+                }
+                return y;
+            },
+            comm);
+        if (lowered || compConfig.liCorrelationFactorsSpecified()) {
+            setLiCorrelationFactors_(eqlnum, liFactors);
         }
 
         if (water_active && Parameters::Get<Parameters::NormalizeExplicitSwat>()) {
