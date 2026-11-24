@@ -38,6 +38,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <map>
 #include <string>
 
@@ -70,7 +71,7 @@ public:
     auto getTransmissibilitymap() { return this->trans_; }
 };
 
-Deck dualContinuumDeck(bool nodppm, bool dualperm)
+Deck dualContinuumDeck(bool nodppm, bool dualperm, const std::string& editKeywords = "")
 {
     // 2x1x4: matrix cells cart 0-3 (k=0,1), fracture cells cart 4-7 (k=2,3),
     // co-located twins, sigma one field value.
@@ -99,7 +100,7 @@ PERMZ
  4*0.5 4*500.0 /
 SIGMA
  0.12 /
-)" "END";
+)" + (editKeywords.empty() ? "" : "EDIT\n" + editKeywords) + "END";
     return Parser{}.parseString(deckData);
 }
 
@@ -212,9 +213,9 @@ TransResult computeTransFromDeck(const Deck& deck)
     return result;
 }
 
-TransResult computeTrans(bool nodppm, bool dualperm = false)
+TransResult computeTrans(bool nodppm, bool dualperm = false, const std::string& editKeywords = "")
 {
-    return computeTransFromDeck(dualContinuumDeck(nodppm, dualperm));
+    return computeTransFromDeck(dualContinuumDeck(nodppm, dualperm, editKeywords));
 }
 
 // The coupling transmissibility of every twin pair:
@@ -319,6 +320,31 @@ BOOST_AUTO_TEST_CASE(DualPermeabilityTransPolicy)
     }
 
     checkOnlySameHalfOrTwin(res);
+}
+
+BOOST_AUTO_TEST_CASE(PositiveTranOfTheMatrixKeepsTheMatrixClosedInDualPorosity)
+{
+    // TRANX of the EDIT section gives every cell with a neighbour in the X direction a transmissibility.
+    const std::string tranx = "TRANX\n 8*3.0 /\n";
+
+    // Dual porosity: the matrix has no internal flow, whatever the deck says. The fracture takes
+    // its values from the array.
+    const auto dp = computeTrans(true, /* dualperm = */ false, tranx);
+    BOOST_CHECK_EQUAL(dp.trans(0, 1), 0.0);
+    BOOST_CHECK_EQUAL(dp.trans(2, 3), 0.0);
+    BOOST_CHECK_GT(dp.trans(4, 5), 0.0);
+    BOOST_CHECK_GT(dp.trans(6, 7), 0.0);
+    for (std::size_t g = 0; g < 4; ++g) {
+        BOOST_CHECK_CLOSE(dp.trans(g, g + 4), expectedCoupling, 1e-4);
+    }
+
+    // Dual permeability: the matrix flows, with the value of the array.
+    const auto dk = computeTrans(true, /* dualperm = */ true, tranx);
+    BOOST_CHECK_GT(dk.trans(0, 1), 0.0);
+    BOOST_CHECK_CLOSE(dk.trans(0, 1), dk.trans(4, 5), 1e-6);
+    BOOST_CHECK_CLOSE(dk.trans(2, 3), dk.trans(6, 7), 1e-6);
+    // The array has an effect: the values are not those of the permeability.
+    BOOST_CHECK_GT(std::abs(dk.trans(0, 1) - computeTrans(true, true).trans(0, 1)), 0.0);
 }
 
 int main(int argc, char** argv)

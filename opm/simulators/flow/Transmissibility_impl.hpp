@@ -739,6 +739,22 @@ update(bool global, const TransUpdateQuantities update_quantities,
     // Potentially overwrite and/or modify transmissibilities based on input from deck
     this->updateFromEclState_(global);
 
+    // The TRANX, TRANY and TRANZ arrays assign the transmissibility of the faces they name, so they
+    // would give the matrix of a dual-porosity run the flow that it does not have, after the faces
+    // between its cells were set to zero above. Matrix-matrix flow comes with dual permeability only.
+    if (dualPorosity && !dualPermeability) {
+        for (auto& [id, value] : trans_) {
+            if (value != 0.0) {
+                const auto elements = details::isIdReverse(id);
+                if (!isFractureCell(cartMapper_.cartesianIndex(elements.first)) &&
+                    !isFractureCell(cartMapper_.cartesianIndex(elements.second)))
+                {
+                    value = 0.0;
+                }
+            }
+        }
+    }
+
     // Create mapping from global to local index
     std::unordered_map<std::size_t,int> globalToLocal;
 
