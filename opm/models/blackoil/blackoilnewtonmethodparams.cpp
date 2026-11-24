@@ -40,6 +40,10 @@ void BlackoilNewtonParams<Scalar>::registerParameters()
          "after its meaning has switched to hinder oscillations");
     Parameters::Register<Parameters::ProjectSaturations>
         ("Option for doing saturation projection");
+    Parameters::Register<Parameters::ChopGasSaturationAtTrappedGas>
+        ("Stop a Newton update of the gas saturation at the trapped gas saturation "
+         "of the WAG hysteresis imbibition curve (WAGHYSTR), when the update "
+         "crosses it. Gas is immobile below this saturation");
     Parameters::Register<Parameters::MaxTemperatureChange<Scalar>>
         ("Maximum absolute change of temperature in a single iteration");
     Parameters::Register<Parameters::TemperatureMax<Scalar>>
@@ -63,6 +67,7 @@ void BlackoilNewtonParams<Scalar>::read()
     dpMaxRel_ = Parameters::Get<Parameters::DpMaxRel<Scalar>>();
     dsMax_ = Parameters::Get<Parameters::DsMax<Scalar>>();
     projectSaturations_ = Parameters::Get<Parameters::ProjectSaturations>();
+    chopGasSaturationAtTrappedGas_ = Parameters::Get<Parameters::ChopGasSaturationAtTrappedGas>();
     maxTempChange_ = Parameters::Get<Parameters::MaxTemperatureChange<Scalar>>();
     tempMax_ = Parameters::Get<Parameters::TemperatureMax<Scalar>>();
     tempMin_ = Parameters::Get<Parameters::TemperatureMin<Scalar>>();

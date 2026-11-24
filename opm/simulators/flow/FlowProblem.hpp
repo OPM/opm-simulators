@@ -916,6 +916,18 @@ public:
     const EclMaterialLawManager& materialLawManager() const
     { return *materialLawManager_; }
 
+    /*!
+     * \brief Gas saturation below which gas is immobile on the current WAG
+     *        imbibition curve of a cell, or a negative value if this does not apply.
+     */
+    Scalar trappedGasSaturationWAG(unsigned globalDofIdx) const
+    {
+        if (!materialLawManager_->enableHysteresis()) {
+            return -1.0;
+        }
+        return MaterialLaw::trappedGasSaturationWAG(materialLawParams(globalDofIdx));
+    }
+
     std::shared_ptr<const EclThermalLawManager> thermalLawManager() const
     { return thermalLawManager_; }
 

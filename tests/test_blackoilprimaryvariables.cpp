@@ -789,6 +789,53 @@ BOOST_AUTO_TEST_CASE(NewtonUpdateLimitsPressureAndCombinedSaturationChange)
     BOOST_CHECK_CLOSE(current[Indices::waterSwitchIdx], 0.3, 1.e-12);
 }
 
+// Gas saturation updates crossing the trapped gas saturation of a WAG
+// imbibition curve stop just on its mobile side.
+BOOST_AUTO_TEST_CASE(NewtonUpdateStopsGasSaturationAtTrappedGas)
+{
+    FluidSystemGuard guard;
+    FluidSystem::setEnableDissolvedGasInWater(false);
+    FluidSystem::setReservoirTemperature(300.0);
+    Problem problem;
+    Opm::BlackoilNewtonParams<double> params{};
+    params.dpMaxRel_ = 0.3;
+    params.dsMax_ = 0.2;
+    params.pressMin_ = 0.0;
+    params.pressMax_ = 1.e9;
+    params.waterSaturationMax_ = 1.0;
+    params.waterOnlyThreshold_ = 1.0;
+
+    using Update = Opm::BlackOilNewtonUpdate<TypeTag>;
+    const double offset = Update::trappedGasSaturationOffset;
+    const double sgt = 0.01;
+    const auto newSg = [&](double sg, double deltaSg, double sgTrapped) {
+        const auto current = makePrimaryVariables(PrimaryVariables::GasMeaning::Sg,
+                                                  0.2, sg,
+                                                  PrimaryVariables::WaterMeaning::Sw,
+                                                  PrimaryVariables::PressureMeaning::Po,
+                                                  1.e7);
+        auto next = current;
+        Opm::GetPropType<TypeTag, Opm::Properties::EqVector> correction(0.0);
+        correction[Indices::compositionSwitchIdx] = -deltaSg;
+        BOOST_CHECK(!Update::update(problem, FluidSystem{}, 0, next, current,
+                                    correction, params, false, sgTrapped));
+        BOOST_CHECK(next.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg);
+        BOOST_CHECK_CLOSE(next[Indices::waterSwitchIdx], 0.2, 1.e-12);
+        return double(next[Indices::compositionSwitchIdx]);
+    };
+
+    // Crossing downwards and upwards (after the DS chop) stops at the threshold.
+    BOOST_CHECK_CLOSE(newSg(0.05, -0.045, sgt), sgt + offset, 1.e-10);
+    BOOST_CHECK_CLOSE(newSg(0.005, 0.3, sgt), sgt + offset, 1.e-10);
+    // Updates not crossing the threshold are unchanged.
+    BOOST_CHECK_CLOSE(newSg(0.05, -0.03, sgt), 0.02, 1.e-10);
+    BOOST_CHECK_CLOSE(newSg(0.008, -0.004, sgt), 0.004, 1.e-10);
+    BOOST_CHECK_CLOSE(newSg(0.005, 0.3, -1.0), 0.205, 1.e-10);
+    BOOST_CHECK_CLOSE(newSg(0.05, -0.045, -1.0), 0.005, 1.e-10);
+    // A cell stopped at the threshold may cross it in the next iteration.
+    BOOST_CHECK_CLOSE(newSg(sgt + offset, -0.006, sgt), 0.004 + offset, 1.e-8);
+}
+
 BOOST_AUTO_TEST_CASE(NewtonUpdateUsesSwitchHistoryToSuppressOscillation)
 {
     FluidSystemGuard guard;

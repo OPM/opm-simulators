@@ -45,6 +45,11 @@ namespace Opm {
 template<class TypeTag>
 struct BlackOilNewtonUpdate
 {
+    // Distance on the mobile side of the trapped gas saturation at which a gas
+    // saturation update crossing it is stopped, such that the next linearization
+    // sees a non-zero derivative of the gas relative permeability.
+    static constexpr double trappedGasSaturationOffset = 1.0e-6;
+
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     static constexpr unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
@@ -59,7 +64,8 @@ struct BlackOilNewtonUpdate
                                        const PrimaryVariables& currentValue,
                                        const Update& update,
                                        const BlackoilNewtonParams<Scalar>& params,
-                                       bool wasSwitched)
+                                       bool wasSwitched,
+                                       Scalar sgTrapped = -1.0)
     {
         static constexpr bool enableSolvent =
             Indices::solventSaturationIdx != std::numeric_limits<unsigned>::max();
@@ -153,6 +159,22 @@ struct BlackOilNewtonUpdate
                 // negative.
                 if (currentValue.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg) {
                     delta *= satAlpha;
+                    // Gas is immobile below the trapped gas saturation of a WAG
+                    // imbibition curve, where krg has a kink, and krg may increase
+                    // steeply above it. Stop an update crossing it, in either
+                    // direction, just on the mobile side. A cell stopped there in
+                    // the previous iteration may cross it in this one.
+                    if (sgTrapped > 0.0) {
+                        const Scalar sg = currentValue[pvIdx];
+                        const Scalar sgNext = sg - delta;
+                        const Scalar sgStop = sgTrapped + Scalar{trappedGasSaturationOffset};
+                        const bool crossDown = sg > sgStop + Scalar{trappedGasSaturationOffset} &&
+                                               sgNext < sgStop;
+                        const bool crossUp = sg < sgTrapped && sgNext > sgStop;
+                        if (crossDown || crossUp) {
+                            delta = sg - sgStop;
+                        }
+                    }
                 }
                 else {
                     // Ensure Rv and Rs factor does not become negative
