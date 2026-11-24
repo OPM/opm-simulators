@@ -40,6 +40,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <vector>
 
@@ -62,7 +63,12 @@ auto getParamName()
         return Parameter::name;
     } else {
         std::string paramName = Dune::className<Parameter>();
-        paramName.replace(0, std::strlen("Opm::Parameters::"), "");
+        // Dune::className() gives the compiler's rendering of the type, which
+        // need not start with the namespace.
+        constexpr std::string_view nsQualifier = "Opm::Parameters::";
+        if (const auto nsPos = paramName.find(nsQualifier); nsPos != std::string::npos) {
+            paramName.erase(0, nsPos + nsQualifier.size());
+        }
         const auto pos = paramName.find_first_of('<');
         if (pos != std::string::npos) {
             paramName.erase(pos);
