@@ -631,6 +631,31 @@ regionSum(const ScalarBuffer& property,
     return totals;
 }
 
+namespace {
+// How the phase is encoded in an output keyword (doAllocBuffers()).
+enum class EntryPhaseType {
+    // one kw for all fields
+    // RESIDUAL
+    None,
+
+    // append GWO to kw name
+    // KR(G|W|O)
+    GWO,
+
+    // Pure kw controls all, additionally append GWO to kw name for each phase
+    // DEN, DENG, DENW, DENO
+    NGWO,
+
+    // append gas/wat/oil to kw name
+    // SGAS, SWAT, SOIL
+    GasWatOil,
+
+    // Pure kw controls all, then first letter of kw and apply gas/wat/oil for each phase.
+    // VISC, VGAS, VWAT, VOIL
+    NGasWatOil,
+};
+} // anonymous namespace
+
 template<class FluidSystem>
 void GenericOutputModule<FluidSystem>::
 doAllocBuffers(const unsigned bufferSize,
@@ -719,28 +744,6 @@ doAllocBuffers(const unsigned bufferSize,
     if (!alloc_fields) {
         return;
     }
-
-    enum class EntryPhaseType {
-        // one kw for all fields
-        // RESIDUAL
-        None,
-
-        // append GWO to kw name
-        // KR(G|W|O)
-        GWO,
-
-        // Pure kw controls all, additionally append GWO to kw name for each phase
-        // DEN, DENG, DENW, DENO
-        NGWO,
-
-        // append gas/wat/oil to kw name
-        // SGAS, SWAT, SOIL
-        GasWatOil,
-
-        // Pure kw controls all, then first letter of kw and apply gas/wat/oil for each phase.
-        // VISC, VGAS, VWAT, VOIL
-        NGasWatOil,
-    };
 
     struct Entry {
         std::variant<ScalarBuffer*,
