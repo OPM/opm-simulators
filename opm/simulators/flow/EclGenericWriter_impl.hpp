@@ -956,8 +956,13 @@ exportNncStructure_(const std::vector<std::unordered_map<int,int>>& levelCartToL
 
             // ECLIPSE ignores NNCs (with EDITNNC/EDITNNCR applied) with
             // small transmissibility values.  Seems like the threshold is
-            // 1.0e-6 in output units.
-            if (std::isnormal(tt) && ! (tt < 1.0e-6)) {
+            // 1.0e-6 in output units.  The matrix-fracture coupling of a
+            // dual-continuum run is not subject to it, the simulator keeps it
+            // whatever its size, and the connections in the output have to be
+            // those of the simulator.
+            if (std::isnormal(tt) &&
+                (isDualPorosityTwin_(entry.cell1, entry.cell2) || ! (tt < 1.0e-6)))
+            {
                 inputedNnc.emplace_back(entry.cell1, entry.cell2, trans);
             }
         }
