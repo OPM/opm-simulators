@@ -683,9 +683,12 @@ protected:
         }
 
         // Boundary terms, e.g. at the boundary of a sector run (USEFLUX)
-        if (simulator_.problem().nonTrivialBoundaryConditions()) {
-            OPM_TIMEBLOCK(TemperatureModel_assembleEquations_boundary);
-            this->assembleBoundaryTerms_();
+        // Only the TPFA linearizer records boundary faces.
+        if constexpr (requires { simulator_.model().linearizer().getBoundaryInfo(); }) {
+            if (simulator_.problem().nonTrivialBoundaryConditions()) {
+                OPM_TIMEBLOCK(TemperatureModel_assembleEquations_boundary);
+                this->assembleBoundaryTerms_();
+            }
         }
 
         // Well terms
