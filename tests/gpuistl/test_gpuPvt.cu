@@ -16,10 +16,11 @@
 #include <opm/input/eclipse/EclipseState/Co2StoreConfig.hpp>
 #include <opm/common/utility/SaltArray.hpp>
 
-#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
+
+#include "GpuTestHelpers.hpp"
 
 #include <cuda_runtime.h>
 #include <vector>
@@ -110,22 +111,6 @@ __global__ void brineCo2PvtInternalEnergy(GpuViewBrineCo2Pvt gpuViewBrineCo2Pvt,
     *result = gpuViewBrineCo2Pvt.internalEnergy(1, *temp, *pressure, *rs, *saltConcentration).value();
 }
 
-// Helper function to launch a kernel and retrieve the result on the CPU to reduce code duplicatoin
-template <typename KernelFunc, typename... Args>
-double launchKernelAndRetrieveResult(KernelFunc kernel, Args... args) {
-    auto resultOnGpu = Opm::gpuistl::make_gpu_unique_ptr<double>();
-
-    // Launch the kernel
-    kernel<<<1, 1>>>(args..., resultOnGpu.get());
-
-    // Check for any errors in kernel launch
-    OPM_GPU_SAFE_CALL(cudaPeekAtLastError());
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-
-    // Retrieve the result from the GPU to the CPU
-    return Opm::gpuistl::copyFromGPU(resultOnGpu);
-}
-
 bool compareSignificantDigits(double a, double b, int significantDigits) {
     // Handle the case where both values are exactly equal
     if (a == b) {
@@ -153,7 +138,7 @@ BOOST_FIXTURE_TEST_CASE(TestUseCO2OnGpu, Fixture) {
     GpuBufCo2Tables gpuBufCo2Table = Opm::gpuistl::copy_to_gpu(co2Tables);
     GpuViewCO2Tables gpuViewCo2Table = Opm::gpuistl::make_view(gpuBufCo2Table);
 
-    gpuComputedResultOnCpu = launchKernelAndRetrieveResult(gpuCO2GasViscosity, gpuViewCo2Table, gpuTemp, gpuPressure);
+    gpuComputedResultOnCpu = Opm::gpuistl::test::runSingleThreadKernel(gpuCO2GasViscosity, gpuViewCo2Table, gpuTemp, gpuPressure);
 
     // Verify that the CPU and GPU results match within a reasonable tolerance
     BOOST_CHECK(std::fabs(gpuComputedResultOnCpu - viscosityReference) < ABS_TOL);
@@ -165,7 +150,7 @@ BOOST_FIXTURE_TEST_CASE(TestUseH2OOnGpu, Fixture) {
     // use the CO2 tables to aquire the densityReference at 290[K] and 2e5[Pa]
     double densityReference = HuDuan::liquidDensity(temp, pressure, true).value();
 
-    gpuComputedResultOnCpu = launchKernelAndRetrieveResult(huDuanLiquidDensity, gpuTemp, gpuPressure);
+    gpuComputedResultOnCpu = Opm::gpuistl::test::runSingleThreadKernel(huDuanLiquidDensity, gpuTemp, gpuPressure);
 
     // Verify that the CPU and GPU results match within a reasonable tolerance
     BOOST_CHECK(std::fabs(gpuComputedResultOnCpu - densityReference) < ABS_TOL);
@@ -181,7 +166,7 @@ BOOST_FIXTURE_TEST_CASE(TestUseBrineDynamicOnGpu, Fixture) {
     // Allocate GPU memory for the Evaluation inputs
     auto gpuSalinity = Opm::gpuistl::make_gpu_unique_ptr(salinity);
 
-    gpuComputedResultOnCpu = launchKernelAndRetrieveResult(brineDynamicLiquidEnthalpy, gpuTemp, gpuPressure, gpuSalinity.get());
+    gpuComputedResultOnCpu = Opm::gpuistl::test::runSingleThreadKernel(brineDynamicLiquidEnthalpy, gpuTemp, gpuPressure, gpuSalinity.get());
 
     // Verify that the CPU and GPU results match within a reasonable tolerance
     BOOST_CHECK(std::fabs(gpuComputedResultOnCpu - enthalpyReference) < ABS_TOL);
@@ -199,7 +184,7 @@ BOOST_FIXTURE_TEST_CASE(TestBrine_CO2OnGPU, Fixture) {
     GpuBufCo2Tables gpuBufCo2Table = Opm::gpuistl::copy_to_gpu(co2Tables);
     GpuViewCO2Tables gpuViewCo2Table = Opm::gpuistl::make_view(gpuBufCo2Table);
 
-    gpuComputedResultOnCpu = launchKernelAndRetrieveResult(brineCO2GasDiffCoeff, gpuViewCo2Table, gpuTemp, gpuPressure);
+    gpuComputedResultOnCpu = Opm::gpuistl::test::runSingleThreadKernel(brineCO2GasDiffCoeff, gpuViewCo2Table, gpuTemp, gpuPressure);
 
     // Verify that the CPU and GPU results match within a reasonable tolerance
     BOOST_CHECK(std::fabs(gpuComputedResultOnCpu - gasDiffCoeffReference) < ABS_TOL);
@@ -222,7 +207,7 @@ BOOST_FIXTURE_TEST_CASE(TestCo2GasPvt, Fixture) {
     auto brineReferenceDensityCPUCopy = gpuBufCo2Pvt.getBrineReferenceDensity().asStdVector();
     GpuViewCo2Pvt gpuViewCo2Pvt = Opm::gpuistl::make_view(gpuBufCo2Pvt);
 
-    gpuComputedResultOnCpu = launchKernelAndRetrieveResult(co2GasPvtInternalEnergy, gpuViewCo2Pvt, gpuTemp, gpuPressure);
+    gpuComputedResultOnCpu = Opm::gpuistl::test::runSingleThreadKernel(co2GasPvtInternalEnergy, gpuViewCo2Pvt, gpuTemp, gpuPressure);
 
     // Verify that the CPU and GPU results match within a reasonable tolerance
     BOOST_CHECK(compareSignificantDigits(gpuComputedResultOnCpu, internalEnergyReference, 6));
@@ -250,7 +235,7 @@ BOOST_FIXTURE_TEST_CASE(TestBrineCo2Pvt, Fixture) {
     auto gpuRs = Opm::gpuistl::make_gpu_unique_ptr(rs);
     auto gpuSaltConcentration = Opm::gpuistl::make_gpu_unique_ptr(saltConcentration);
 
-    gpuComputedResultOnCpu = launchKernelAndRetrieveResult(brineCo2PvtInternalEnergy, gpuViewBrineCo2Pvt, gpuTemp, gpuPressure, gpuRs.get(), gpuSaltConcentration.get());
+    gpuComputedResultOnCpu = Opm::gpuistl::test::runSingleThreadKernel(brineCo2PvtInternalEnergy, gpuViewBrineCo2Pvt, gpuTemp, gpuPressure, gpuRs.get(), gpuSaltConcentration.get());
 
     BOOST_CHECK(compareSignificantDigits(gpuComputedResultOnCpu, internalEnergyReference, 6));
 }

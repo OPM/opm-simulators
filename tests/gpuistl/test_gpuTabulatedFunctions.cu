@@ -33,10 +33,11 @@
 #include <opm/material/common/UniformXTabulated2DFunction.hpp>
 #include <opm/material/common/UniformXTabulated2DFunctionBuilder.hpp>
 
-#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
+
+#include "GpuTestHelpers.hpp"
 
 #include <cuda_runtime.h>
 #include <cmath>
@@ -71,22 +72,6 @@ __global__ void gpuEvaluateUniformTabulated2DFunction(GpuViewUniformTab gpuTab, 
 // Kernel to evaluate a UniformXTabulated2DFunction on the GPU
 __global__ void gpuEvaluateUniformXTabulated2DFunction(GpuViewXTab gpuTab, double x, double y, double* result) {
     *result = gpuTab.eval(x, y, /*extrapolate=*/false);
-}
-
-// Helper function to launch a kernel and retrieve the result on the CPU to reduce code duplication
-template <typename KernelFunc, typename... Args>
-double launchKernelAndRetrieveResult(KernelFunc kernel, Args... args) {
-    auto resultOnGpu = Opm::gpuistl::make_gpu_unique_ptr<double>();
-
-    // Launch the kernel
-    kernel<<<1, 1>>>(args..., resultOnGpu.get());
-
-    // Check for any errors in kernel launch
-    OPM_GPU_SAFE_CALL(cudaPeekAtLastError());
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-
-    // Retrieve the result from the GPU to the CPU
-    return Opm::gpuistl::copyFromGPU(resultOnGpu);
 }
 
 // Regular grid: same X spacing and the same number/position of Y samples in every
@@ -191,7 +176,7 @@ void checkGpuMatchesCpu(const XTabulatedFunction& cpuTab, const std::vector<std:
 
     for (const auto& [x, y] : points) {
         const double cpuResult = cpuTab.eval(x, y, false);
-        const double gpuResult = launchKernelAndRetrieveResult(gpuEvaluateUniformXTabulated2DFunction, gpuViewTab, x, y);
+        const double gpuResult = Opm::gpuistl::test::runSingleThreadKernel(gpuEvaluateUniformXTabulated2DFunction, gpuViewTab, x, y);
         BOOST_CHECK_MESSAGE(std::fabs(gpuResult - cpuResult) < ABS_TOL,
                             "eval(" << x << ", " << y << "): gpu=" << gpuResult << " cpu=" << cpuResult);
     }
@@ -219,7 +204,7 @@ BOOST_AUTO_TEST_CASE(TestEvaluateUniformTabulated2DFunctionOnGpu) {
     auto gpuA = Opm::gpuistl::make_gpu_unique_ptr(a);
     auto gpuB = Opm::gpuistl::make_gpu_unique_ptr(b);
 
-    const double gpuComputedResultOnCpu = launchKernelAndRetrieveResult(gpuEvaluateUniformTabulated2DFunction, gpuViewTab, gpuA.get(), gpuB.get());
+    const double gpuComputedResultOnCpu = Opm::gpuistl::test::runSingleThreadKernel(gpuEvaluateUniformTabulated2DFunction, gpuViewTab, gpuA.get(), gpuB.get());
 
     // Verify that the CPU and GPU results match within a reasonable tolerance
     const double cpuComputedResult = cpuTab.eval(a, b, true).value();
