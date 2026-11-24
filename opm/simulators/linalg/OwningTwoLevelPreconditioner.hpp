@@ -20,6 +20,7 @@
 #ifndef OPM_OWNINGTWOLEVELPRECONDITIONER_HEADER_INCLUDED
 #define OPM_OWNINGTWOLEVELPRECONDITIONER_HEADER_INCLUDED
 
+#include <opm/simulators/linalg/InPlaceCprWeights.hpp>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 #include <opm/simulators/linalg/PressureSolverPolicy.hpp>
 #include <opm/simulators/linalg/twolevelmethodcpr.hh>
@@ -166,7 +167,11 @@ public:
 
     void update() override
     {
-        weights_ = weightsCalculator_();
+        if (const auto* inPlace = weightsCalculator_.template target<Opm::InPlaceCprWeights<VectorType>>()) {
+            inPlace->fill(weights_);
+        } else {
+            weights_ = weightsCalculator_();
+        }
         updateImpl(comm_);
     }
 

@@ -27,10 +27,11 @@
 
 #include <opm/grid/utility/ElementChunks.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
-#include <opm/material/common/MathToolbox.hpp>
 #include <opm/models/parallel/threadmanager.hpp>
+#include <opm/simulators/linalg/TrueImpesWeights.hpp>
 #include <algorithm>
 #include <cmath>
+#include <exception>
 #include <stdexcept>
 
 #if HAVE_CUDA
@@ -178,17 +179,11 @@ namespace Amg
         VectorBlockType rhs(0.0);
         rhs[pressureVarIndex] = 1.0;
 
-        // Declare variables outside the loop to avoid repetitive allocation
-        MatrixBlockType block;
-        VectorBlockType bweights;
-        MatrixBlockType block_transpose;
-        Dune::FieldVector<Evaluation, numEq> storage;
-
         OPM_BEGIN_PARALLEL_TRY_CATCH();
-#ifdef _OPENMP
-#pragma omp parallel for private(block, bweights, block_transpose, storage) if(enable_thread_parallel)
-#endif
-        for (const auto& chunk : element_chunks) {
+        const auto computeChunk = [&](const auto& chunk) {
+            VectorBlockType bweights;
+            MatrixBlockType block_transpose;
+            Dune::FieldVector<Evaluation, numEq> storage;
             const std::size_t thread_id = ThreadManager::threadId();
             ElementContext localElemCtx(elemCtx.simulator());
 
@@ -200,58 +195,64 @@ namespace Amg
 
                 auto extrusionFactor = localElemCtx.intensiveQuantities(0, /*timeIdx=*/0).extrusionFactor();
                 auto scvVolume = localElemCtx.stencil(/*timeIdx=*/0).subControlVolume(0).volume() * extrusionFactor;
-                auto storage_scale = scvVolume / localElemCtx.simulator().timeStepSize();
-                const double pressure_scale = 50e5;
-
-                // Build the transposed matrix directly to avoid separate transpose step
-                for (int ii = 0; ii < numEq; ++ii) {
-                    for (int jj = 0; jj < numEq; ++jj) {
-                        block_transpose[jj][ii] = storage[ii].derivative(jj)/storage_scale;
-                        if (jj == pressureVarIndex) {
-                            block_transpose[jj][ii] *= pressure_scale;
-                        }
-                    }
-                }
-                try {
-                    block_transpose.solve(bweights, rhs);
-                }
-                catch (const Dune::FMatrixError&) {
-                    // Rank-deficient storage derivatives: no combination of the
-                    // mass balances has a storage term that depends on pressure
-                    // alone, so there is no weight vector to compute here.
-                    //
-                    // Deliberately no fallback value.  bweights is indexed by
-                    // equation while rhs is indexed by primary variable, so
-                    // substituting rhs would put unit weight on whichever
-                    // equation happens to share the pressure variable's index -
-                    // an arbitrary choice that goes on to make the CPR pressure
-                    // system itself singular.  Name the cell instead, so the
-                    // cause can be found.
+                const auto storageScale = scvVolume / localElemCtx.simulator().timeStepSize();
+                detail::formTrueImpesStorageJacobian<numEq>(storage, storageScale,
+                                                            pressureVarIndex, block_transpose);
+                // A rank-deficient solve cannot supply a pressure equation.
+                // Substituting rhs would pick an arbitrary conservation equation.
+                const auto reportInvalidWeights = [&localElemCtx]() {
                     const auto globalDofIdx =
                         localElemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
 
                     throw std::runtime_error {
-                        fmt::format("Singular storage matrix when forming the CPR "
+                        fmt::format("Singular storage matrix or invalid solution when forming the CPR "
                                     "pressure weights for cell {} (Cartesian index "
-                                    "{}).  The storage derivatives of that cell are "
-                                    "rank deficient, so the pressure equation cannot "
-                                    "be formed there.",
+                                    "{}). The pressure equation cannot be formed there.",
                                     globalDofIdx,
                                     localElemCtx.simulator().vanguard()
                                         .cartesianIndex(globalDofIdx))
                     };
+                };
+                try {
+                    block_transpose.solve(bweights, rhs);
+                }
+                catch (const Dune::FMatrixError&) {
+                    reportInvalidWeights();
                 }
 
-                const double abs_max =
-                    *std::ranges::max_element(bweights,
-                                              [](double a, double b)
-                                              { return std::fabs(a) < std::fabs(b); });
-                // probably a scaling which could give approximately total compressibility would be better
-                bweights /=  std::fabs(abs_max); // given normal densities this scales weights to about 1.
+                // Small-block singularity checks can be disabled in Dune.
+                if (!detail::normalizeTrueImpesWeights<numEq>(bweights.data(), bweights.data())) {
+                    reportInvalidWeights();
+                }
 
                 const auto index = localElemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
                 weights[index] = bweights;
             }
+        };
+
+        // OpenMP requires exceptions to be caught inside the region even
+        // when the runtime if clause runs the loop with one thread.
+        std::exception_ptr failure;
+#ifdef _OPENMP
+#pragma omp parallel for if(enable_thread_parallel)
+#endif
+        for (const auto& chunk : element_chunks) {
+            try {
+                computeChunk(chunk);
+            }
+            catch (...) {
+#ifdef _OPENMP
+#pragma omp critical(opmTrueImpesWeightFailure)
+#endif
+                {
+                    if (!failure) {
+                        failure = std::current_exception();
+                    }
+                }
+            }
+        }
+        if (failure) {
+            std::rethrow_exception(failure);
         }
         OPM_END_PARALLEL_TRY_CATCH("getTrueImpesWeights() failed: ", elemCtx.simulator().vanguard().grid().comm());
     }
@@ -264,30 +265,12 @@ namespace Amg
                                      const ElementChunksType& element_chunks,
                                      [[maybe_unused]] bool enable_thread_parallel)
     {
-        // The sequential residual is a linear combination of the
-        // mass balance residuals, with coefficients equal to (for
-        // water, oil, gas):
-        //    1/bw,
-        //    (1/bo - rs/bg)/(1-rs*rv)
-        //    (1/bg - rv/bo)/(1-rs*rv)
-        // These coefficients must be applied for both the residual and
-        // Jacobian.
-        using FluidSystem = typename Model::FluidSystem;
-        using LhsEval = double;
-
-        using PrimaryVariables = typename Model::PrimaryVariables;
-        using VectorBlockType = typename Vector::block_type;
-        using Evaluation =
-            typename std::decay_t<decltype(model.localLinearizer(ThreadManager::threadId()).localResidual().residual(0))>::block_type;
-        using Toolbox = MathToolbox<Evaluation>;
-
         const auto& solution = model.solution(/*timeIdx*/ 0);
-        VectorBlockType bweights;
 
         // Use OpenMP to parallelize over element chunks (runtime controlled via if clause)
         OPM_BEGIN_PARALLEL_TRY_CATCH();
 #ifdef _OPENMP
-#pragma omp parallel for private(bweights) if(enable_thread_parallel)
+#pragma omp parallel for if(enable_thread_parallel)
 #endif
         for (const auto& chunk : element_chunks) {
 
@@ -300,53 +283,10 @@ namespace Amg
 
                 const auto index = localElemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
                 const auto& intQuants = localElemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-                const auto& fs = intQuants.fluidState();
-
-                if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                    const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(
-                        FluidSystem::solventComponentIndex(FluidSystem::waterPhaseIdx));
-                    bweights[activeCompIdx]
-                        = Toolbox::template decay<LhsEval>(1 / fs.invB(FluidSystem::waterPhaseIdx));
-                }
-
-                double denominator = 1.0;
-                double rs = Toolbox::template decay<double>(fs.Rs());
-                double rv = Toolbox::template decay<double>(fs.Rv());
-                const auto& priVars = solution[index];
-                if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
-                    rs = 0.0;
-                }
-                if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs) {
-                    rv = 0.0;
-                }
-                // The dissolved gas and vaporised oil terms only exist when both
-                // oil and gas are active.
-                const bool oilAndGas = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
-                    && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
-                if (oilAndGas) {
-                    denominator = Toolbox::template decay<LhsEval>(1 - rs * rv);
-                }
-
-                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-                    const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(
-                        FluidSystem::solventComponentIndex(FluidSystem::oilPhaseIdx));
-                    auto oilWeight = 1 / fs.invB(FluidSystem::oilPhaseIdx);
-                    if (oilAndGas) {
-                        oilWeight -= rs / fs.invB(FluidSystem::gasPhaseIdx);
-                    }
-                    bweights[activeCompIdx] = Toolbox::template decay<LhsEval>(oilWeight / denominator);
-                }
-                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                    const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(
-                        FluidSystem::solventComponentIndex(FluidSystem::gasPhaseIdx));
-                    auto gasWeight = 1 / fs.invB(FluidSystem::gasPhaseIdx);
-                    if (oilAndGas) {
-                        gasWeight -= rv / fs.invB(FluidSystem::oilPhaseIdx);
-                    }
-                    bweights[activeCompIdx] = Toolbox::template decay<LhsEval>(gasWeight / denominator);
-                }
-
-                weights[index] = bweights;
+                auto& block = weights[index];
+                block = 0.0; // Extra equations (e.g. energy) have no analytic component weight.
+                detail::analyticWeights(intQuants.getFluidSystem(), intQuants.fluidState(),
+                                        solution[index], block);
             }
         }
         OPM_END_PARALLEL_TRY_CATCH("getTrueImpesAnalyticWeights() failed: ", elemCtx.simulator().vanguard().grid().comm());

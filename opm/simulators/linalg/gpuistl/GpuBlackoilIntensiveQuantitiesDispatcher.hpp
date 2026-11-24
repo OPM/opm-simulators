@@ -48,6 +48,8 @@ namespace Opm::gpuistl {
 
 template <class T>
 class GpuView;
+template <class T>
+class GpuVector;
 
 template <class CpuTypeTag,
           class DeviceTypeTag =
@@ -99,6 +101,7 @@ template <class CpuTypeTag>
 class GpuBlackoilIntensiveQuantitiesDispatcher
 {
 public:
+    using Scalar = Opm::GetPropType<CpuTypeTag, Opm::Properties::Scalar>;
     using Problem            = Opm::GetPropType<CpuTypeTag, Opm::Properties::Problem>;
     using PrimaryVariables = Opm::GetPropType<CpuTypeTag, Opm::Properties::PrimaryVariables>;
     using SolutionVector = Opm::GetPropType<CpuTypeTag, Opm::Properties::SolutionVector>;
@@ -125,6 +128,12 @@ public:
                                             std::size_t numDof);
 
     void advanceTimeLevel();
+
+    /// Form true-IMPES CPR weights directly from resident storage derivatives.
+    /// Report the affected cell if the storage solve cannot produce valid weights.
+    void computeTrueImpesWeights(GpuVector<Scalar>& weights, Scalar timeStepSize);
+    /// Form analytic CPR weights from the current resident IQs and primary variables.
+    void computeAnalyticWeights(GpuVector<Scalar>& weights);
 
     bool hasDeviceModelView() const;
     const Bridge& bridge() const;

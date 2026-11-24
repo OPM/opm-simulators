@@ -31,6 +31,8 @@
 #include <opm/models/utils/start.hh>
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicit.hpp>
+#include <opm/simulators/linalg/TrueImpesWeights.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/utils/moduleVersion.hpp>
 
 #include <cmath>
@@ -41,6 +43,7 @@
 #include <numeric>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <system_error>
 #include <utility>
 #include <vector>
@@ -160,6 +163,21 @@ struct Fixture {
             Opm::setupParameters_<TypeTag>(sizeof(args) / sizeof(args[0]), args, false, true, false, 0);
             Opm::FlowGenericVanguard::readDeck(filename.string(), /*ignoredKeywords=*/"");
             auto sim = std::make_unique<Simulator>();
+            // Before the first property update only the CPU-configured model
+            // may delegate weight calculation to the host.
+            using Method = Opm::Amg::TrueImpesMethod;
+            Opm::gpuistl::GpuVector<double> weights(sim->model().numGridDof() * numEq);
+            for (const auto method : {Method::Storage, Method::Analytic}) {
+                if (propertiesOnGpu) {
+                    BOOST_CHECK_EXCEPTION(sim->model().computeGpuTrueImpesWeights(weights, method, 100.0),
+                                          std::logic_error, [](const std::logic_error& error) {
+                                              return std::string_view{error.what()}.find("current GPU property bridge")
+                                                  != std::string_view::npos;
+                                          });
+                } else {
+                    BOOST_CHECK(!sim->model().computeGpuTrueImpesWeights(weights, method, 100.0));
+                }
+            }
             // Exercises production startup, including the first GPU update while
             // the allocated CPU history slot has not yet been populated.
             sim->model().applyInitialSolution();

@@ -1240,6 +1240,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/gpuistl_assembly_if_available.hpp
   opm/simulators/linalg/GraphColoring.hpp
   opm/simulators/linalg/ilufirstelement.hh
+  opm/simulators/linalg/InPlaceCprWeights.hpp
   opm/simulators/linalg/is_gpu_operator.hpp
   opm/simulators/linalg/ISTLSolver.hpp
   opm/simulators/linalg/ISTLSolverRuntimeOptionProxy.hpp
@@ -1302,6 +1303,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/setupPropertyTree.hpp
   opm/simulators/linalg/superlubackend.hh
   opm/simulators/linalg/TPSALinearSolverParameters.hpp
+  opm/simulators/linalg/TrueImpesWeights.hpp
   opm/simulators/linalg/twolevelmethodcpr.hh
   opm/simulators/linalg/vertexborderlistfromgrid.hh
   opm/simulators/linalg/weightedresidreductioncriterion.hh
