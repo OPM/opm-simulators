@@ -508,7 +508,7 @@ protected:
         const bool relax = (sum_pv_not_converged / sum_pv) <  relaxed_max_pv_fraction;
         const auto tolerance_energy_balance = relax? Parameters::Get<Parameters::ToleranceEnergyBalanceRelaxed<Scalar>>():
                                             Parameters::Get<Parameters::ToleranceEnergyBalance<Scalar>>();
-        const bool tolerance_cnv_energy = relax? Parameters::Get<Parameters::ToleranceCnvEnergyRelaxed<Scalar>>():
+        const Scalar tolerance_cnv_energy = relax? Parameters::Get<Parameters::ToleranceCnvEnergyRelaxed<Scalar>>():
                                             tolerance_cnv_energy_strict;
 
         const auto msg = fmt::format(fmt::runtime("Temperature model (TEMP): Newton iter {}: "
