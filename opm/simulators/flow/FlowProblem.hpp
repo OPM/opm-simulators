@@ -2396,12 +2396,13 @@ protected:
     Module& registerAuxCellModule_(std::unique_ptr<Module> module)
     {
         // Aux DOFs are not in the communication index set yet, so each rank would
-        // solve its own copy of the aquifer.
+        // solve its own copy of them.
         if (this->simulator().gridView().comm().size() > 1) {
             OPM_THROW(std::runtime_error,
-                      "Degrees of freedom outside the grid (numerical aquifers "
-                      "represented as auxiliary cells) are not supported in parallel "
-                      "yet. Run on one process, or use --numerical-aquifer-mode=grid.");
+                      "Degrees of freedom outside the grid (auxiliary cells: numerical "
+                      "aquifers or embedded fractures) are not supported in parallel "
+                      "yet. Run on one process; for numerical aquifers "
+                      "--numerical-aquifer-mode=grid also avoids them.");
         }
 
         auto& ref = *module;
