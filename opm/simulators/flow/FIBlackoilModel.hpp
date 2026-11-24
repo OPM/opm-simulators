@@ -125,25 +125,25 @@ public:
 #endif
     }
 
-    // Publish host mirrors once before a read-only output traversal.
-    // The callback must join all workers before returning.
+    // With GPU properties enabled, a host traversal can need IQs that are
+    // still device-resident. Publish the slot before launching workers so
+    // copies can fail on the calling thread and cell/face reads avoid the mutex.
+    // The callback must leave the slot unchanged and join its workers.
     template <class Func>
-    void withHostStateForOutput(unsigned timeIdx, Func&& func) const
+    void withHostIntensiveQuantities(unsigned timeIdx, Func&& func) const
     {
 #if HAVE_CUDA
-        if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
-            if (gpuIntensiveQuantitiesDispatcher_ && gpuIntensiveQuantitiesDispatcher_->hasBridge()
-                && gpuIntensiveQuantitiesDispatcher_->bridge().hasIntensiveQuantities(timeIdx)) {
-                assert(!hostOutputTimeIdx_);
-                ensureHostIntensiveQuantities(timeIdx);
-                struct Scope {
-                    std::optional<unsigned>& slot;
-                    ~Scope() { slot.reset(); }
-                } scope{hostOutputTimeIdx_};
-                hostOutputTimeIdx_ = timeIdx;
-                std::forward<Func>(func)();
-                return;
-            }
+        if (hasDeviceIntensiveQuantitiesForHost_(timeIdx)) {
+            OPM_ERROR_IF(preparedHostIqTimeIdx_.has_value(),
+                         "Nested host intensive-quantity scopes are unsupported.");
+            ensureHostIntensiveQuantities(timeIdx);
+            struct Scope {
+                std::optional<unsigned>& slot;
+                ~Scope() { slot.reset(); }
+            } scope{preparedHostIqTimeIdx_};
+            preparedHostIqTimeIdx_ = timeIdx;
+            std::forward<Func>(func)();
+            return;
         }
 #endif
         std::forward<Func>(func)();
@@ -327,12 +327,11 @@ public:
     void ensureHostIntensiveQuantities(unsigned timeIdx,
                                       std::optional<unsigned> globalIdx = std::nullopt) const
     {
-        if (hostOutputTimeIdx_ == timeIdx) {
+        if (preparedHostIqTimeIdx_ == timeIdx) {
             return;
         }
         if constexpr (Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
-            if (!gpuIntensiveQuantitiesDispatcher_ || !gpuIntensiveQuantitiesDispatcher_->hasBridge()
-                || !gpuIntensiveQuantitiesDispatcher_->bridge().hasIntensiveQuantities(timeIdx)) {
+            if (!hasDeviceIntensiveQuantitiesForHost_(timeIdx)) {
                 return;
             }
 
@@ -368,6 +367,11 @@ public:
                 this->setIntensiveQuantitiesCacheEntryValidity(i, timeIdx, true);
             }
         }
+    }
+
+    bool gpuIntensiveQuantitiesEnabled() const
+    {
+        return useGpuIntensiveQuantitiesDispatcher_;
     }
 
     bool hasGpuPropertyAssemblyBridge() const
@@ -483,7 +487,17 @@ protected:
         std::monostate>;
     mutable GpuDispatcherStorage gpuIntensiveQuantitiesDispatcher_{};
     mutable std::mutex gpuHostIntensiveQuantitiesMutex_;
-    mutable std::optional<unsigned> hostOutputTimeIdx_;
+    mutable std::optional<unsigned> preparedHostIqTimeIdx_;
+
+    bool hasDeviceIntensiveQuantitiesForHost_(unsigned timeIdx) const
+    {
+        if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            return timeIdx < this->cachedIntensiveQuantityHistorySize()
+                && gpuIntensiveQuantitiesDispatcher_ && gpuIntensiveQuantitiesDispatcher_->hasBridge()
+                && gpuIntensiveQuantitiesDispatcher_->bridge().hasIntensiveQuantities(timeIdx);
+        }
+        return false;
+    }
 
     void runGpuIntensiveQuantitiesDispatcher_(const unsigned timeIdx) const
     {

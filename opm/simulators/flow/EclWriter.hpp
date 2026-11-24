@@ -878,7 +878,7 @@ private:
 
         OPM_BEGIN_PARALLEL_TRY_CATCH();
 
-        simulator_.model().withHostStateForOutput(/*timeIdx=*/0, [&] {
+        simulator_.model().withHostIntensiveQuantities(/*timeIdx=*/0, [&] {
             {
                 OPM_TIMEBLOCK(prepareCellBasedData);
 

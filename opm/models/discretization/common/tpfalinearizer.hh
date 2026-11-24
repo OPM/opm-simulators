@@ -795,73 +795,77 @@ public:
             return;
         }
         const unsigned int numCells = model_().numTotalDof();
-        prepareHostIntensiveQuantitiesForParallelRead_(numCells);
+        if (numCells == 0) {
+            return;
+        }
+        model_().withHostIntensiveQuantities(/*timeIdx=*/0, [&] {
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-        for (unsigned globI = 0; globI < numCells; ++globI) {
-            OPM_TIMEBLOCK_LOCAL(linearizationForEachCell, Subsystem::Assembly);
-            const auto& nbInfos = neighborInfo_[globI];
-            ADVectorBlock adres(0.0);
-            ADVectorBlock darcyFlux(0.0);
-            const IntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
-            // Flux term.
-            {
-                OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachCell, Subsystem::Assembly);
-                short loc = 0;
-                for (const auto& nbInfo : nbInfos) {
-                    OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachFace, Subsystem::Assembly);
-                    const unsigned globJ = nbInfo.neighbor;
-                    assert(globJ != globI);
-                    adres = 0.0;
-                    darcyFlux = 0.0;
-                    const IntensiveQuantities& intQuantsEx = model_().intensiveQuantities(globJ, /*timeIdx*/ 0);
-                    LocalResidual::computeFlux(adres, darcyFlux, globI, globJ, intQuantsIn,
-                                               intQuantsEx, nbInfo.res_nbinfo, problem_().moduleParams());
-                    adres *= nbInfo.res_nbinfo.faceArea;
-                    if (!blockFlows.empty()) {
-                        if (std::ranges::binary_search(blockFlows,
-                                                       simulator_().vanguard().cartesianIndex(globI))) {
+            for (unsigned globI = 0; globI < numCells; ++globI) {
+                OPM_TIMEBLOCK_LOCAL(linearizationForEachCell, Subsystem::Assembly);
+                const auto& nbInfos = neighborInfo_[globI];
+                ADVectorBlock adres(0.0);
+                ADVectorBlock darcyFlux(0.0);
+                const IntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
+                // Flux term.
+                {
+                    OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachCell, Subsystem::Assembly);
+                    short loc = 0;
+                    for (const auto& nbInfo : nbInfos) {
+                        OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachFace, Subsystem::Assembly);
+                        const unsigned globJ = nbInfo.neighbor;
+                        assert(globJ != globI);
+                        adres = 0.0;
+                        darcyFlux = 0.0;
+                        const IntensiveQuantities& intQuantsEx = model_().intensiveQuantities(globJ, /*timeIdx*/ 0);
+                        LocalResidual::computeFlux(adres, darcyFlux, globI, globJ, intQuantsIn,
+                                                   intQuantsEx, nbInfo.res_nbinfo, problem_().moduleParams());
+                        adres *= nbInfo.res_nbinfo.faceArea;
+                        if (!blockFlows.empty()) {
+                            if (std::ranges::binary_search(blockFlows,
+                                                           simulator_().vanguard().cartesianIndex(globI))) {
+                                for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
+                                    flowsInfo_[globI][loc].flow[eqIdx] = adres[eqIdx].value();
+                                }
+                            }
+                        }
+                        else if (enableFlows) {
                             for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
                                 flowsInfo_[globI][loc].flow[eqIdx] = adres[eqIdx].value();
                             }
                         }
-                    }
-                    else if (enableFlows) {
-                        for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
-                            flowsInfo_[globI][loc].flow[eqIdx] = adres[eqIdx].value();
+                        if (enableFlores) {
+                            for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
+                                floresInfo_[globI][loc].flow[eqIdx] = darcyFlux[eqIdx].value();
+                            }
                         }
+                        ++loc;
                     }
-                    if (enableFlores) {
-                        for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
-                            floresInfo_[globI][loc].flow[eqIdx] = darcyFlux[eqIdx].value();
-                        }
-                    }
-                    ++loc;
                 }
             }
-        }
 
-        // Boundary terms. Only looping over cells with nontrivial bcs.
-        for (const auto& bdyInfo : boundaryInfo_) {
-            if (bdyInfo.bcdata.type == BCType::NONE) {
-                continue;
-            }
-
-            ADVectorBlockCPU adres(0.0);
-            const unsigned globI = bdyInfo.cell;
-            const auto& nbInfos = neighborInfo_[globI];
-            const IntensiveQuantities& insideIntQuants = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
-            LocalResidual::computeBoundaryFlux(adres, problem_(), bdyInfo.bcdata, insideIntQuants, globI);
-            adres *= bdyInfo.bcdata.faceArea;
-            const unsigned bfIndex = bdyInfo.bfIndex;
-            if (enableFlows) {
-                for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
-                    flowsInfo_[globI][nbInfos.size() + bfIndex].flow[eqIdx] = adres[eqIdx].value();
+            // Boundary terms. Only looping over cells with nontrivial bcs.
+            for (const auto& bdyInfo : boundaryInfo_) {
+                if (bdyInfo.bcdata.type == BCType::NONE) {
+                    continue;
                 }
+
+                ADVectorBlockCPU adres(0.0);
+                const unsigned globI = bdyInfo.cell;
+                const auto& nbInfos = neighborInfo_[globI];
+                const IntensiveQuantities& insideIntQuants = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
+                LocalResidual::computeBoundaryFlux(adres, problem_(), bdyInfo.bcdata, insideIntQuants, globI);
+                adres *= bdyInfo.bcdata.faceArea;
+                const unsigned bfIndex = bdyInfo.bfIndex;
+                if (enableFlows) {
+                    for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
+                        flowsInfo_[globI][nbInfos.size() + bfIndex].flow[eqIdx] = adres[eqIdx].value();
+                    }
+                }
+                // TODO also store Flores?
             }
-            // TODO also store Flores?
-        }
+        });
     }
 
 private:
@@ -949,48 +953,41 @@ private:
         }
     }
 
-    void prepareHostIntensiveQuantitiesForParallelRead_(unsigned numCells)
-    {
-        if constexpr (requires { model_().ensureHostIntensiveQuantities(0); }) {
-            if (numCells != 0) {
-                // A failed allocation or GPU copy must propagate on the calling thread.
-                model_().ensureHostIntensiveQuantities(/*timeIdx=*/0);
-            }
-        }
-    }
-
     template <class SubDomainType>
     void linearize_source_terms(unsigned int numCells, const SubDomainType& domain)
     {
-        prepareHostIntensiveQuantitiesForParallelRead_(numCells);
+        if (numCells != 0) {
+            model_().withHostIntensiveQuantities(/*timeIdx=*/0, [&] {
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-        for (unsigned ii = 0; ii < numCells; ++ii) {
-            OPM_TIMEBLOCK_LOCAL(linearizationForEachCell, Subsystem::Assembly);
-            const unsigned globI = domain.cells[ii];
-            VectorBlockCPU res(0.0);
-            MatrixBlockCPU bMat(0.0);
-            ADVectorBlockCPU adres(0.0);
-            const IntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
-            const double volume = model_().dofTotalVolume(globI);
+                for (unsigned ii = 0; ii < numCells; ++ii) {
+                    OPM_TIMEBLOCK_LOCAL(linearizationForEachCell, Subsystem::Assembly);
+                    const unsigned globI = domain.cells[ii];
+                    VectorBlockCPU res(0.0);
+                    MatrixBlockCPU bMat(0.0);
+                    ADVectorBlockCPU adres(0.0);
+                    const IntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
+                    const double volume = model_().dofTotalVolume(globI);
 
-            // Cell-wise source terms.
-            // This will include well sources if SeparateSparseSourceTerms is false.
-            res = 0.0;
-            bMat = 0.0;
-            adres = 0.0;
-            if (separateSparseSourceTerms_) {
-                LocalResidual::computeSourceDense(adres, problem_(), intQuantsIn, globI, 0);
-            } else {
-                LocalResidual::computeSource(adres, problem_(), intQuantsIn, globI, 0);
-            }
-            adres *= -volume;
-            setResAndJacobi(res, bMat, adres);
-            residual_[globI] += res;
-            // SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
-            *diagMatAddress_[globI] += bMat;
-        } // end of loop for cell globI.
+                    // Cell-wise source terms.
+                    // This will include well sources if SeparateSparseSourceTerms is false.
+                    res = 0.0;
+                    bMat = 0.0;
+                    adres = 0.0;
+                    if (separateSparseSourceTerms_) {
+                        LocalResidual::computeSourceDense(adres, problem_(), intQuantsIn, globI, 0);
+                    } else {
+                        LocalResidual::computeSource(adres, problem_(), intQuantsIn, globI, 0);
+                    }
+                    adres *= -volume;
+                    setResAndJacobi(res, bMat, adres);
+                    residual_[globI] += res;
+                    // SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+                    *diagMatAddress_[globI] += bMat;
+                } // end of loop for cell globI.
+            });
+        }
 
         // Add sparse source terms. For now only wells.
         if (separateSparseSourceTerms_) {
