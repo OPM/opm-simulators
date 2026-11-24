@@ -24,6 +24,8 @@
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
+
+#include "GpuTestHelpers.hpp"
 namespace
 {
 
@@ -191,12 +193,9 @@ BOOST_AUTO_TEST_CASE(TestCreation)
 BOOST_AUTO_TEST_CASE(TestSaturation)
 {
     const double saturation = 0.5;
-    auto saturationRead = Opm::gpuistl::make_gpu_unique_ptr<double>(0.0);
-    kernelSetAndGetTotalSaturation<FluidState><<<1, 1>>>(saturation, saturationRead.get());
-    auto saturationFromGPU = Opm::gpuistl::copyFromGPU(saturationRead);
+    const auto saturationFromGPU = Opm::gpuistl::test::runSingleThreadKernel(
+        kernelSetAndGetTotalSaturation<FluidState>, saturation);
     BOOST_CHECK_EQUAL(saturationFromGPU, saturation);
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-    OPM_GPU_SAFE_CALL(cudaGetLastError());
 }
 
 BOOST_AUTO_TEST_CASE(TestPressure)
@@ -207,10 +206,9 @@ BOOST_AUTO_TEST_CASE(TestPressure)
     state.setPressure(2, 3.0);
 
     auto stateGPU = Opm::gpuistl::make_gpu_unique_ptr<FluidState>(state);
-    auto output = Opm::gpuistl::make_gpu_unique_ptr<std::array<double, 3>>();
 
-    getPressure<<<1, 1>>>(Opm::gpuistl::make_view(stateGPU), output.get());
-    auto outputCPU = Opm::gpuistl::copyFromGPU(output);
+    const auto outputCPU = Opm::gpuistl::test::runSingleThreadKernel<std::array<double, 3>>(
+        getPressure<FluidState>, Opm::gpuistl::make_view(stateGPU));
     BOOST_CHECK_EQUAL(1.0, outputCPU[0]);
     BOOST_CHECK_EQUAL(2.0, outputCPU[1]);
     BOOST_CHECK_EQUAL(3.0, outputCPU[2]);
@@ -228,9 +226,7 @@ BOOST_AUTO_TEST_CASE(TestPassByValueToGPUDynamic)
     DummyFluidSystemDynamic<ScalarT> system;
 
     system.someVariable = 1234;
-    auto output = Opm::gpuistl::make_gpu_unique_ptr<double>();
-    getViscosity<FluidStateDynamic><<<1, 1>>>(system, output.get());
-
-    auto outputCPU = Opm::gpuistl::copyFromGPU(output);
+    const auto outputCPU = Opm::gpuistl::test::runSingleThreadKernel(
+        getViscosity<FluidStateDynamic, DummyFluidSystemDynamic<ScalarT>>, system);
     BOOST_CHECK_EQUAL(1234, outputCPU);
 }
