@@ -69,6 +69,7 @@
 #include <opm/simulators/flow/GpuFlowProblem.hpp>
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBlackoilNohystIntensiveQuantities.hpp>
+#include <opm/simulators/linalg/TrueImpesWeights.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuFlowBlackoilNohystTypeTag.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
@@ -77,6 +78,7 @@
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <filesystem>
@@ -908,6 +910,34 @@ BOOST_AUTO_TEST_CASE(DispatcherAcceptsEndpointScaling)
     BOOST_CHECK(contains(
         runDispatcher(*makeSimulator(deckWithWetGasAndThreePointScalingAndSwatinit())),
         "wet gas"));
+}
+
+BOOST_AUTO_TEST_CASE(ResidentAnalyticWeightsMatchCpu)
+{
+    using Dispatcher = Opm::gpuistl::GpuBlackoilNohystIntensiveQuantities<CpuTypeTag>;
+    for (const auto& deck : {deckWithThreePointScalingAndSwatinit(),
+                             deckWithWetGasAndThreePointScalingAndSwatinit()}) {
+        auto sim = makeSimulator(deck);
+        const auto& model = sim->model();
+        const auto& solution = model.solution(0);
+        const auto cells = solution.size();
+        Dispatcher dispatcher;
+        std::vector<Dispatcher::IntensiveQuantities> cache(cells);
+        dispatcher.update(sim->problem(), solution, cache, 0);
+        Opm::gpuistl::GpuBuffer<double> deviceWeights(3 * cells);
+        BOOST_REQUIRE(dispatcher.analyticWeights(deviceWeights.data(), deviceWeights.size()));
+        std::vector<double> weights(deviceWeights.size());
+        deviceWeights.copyToHost(weights.data(), weights.size());
+        for (std::size_t cell = 0; cell < cells; ++cell) {
+            const auto& iq = model.intensiveQuantities(cell, 0);
+            std::array<double, 3> expected{};
+            Opm::Amg::detail::analyticWeights(iq.getFluidSystem(), iq.fluidState(),
+                                              solution[cell], expected);
+            for (unsigned eq = 0; eq < 3; ++eq) {
+                BOOST_CHECK_CLOSE(weights[3 * cell + eq], expected[eq], 1e-9);
+            }
+        }
+    }
 }
 
 BOOST_AUTO_TEST_CASE(DispatcherRejectsUnsupportedEndpointScaling)

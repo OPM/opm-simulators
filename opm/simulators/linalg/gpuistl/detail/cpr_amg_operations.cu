@@ -19,7 +19,6 @@
 #include <config.h>
 
 #include <opm/simulators/linalg/gpuistl/detail/cpr_amg_operations.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/deviceBlockOperations.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpuThreadUtils.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 
@@ -30,49 +29,93 @@ namespace Opm::gpuistl::detail
 
 namespace
 {
-    // Kernel for calculating quasi-IMPES weights
-    template <typename T, bool transpose, int blockSize>
-    __global__ void quasiImpesWeightsKernel(const T* matrix,
-                                            T* weights,
-                                            const int* diagonalIndices,
-                                            const int numberOfRows,
-                                            const int pressureVarIndex)
+    // Only the direction of the solution is needed. Scale the matrix before
+    // elimination so that a uniform change of units leaves the weights invariant.
+    template <typename T, bool transpose, int n>
+    __device__ bool normalizedWeights(const T* block, int pressure, T* weights)
     {
-        const auto row = blockDim.x * blockIdx.x + threadIdx.x;
+        T a[n][n];
+        T rhs[n] = {};
+        rhs[pressure] = 1;
+        T scale = 0;
+        for (int i = 0; i < n; ++i) {
+            for (int j = 0; j < n; ++j) {
+                const T v = transpose ? block[i*n + j] : block[j*n + i];
+                if (!isfinite(v)) {
+                    return false;
+                }
+                a[i][j] = v;
+                scale = max(scale, abs(v));
+            }
+        }
+        if (scale == 0) {
+            return false;
+        }
+        for (auto& row : a) {
+            for (auto& value : row) {
+                value /= scale;
+            }
+        }
+        for (int k = 0; k < n; ++k) {
+            int pivot = k;
+            for (int i = k + 1; i < n; ++i) {
+                if (abs(a[i][k]) > abs(a[pivot][k])) {
+                    pivot = i;
+                }
+            }
+            if (a[pivot][k] == 0) {
+                return false;
+            }
+            if (pivot != k) {
+                for (int j = k; j < n; ++j) {
+                    const T tmp = a[k][j];
+                    a[k][j] = a[pivot][j];
+                    a[pivot][j] = tmp;
+                }
+                const T tmp = rhs[k];
+                rhs[k] = rhs[pivot];
+                rhs[pivot] = tmp;
+            }
+            for (int i = k + 1; i < n; ++i) {
+                const T factor = a[i][k] / a[k][k];
+                for (int j = k + 1; j < n; ++j) {
+                    a[i][j] -= factor * a[k][j];
+                }
+                rhs[i] -= factor * rhs[k];
+            }
+        }
+        T norm = 0;
+        for (int i = n - 1; i >= 0; --i) {
+            for (int j = i + 1; j < n; ++j) {
+                rhs[i] -= a[i][j] * rhs[j];
+            }
+            rhs[i] /= a[i][i];
+            if (!isfinite(rhs[i])) {
+                return false;
+            }
+            norm = max(norm, abs(rhs[i]));
+        }
+        if (norm == 0) {
+            return false;
+        }
+        for (int i = 0; i < n; ++i) {
+            weights[i] = rhs[i] / norm;
+        }
+        return true;
+    }
 
+    template <typename T, bool transpose, int blockSize>
+    __global__ void quasiImpesWeightsKernel(const T* matrix, T* weights,
+                                            const int* diagonalIndices, int numberOfRows,
+                                            int pressureVarIndex, int* failedRow)
+    {
+        const int row = blockDim.x * blockIdx.x + threadIdx.x;
         if (row < numberOfRows) {
-            const int diagIdx = diagonalIndices[row];
-            const int blockOffset = diagIdx * blockSize * blockSize;
-            const T* block = matrix + blockOffset;
-
-            // Set up RHS with 1.0 at pressure index
-            T rhs[blockSize] = {0};
-            rhs[pressureVarIndex] = 1.0;
-
-            // Storage for solution
-            T bweights[blockSize] = {0};
-
-            // Solve the system
-            if constexpr (transpose) {
-                // Solve using original matrix
-                solveBlock<T, blockSize>(block, rhs, bweights);
-            } else {
-                // Create transposed block for solving
-                T transposed[blockSize * blockSize];
-                transposeBlock<T, blockSize>(block, transposed);
-                solveBlock<T, blockSize>(transposed, rhs, bweights);
-            }
-
-            // Find maximum absolute value for normalization
-            T invMaxAbs = abs(bweights[0]);
-            for (int j = 1; j < blockSize; ++j) {
-                invMaxAbs = max(invMaxAbs, abs(bweights[j]));
-            }
-            invMaxAbs = T(1.0) / invMaxAbs;
-
-            // Normalize and store weights
-            for (int j = 0; j < blockSize; ++j) {
-                weights[row * blockSize + j] = bweights[j] * invMaxAbs;
+            const int diag = diagonalIndices[row];
+            if (diag < 0 || !normalizedWeights<T, transpose, blockSize>(
+                    matrix + std::size_t(diag)*blockSize*blockSize, pressureVarIndex,
+                    weights + std::size_t(row)*blockSize)) {
+                atomicMin(failedRow, row);
             }
         }
     }
@@ -197,12 +240,18 @@ dispatchQuasiImpesWeights(const GpuSparseMatrixWrapper<T>& matrix,
         // Launch kernel with the correct block size
         int threadBlockSize = getCudaRecomendedThreadBlockSize(quasiImpesWeightsKernel<T, transpose, blocksize>);
         int nThreadBlocks = getNumberOfBlocks(numberOfRows, threadBlockSize);
+        GpuVector<int> failedRow(&numberOfRows, 1);
         quasiImpesWeightsKernel<T, transpose, blocksize><<<nThreadBlocks, threadBlockSize>>>(
             matrix.getNonZeroValues().data(),
             weights.data(),
             diagonalIndices.data(),
             numberOfRows,
-            pressureVarIndex);
+            pressureVarIndex, failedRow.data());
+        const int row = failedRow.asStdVector().front();
+        if (row != numberOfRows) {
+            throw std::runtime_error("Cannot form GPU quasi-IMPES weights for diagonal block at row "
+                                     + std::to_string(row));
+        }
     }
 }
 

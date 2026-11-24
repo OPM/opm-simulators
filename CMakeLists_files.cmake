@@ -1304,6 +1304,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/overlappingscalarproduct.hh
   opm/simulators/linalg/overlaptypes.hh
   opm/simulators/linalg/OwningBlockPreconditioner.hpp
+  opm/simulators/linalg/InPlaceCprWeights.hpp
   opm/simulators/linalg/OwningTwoLevelPreconditioner.hpp
   opm/simulators/linalg/MILU.hpp
   opm/simulators/linalg/parallelamgbackend.hh

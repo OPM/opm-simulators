@@ -686,6 +686,15 @@ public:
         return false;
     }
 
+    bool computeGpuAnalyticWeights(gpuistl::GpuVector<Scalar>& weights) const
+    {
+        if constexpr (gpuistl::GpuBlackoilNohystIntensiveQuantitiesSupport<TypeTag>::value) {
+            return useGpuIntensiveQuantitiesDispatcher_ && gpuNohystIntensiveQuantities_
+                && gpuNohystIntensiveQuantities_->analyticWeights(weights.data(), weights.dim());
+        }
+        return false;
+    }
+
     bool computeGpuTrueImpesWeights(gpuistl::GpuVector<Scalar>& weights,
                                    Scalar timeStepSize) const
     {

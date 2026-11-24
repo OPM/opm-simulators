@@ -110,6 +110,9 @@ public:
     void assemble(TpfaLinearizerGpuParams<CpuTypeTag>& buffers,
                   const Problem& cpuProblem, Scalar dt) const;
 
+    bool analyticWeights(Scalar* weights, std::size_t size) const
+    { return impl_ && impl_->analyticWeights(weights, size); }
+
     /// Refresh the previous slot after the host recomputes its history, for example on restart.
     void invalidatePrevious();
 
@@ -130,6 +133,7 @@ private:
                             unsigned timeIdx) = 0;
         virtual void assemble(TpfaLinearizerGpuParams<CpuTypeTag>& buffers,
                               const Problem& cpuProblem, Scalar dt) = 0;
+        virtual bool analyticWeights(Scalar* weights, std::size_t size) const = 0;
         virtual void invalidatePrevious() = 0;
         virtual void advanceTimeLevel() = 0;
         virtual const char* name() const = 0;

@@ -274,15 +274,7 @@ namespace Amg
         //    (1/bg - rv/bo)/(1-rs*rv)
         // These coefficients must be applied for both the residual and
         // Jacobian.
-        using FluidSystem = typename Model::FluidSystem;
-        using LhsEval = double;
-
-        using PrimaryVariables = typename Model::PrimaryVariables;
         using VectorBlockType = typename Vector::block_type;
-        using Evaluation =
-            typename std::decay_t<decltype(model.localLinearizer(ThreadManager::threadId()).localResidual().residual(0))>::block_type;
-        using Toolbox = MathToolbox<Evaluation>;
-
         const auto& solution = model.solution(/*timeIdx*/ 0);
         VectorBlockType bweights;
 
@@ -304,43 +296,7 @@ namespace Amg
                 const auto& intQuants = localElemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
                 const auto& fs = intQuants.fluidState();
 
-                if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                    const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(
-                        FluidSystem::solventComponentIndex(FluidSystem::waterPhaseIdx));
-                    bweights[activeCompIdx]
-                        = Toolbox::template decay<LhsEval>(1 / fs.invB(FluidSystem::waterPhaseIdx));
-                }
-
-                double denominator = 1.0;
-                double rs = Toolbox::template decay<double>(fs.Rs());
-                double rv = Toolbox::template decay<double>(fs.Rv());
-                const auto& priVars = solution[index];
-                if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
-                    rs = 0.0;
-                }
-                if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs) {
-                    rv = 0.0;
-                }
-                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
-                    && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                    denominator = Toolbox::template decay<LhsEval>(1 - rs * rv);
-                }
-
-                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-                    const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(
-                        FluidSystem::solventComponentIndex(FluidSystem::oilPhaseIdx));
-                    bweights[activeCompIdx] = Toolbox::template decay<LhsEval>(
-                        (1 / fs.invB(FluidSystem::oilPhaseIdx) - rs / fs.invB(FluidSystem::gasPhaseIdx))
-                        / denominator);
-                }
-                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                    const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(
-                        FluidSystem::solventComponentIndex(FluidSystem::gasPhaseIdx));
-                    bweights[activeCompIdx] = Toolbox::template decay<LhsEval>(
-                        (1 / fs.invB(FluidSystem::gasPhaseIdx) - rv / fs.invB(FluidSystem::oilPhaseIdx))
-                        / denominator);
-                }
-
+                detail::analyticWeights(intQuants.getFluidSystem(), fs, solution[index], bweights);
                 weights[index] = bweights;
             }
         }

@@ -35,6 +35,7 @@
 #define OPM_GPU_BLACKOIL_NOHYST_INTENSIVE_QUANTITIES_IMPL_HPP
 
 #include <cuda_runtime.h>
+#include <opm/simulators/linalg/TrueImpesWeights.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/utility/gpuDecorators.hpp>
@@ -274,6 +275,18 @@ struct BlackoilNohystDispatcherTraits
     }
 };
 
+template<class IQ, class PV, class Scalar>
+__global__ void analyticWeightsKernel(const IQ* quantities, const PV* variables,
+                                      Scalar* weights, std::size_t cells)
+{
+    const std::size_t cell = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+    if (cell < cells) {
+        const auto& iq = quantities[cell];
+        Amg::detail::analyticWeights(iq.getFluidSystem(), iq.fluidState(), variables[cell],
+                                     weights + 3 * cell);
+    }
+}
+
 // The GPU kernel that runs the IQ update for each cell
 template <class GpuProblem, class PrimaryVariablesT, class IntensiveQuantitiesT>
 __global__ void
@@ -385,6 +398,19 @@ struct ImplFor final : GpuBlackoilNohystIntensiveQuantities<CpuTypeTag>::Impl
     const char* name() const override
     {
         return Traits::name;
+    }
+
+    bool analyticWeights(Scalar* weights, std::size_t size) const override
+    {
+        const auto cells = deviceIQ.size();
+        if (size != 3 * cells) {
+            OPM_THROW(std::logic_error, "Three-phase analytic CPR weight dimension mismatch");
+        }
+        constexpr unsigned threads = 128;
+        analyticWeightsKernel<<<(cells + threads - 1) / threads, threads>>>(
+            deviceIQ.data(), devicePriVars.data(), weights, cells);
+        OPM_GPU_SAFE_CALL(cudaGetLastError());
+        return true;
     }
 
     void invalidatePrevious() override

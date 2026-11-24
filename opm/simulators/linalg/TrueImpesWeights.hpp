@@ -22,11 +22,53 @@
 
 #include <opm/common/utility/gpuDecorators.hpp>
 
+#include <opm/material/common/MathToolbox.hpp>
+
 #include <algorithm>
 #include <cmath>
 #include <type_traits>
 
 namespace Opm::Amg::detail {
+
+template<class FluidSystem, class FluidState, class PrimaryVariables, class Weights>
+OPM_HOST_DEVICE void analyticWeights(const FluidSystem& system, const FluidState& fs,
+                                     const PrimaryVariables& priVars, Weights&& weights)
+{
+    if (system.phaseIsActive(FluidSystem::waterPhaseIdx)) {
+        const unsigned activeCompIdx = system.canonicalToActiveCompIdx(
+            system.solventComponentIndex(FluidSystem::waterPhaseIdx));
+        weights[activeCompIdx]
+            = 1.0 / getValue(fs.invB(FluidSystem::waterPhaseIdx));
+    }
+
+    double denominator = 1.0;
+    double rs = getValue(fs.Rs());
+    double rv = getValue(fs.Rv());
+
+    if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
+        rs = 0.0;
+    }
+    if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs) {
+        rv = 0.0;
+    }
+    if (system.phaseIsActive(FluidSystem::oilPhaseIdx)
+        && system.phaseIsActive(FluidSystem::gasPhaseIdx)) {
+        denominator = 1 - rs * rv;
+    }
+
+    if (system.phaseIsActive(FluidSystem::oilPhaseIdx)) {
+        const unsigned activeCompIdx = system.canonicalToActiveCompIdx(
+            system.solventComponentIndex(FluidSystem::oilPhaseIdx));
+        weights[activeCompIdx] = (1.0 / getValue(fs.invB(FluidSystem::oilPhaseIdx))
+                              - rs / getValue(fs.invB(FluidSystem::gasPhaseIdx))) / denominator;
+    }
+    if (system.phaseIsActive(FluidSystem::gasPhaseIdx)) {
+        const unsigned activeCompIdx = system.canonicalToActiveCompIdx(
+            system.solventComponentIndex(FluidSystem::gasPhaseIdx));
+        weights[activeCompIdx] = (1.0 / getValue(fs.invB(FluidSystem::gasPhaseIdx))
+                              - rv / getValue(fs.invB(FluidSystem::oilPhaseIdx))) / denominator;
+    }
+}
 
 template <int numEq, class Matrix, class Index>
 OPM_HOST_DEVICE inline auto& trueImpesJacobianEntry(Matrix& block, Index pv, Index eq)

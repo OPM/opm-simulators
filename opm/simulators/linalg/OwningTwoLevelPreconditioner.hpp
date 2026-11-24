@@ -20,6 +20,7 @@
 #ifndef OPM_OWNINGTWOLEVELPRECONDITIONER_HEADER_INCLUDED
 #define OPM_OWNINGTWOLEVELPRECONDITIONER_HEADER_INCLUDED
 
+#include <opm/simulators/linalg/InPlaceCprWeights.hpp>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 #include <opm/simulators/linalg/PressureSolverPolicy.hpp>
 #include <opm/simulators/linalg/twolevelmethodcpr.hh>
@@ -92,8 +93,8 @@ public:
                                             std::function<VectorType()>(), pressureIndex))
         , comm_(nullptr)
         , weightsCalculator_(weightsCalculator)
-        , weights_(weightsCalculator())
-        , levelTransferPolicy_(dummy_comm_, weights_, prm, pressureIndex)
+        , weights_(inPlaceCalculator() ? VectorType{} : weightsCalculator())
+        , levelTransferPolicy_(dummy_comm_, initialWeights(), prm, pressureIndex)
         , coarseSolverPolicy_(prm.get_child_optional("coarsesolver") ? prm.get_child("coarsesolver") : Opm::PropertyTree())
         , twolevel_method_(linearoperator,
                            finesmoother_,
@@ -126,8 +127,8 @@ public:
                                             comm, pressureIndex))
         , comm_(&comm)
         , weightsCalculator_(weightsCalculator)
-        , weights_(weightsCalculator())
-        , levelTransferPolicy_(*comm_, weights_, prm, pressureIndex)
+        , weights_(inPlaceCalculator() ? VectorType{} : weightsCalculator())
+        , levelTransferPolicy_(*comm_, initialWeights(), prm, pressureIndex)
         , coarseSolverPolicy_(prm.get_child_optional("coarsesolver") ? prm.get_child("coarsesolver") : Opm::PropertyTree())
         , twolevel_method_(linearoperator,
                            finesmoother_,
@@ -166,7 +167,11 @@ public:
 
     void update() override
     {
-        weights_ = weightsCalculator_();
+        if (const auto* calculate = inPlaceCalculator()) {
+            calculate->fill(weights_);
+        } else {
+            weights_ = weightsCalculator_();
+        }
         updateImpl(comm_);
     }
 
@@ -199,6 +204,19 @@ private:
     {
         // Serial case.
         twolevel_method_.updatePreconditioner(finesmoother_, coarseSolverPolicy_);
+    }
+
+    const auto* inPlaceCalculator() const
+    {
+        return weightsCalculator_.template target<Opm::InPlaceCprWeights<VectorType>>();
+    }
+
+    const VectorType& initialWeights()
+    {
+        if (const auto* calculate = inPlaceCalculator()) {
+            calculate->fill(weights_);
+        }
+        return weights_;
     }
 
     const OperatorType& linear_operator_;

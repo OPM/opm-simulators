@@ -125,7 +125,7 @@ private:
  */
 template <int blockSize, bool transpose>
 void
-testQuasiImpesWeights(int pressureVarIndex)
+testQuasiImpesWeights(int pressureVarIndex, double scale = 1)
 {
     TestFixture<blockSize> fixture;
 
@@ -133,6 +133,10 @@ testQuasiImpesWeights(int pressureVarIndex)
     auto cpuWeights = Opm::Amg::getQuasiImpesWeights<typename TestFixture<blockSize>::MatrixType,
                                                      typename TestFixture<blockSize>::VectorType>(
         fixture.matrix, pressureVarIndex, transpose, false);
+
+    for (int row = 0; row < fixture.N; ++row) {
+        fixture.matrix[row][row] *= scale;
+    }
 
     // Calculate quasiimpes weights for GPU
     auto gpuMatrix = fixture.createGpuMatrix();
@@ -450,6 +454,13 @@ struct ProlongationTestRunner {
 BOOST_AUTO_TEST_CASE(TestQuasiImpesWeights)
 {
     runTestForAllCombinations<QuasiImpesWeightsTestRunner>();
+}
+
+BOOST_AUTO_TEST_CASE(ScaledThreePhaseQuasiImpesWeights)
+{
+    testQuasiImpesWeights<3, false>(1, 1e-14);
+    testQuasiImpesWeights<3, true>(1, 1e150);
+    BOOST_CHECK_THROW((testQuasiImpesWeights<3, false>(1, 0)), std::runtime_error);
 }
 
 BOOST_AUTO_TEST_CASE(TestCoarseMatrixCreation)
