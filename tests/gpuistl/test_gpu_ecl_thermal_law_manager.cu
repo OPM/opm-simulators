@@ -39,6 +39,8 @@
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 
+#include "GpuTestHelpers.hpp"
+
 #include <array>
 #include <vector>
 
@@ -173,8 +175,7 @@ BOOST_AUTO_TEST_CASE(SpecrockAndThconrEvaluateMatchesCpu)
     Opm::gpuistl::detail::gpuMemcpyHostToDevice(dSg.get(), hostGasSaturations.data(), numCells);
 
     evaluateThermalKernel<<<1, 32>>>(viewManager, dT.get(), dSg.get(), dEnergy.get(), dConductivity.get(), numCells);
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-    OPM_GPU_SAFE_CALL(cudaGetLastError());
+    Opm::gpuistl::test::checkLaunchAndSynchronize();
 
     std::array<Scalar, numCells> hostEnergyResult {};
     std::array<Scalar, numCells> hostConductivityResult {};

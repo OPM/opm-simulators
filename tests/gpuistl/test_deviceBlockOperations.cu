@@ -23,11 +23,12 @@
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/deviceBlockOperations.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 
 #include <cuda_runtime.h>
 
 #include <boost/test/unit_test.hpp>
+
+#include "GpuTestHelpers.hpp"
 
 // Simple GPU kernel to test transposeBlock function
 __global__ void
@@ -65,8 +66,7 @@ BOOST_AUTO_TEST_CASE(TestTransposeBlock)
     Opm::gpuistl::GpuBuffer<double> gpuOutput(9);
 
     testTransposeKernel<<<1, 1>>>(gpuInput.data(), gpuOutput.data());
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-    OPM_GPU_SAFE_CALL(cudaGetLastError());
+    Opm::gpuistl::test::checkLaunchAndSynchronize();
 
     std::vector<double> hostResult = gpuOutput.asStdVector();
 
@@ -91,8 +91,7 @@ BOOST_AUTO_TEST_CASE(TestSolveBlock)
     Opm::gpuistl::GpuVector<double> gpuSolution(3);
 
     testSolveKernel<<<1, 1>>>(gpuMatrix.data(), gpuRhs.data(), gpuSolution.data());
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-    OPM_GPU_SAFE_CALL(cudaGetLastError());
+    Opm::gpuistl::test::checkLaunchAndSynchronize();
 
     std::vector<double> hostSolution = gpuSolution.asStdVector();
     std::vector<double> expectedSolution = {0.2127659574468085, -0.06382978723404256, 0.10638297872340424};

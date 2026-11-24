@@ -22,7 +22,6 @@
 #include <cuda_runtime.h>
 #include <opm/material/common/HasMemberGeneratorMacros.hpp>
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 
 #include "GpuTestHelpers.hpp"
@@ -186,8 +185,7 @@ using FluidStateDynamic = Opm::BlackOilFluidState<ScalarT, DummyFluidSystemDynam
 BOOST_AUTO_TEST_CASE(TestCreation)
 {
     kernelCreatingBlackoilFluidState<FluidState><<<1, 1>>>();
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-    OPM_GPU_SAFE_CALL(cudaGetLastError());
+    Opm::gpuistl::test::checkLaunchAndSynchronize();
 }
 
 BOOST_AUTO_TEST_CASE(TestSaturation)
@@ -217,8 +215,7 @@ BOOST_AUTO_TEST_CASE(TestPressure)
 BOOST_AUTO_TEST_CASE(TestDynamicCreation)
 {
     kernelCreatingBlackoilFluidStateDynamic<FluidStateDynamic, DummyFluidSystemDynamic<ScalarT>><<<1, 1>>>();
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-    OPM_GPU_SAFE_CALL(cudaGetLastError());
+    Opm::gpuistl::test::checkLaunchAndSynchronize();
 }
 
 BOOST_AUTO_TEST_CASE(TestPassByValueToGPUDynamic)

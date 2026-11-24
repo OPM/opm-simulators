@@ -24,6 +24,8 @@
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 
+#include "GpuTestHelpers.hpp"
+
 #include <memory>
 #include <string>
 #include <type_traits>
@@ -107,11 +109,9 @@ BOOST_AUTO_TEST_CASE(TestRunConstructor)
     OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
     OPM_GPU_SAFE_CALL(cudaGetLastError());
     createCondtionalStorage<true, double><<<1, 1>>>();
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-    OPM_GPU_SAFE_CALL(cudaGetLastError());
+    Opm::gpuistl::test::checkLaunchAndSynchronize();
     createCondtionalStorage<false, double><<<1, 1>>>();
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-    OPM_GPU_SAFE_CALL(cudaGetLastError());
+    Opm::gpuistl::test::checkLaunchAndSynchronize();
 }
 
 BOOST_AUTO_TEST_CASE(TestEnabledStoragePointer)
@@ -122,8 +122,7 @@ BOOST_AUTO_TEST_CASE(TestEnabledStoragePointer)
     auto numberFromGPU = Opm::gpuistl::make_gpu_unique_ptr<double>(0.0);
     OPM_GPU_SAFE_CALL(cudaGetLastError());
     testEnabledStorage<<<1, 1>>>(storage.get(), numberFromGPU.get());
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-    OPM_GPU_SAFE_CALL(cudaGetLastError());
+    Opm::gpuistl::test::checkLaunchAndSynchronize();
     auto number = Opm::gpuistl::copyFromGPU(numberFromGPU);
     BOOST_CHECK_EQUAL(32.2, number);
 
@@ -132,8 +131,7 @@ BOOST_AUTO_TEST_CASE(TestEnabledStoragePointer)
     auto storageSomeStruct = Opm::gpuistl::make_gpu_unique_ptr<ConditionalStorage<true, SomeStruct>>(
         ConditionalStorage<true, SomeStruct>());
     testEnabledStorageArrow<<<1, 1>>>(storageSomeStruct.get(), numberFromGPUFromCall.get());
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-    OPM_GPU_SAFE_CALL(cudaGetLastError());
+    Opm::gpuistl::test::checkLaunchAndSynchronize();
     auto numberFromCall = Opm::gpuistl::copyFromGPU(numberFromGPUFromCall);
     BOOST_CHECK_EQUAL(123, numberFromCall);
 }
@@ -144,8 +142,7 @@ BOOST_AUTO_TEST_CASE(TestEnabledStorageCopy)
     auto storage = CS(32.2);
     auto numberFromGPU = Opm::gpuistl::make_gpu_unique_ptr<double>(0.0);
     testEnabledStorage<<<1, 1>>>(storage, numberFromGPU.get());
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-    OPM_GPU_SAFE_CALL(cudaGetLastError());
+    Opm::gpuistl::test::checkLaunchAndSynchronize();
     auto number = Opm::gpuistl::copyFromGPU(numberFromGPU);
     BOOST_CHECK_EQUAL(32.2, number);
 
@@ -153,8 +150,7 @@ BOOST_AUTO_TEST_CASE(TestEnabledStorageCopy)
 
     auto storageSomeStruct = ConditionalStorage<true, SomeStruct>();
     testEnabledStorageArrow<<<1, 1>>>(storageSomeStruct, numberFromGPUFromCall.get());
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-    OPM_GPU_SAFE_CALL(cudaGetLastError());
+    Opm::gpuistl::test::checkLaunchAndSynchronize();
     auto numberFromCall = Opm::gpuistl::copyFromGPU(numberFromGPUFromCall);
     BOOST_CHECK_EQUAL(123, numberFromCall);
 }
@@ -164,7 +160,6 @@ BOOST_AUTO_TEST_CASE(TestDisabledStorageCopy)
     using namespace Opm;
     auto output = Opm::gpuistl::make_gpu_unique_ptr<int>(0);
     testDisabledStorage<<<1, 1>>>(ConditionalStorage<false, SomeStruct>(), output.get());
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-    OPM_GPU_SAFE_CALL(cudaGetLastError());
+    Opm::gpuistl::test::checkLaunchAndSynchronize();
     BOOST_CHECK_EQUAL(42, Opm::gpuistl::copyFromGPU(output));
 }

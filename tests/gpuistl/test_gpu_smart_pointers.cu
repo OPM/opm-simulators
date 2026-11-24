@@ -21,6 +21,9 @@
 
 #include <boost/test/unit_test.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
+
+#include "GpuTestHelpers.hpp"
+
 namespace
 {
 
@@ -166,7 +169,7 @@ BOOST_AUTO_TEST_CASE(TestManagedUniquePointer)
     // Mutate from the device through a regular kernel; the unified-memory
     // pointer is dereferenceable on the device, just like cudaMallocManaged.
     callFunction<<<1, 1>>>(Opm::gpuistl::make_view(managedPtr));
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
+    Opm::gpuistl::test::checkLaunchAndSynchronize();
 
     // Read back directly from host (the whole point of unified memory).
     BOOST_CHECK_EQUAL(managedPtr->isCalled, true);

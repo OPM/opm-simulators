@@ -52,9 +52,10 @@
 
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 
 #include <opm/material/fluidmatrixinteractions/GpuEclMaterialLawManager.hpp>
+
+#include "GpuTestHelpers.hpp"
 
 #include <algorithm>
 #include <array>
@@ -501,8 +502,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SatnumRegionLookupMatchesCpu, Scalar, ScalarTypes)
 
     Opm::gpuistl::GpuBuffer<int> regions(numCells);
     satnumRegionKernel<<<1, 32>>>(gpuManagerView, regions.data(), numCells);
-    OPM_GPU_SAFE_CALL(cudaGetLastError());
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
+    Opm::gpuistl::test::checkLaunchAndSynchronize();
 
     const auto hostRegions = regions.asStdVector();
     for (std::size_t cell = 0; cell < numCells; ++cell) {
@@ -557,12 +557,10 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ThreePhaseRelpermAndPcMatchCpu, Scalar, ScalarType
     Opm::gpuistl::GpuBuffer<PhaseValues> gpuKr(numPoints);
     Opm::gpuistl::GpuBuffer<PhaseValues> gpuPc(numPoints);
 
-    constexpr unsigned threadsPerBlock = 128;
-    const unsigned numBlocks = static_cast<unsigned>((numPoints + threadsPerBlock - 1) / threadsPerBlock);
-    evaluateMaterialLawKernel<Types><<<numBlocks, threadsPerBlock>>>(
+    evaluateMaterialLawKernel<Types><<<Opm::gpuistl::test::numBlocks(numPoints),
+                                       Opm::gpuistl::test::defaultThreadsPerBlock>>>(
         gpuManagerView, gpuPoints.data(), numPoints, gpuKr.data(), gpuPc.data());
-    OPM_GPU_SAFE_CALL(cudaGetLastError());
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
+    Opm::gpuistl::test::checkLaunchAndSynchronize();
 
     const auto hostKr = gpuKr.asStdVector();
     const auto hostPc = gpuPc.asStdVector();

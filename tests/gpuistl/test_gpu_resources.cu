@@ -25,6 +25,8 @@
 #define BOOST_TEST_MODULE TestGPUResources
 
 #include <boost/test/unit_test.hpp>
+
+#include "GpuTestHelpers.hpp"
 #include <cuda_runtime.h>
 
 #include <cstddef>
@@ -56,8 +58,7 @@ BOOST_AUTO_TEST_CASE(TestStreams)
     // Check that we can launch a kernel with said stream
 
     dummyKernel<<<1, 1, 0, stream.get()>>>();
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-    OPM_GPU_SAFE_CALL(cudaGetLastError());
+    Opm::gpuistl::test::checkLaunchAndSynchronize();
 }
 
 BOOST_AUTO_TEST_CASE(TestEvents)

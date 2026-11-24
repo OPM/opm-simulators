@@ -84,6 +84,8 @@
 #include <opm/simulators/linalg/gpuistl/GpuBlackoilIntensiveQuantitiesDispatcher.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuFlowGasWaterEnergyTypeTags.hpp>
 
+#include "GpuTestHelpers.hpp"
+
 #include <array>
 #include <chrono>
 #include <cmath>
@@ -516,7 +518,7 @@ static void runIntensiveQuantitiesTestForDeck(const std::string& deckPath,
     Opm::gpuistl::GpuBuffer<IntensiveQuantitiesGpu> intensiveQuantitiesBuffer(hostIntensiveQuantities);
 
     const unsigned blockSize = 64u;
-    const unsigned gridSize = static_cast<unsigned>((numCells + blockSize - 1u) / blockSize);
+    const int gridSize = Opm::gpuistl::test::numBlocks(numCells, blockSize);
 
     // Time the GPU kernel using CUDA events (excludes the host-to-device
     // setup and device-to-host copy already done via GpuBuffer ctors above).
@@ -955,7 +957,7 @@ static void runIntensiveQuantitiesTestFromSimulatorSolution(const std::string& d
     Opm::gpuistl::GpuBuffer<IntensiveQuantitiesGpu> intensiveQuantitiesBuffer(hostIntensiveQuantities);
 
     const unsigned blockSize = 64u;
-    const unsigned gridSize = static_cast<unsigned>((numCells + blockSize - 1u) / blockSize);
+    const int gridSize = Opm::gpuistl::test::numBlocks(numCells, blockSize);
 
     updateAllCellsKernel<<<gridSize, blockSize>>>(
         gpuProblemView,
@@ -964,8 +966,7 @@ static void runIntensiveQuantitiesTestFromSimulatorSolution(const std::string& d
         Opm::gpuistl::GpuView<IntensiveQuantitiesGpu>(
             intensiveQuantitiesBuffer.data(), intensiveQuantitiesBuffer.size()),
         numCells);
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-    OPM_GPU_SAFE_CALL(cudaGetLastError());
+    Opm::gpuistl::test::checkLaunchAndSynchronize();
 
     // CPU reference: use the IntensiveQuantities the simulator itself
     // computed during invalidateAndUpdateIntensiveQuantities(0). This is the
