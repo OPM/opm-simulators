@@ -82,6 +82,13 @@ loadRestartConnectionData(const std::vector<data::Rates::opt>& phs,
     auto  perf_phase_rates = perf_data.phase_rates.begin();
 
     for (const auto& pd : old_perf_data) {
+        // Auxiliary perforations have no restart connection; keep their initial state.
+        if (pd.ecl_index == AUX_PERFORATION_ECL_INDEX) {
+            ++perf_pressure;
+            ++perf_rates;
+            perf_phase_rates += phs.size();
+            continue;
+        }
         const auto& rst_connection = rst_well.connections[pd.ecl_index];
 
         *perf_pressure = rst_connection.pressure;       ++perf_pressure;
