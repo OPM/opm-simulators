@@ -28,6 +28,7 @@
 #include <opm/simulators/flow/SimulatorFullyImplicit.hpp>
 #endif
 
+#include <opm/input/eclipse/Schedule/Well/Connection.hpp>
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
 #include <opm/models/tpsa/tpsanewtonmethodparams.hpp>
@@ -364,6 +365,26 @@ runStep(SimulatorTimer& timer)
         }
         wellModel_().prepareDeserialize(serializer_.loadStep() - 1);
         serializer_.loadState();
+        // Summary vectors of fracturing connections are created when a connection is
+        // added; those already in the loaded schedule must be registered again.
+        if constexpr (requires { simulator_.problem().eclWriter().recordNewDynamicWellConns({}); }) {
+            const auto step = timer.currentStepNum();
+            typename std::remove_cvref_t<decltype(simulator_.problem().eclWriter())>::DynamicConns conns;
+            for (const auto& name : schedule().wellNames(step)) {
+                std::vector<std::size_t> cells;
+                for (const auto& conn : schedule().getWell(name, step).getConnections()) {
+                    if (conn.kind() == Connection::CTFKind::DynamicFracturing) {
+                        cells.push_back(conn.global_index());
+                    }
+                }
+                if (!cells.empty()) {
+                    conns.emplace_back(name, std::move(cells));
+                }
+            }
+            if (!conns.empty()) {
+                simulator_.problem().eclWriter().recordNewDynamicWellConns(conns);
+            }
+        }
         simulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
         simulator_.model().rebuildStorageCache(/*timeIdx=*/0);
         if (simulator_.problem().intensiveQuantityHistorySize() > 1) {
