@@ -30,6 +30,8 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
 
+#include <opm/grid/GraphOfGridWrappers.hpp>
+
 #include <opm/input/eclipse/EclipseState/Grid/LgrConnectionCheck.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellFractureSeeds.hpp>
@@ -478,7 +480,7 @@ public:
                       "--external-partition cannot be combined.");
         }
 
-        // Before distribution only the root rank holds cells; the others add empty groups.
+        // Before distribution only the root rank holds cells; the other ranks add no groups.
         const auto& level0 = *this->grid_->currentData().front();
         const auto& globalCell = level0.globalCell();
         std::vector<std::pair<int, Dune::FieldVector<double, 3>>> centres;
@@ -507,18 +509,43 @@ public:
                                      "rank each (largest region {} of {} cells).",
                                      radius, seeds.size(), maxGroup, centres.size()));
         }
-        // The partitioner leaves a rank empty when one group exceeds a rank's share.
-        const auto& comm = this->grid_->comm();
-        const auto largest = comm.max(maxGroup);
-        const auto total = comm.max(centres.size());
-        if (largest * static_cast<std::size_t>(comm.size()) > total) {
-            OPM_THROW(std::invalid_argument,
-                      fmt::format("--fracture-partition-radius={} keeps {} of {} cells on one rank, more "
-                                  "than a 1/{} share. Use fewer ranks or a smaller radius.",
-                                  radius, largest, total, comm.size()));
-        }
         this->grid_->setPartitionCellGroups(std::move(groups),
                                             std::max(halo, this->grid_->partitionCellGroupHalo()));
+
+        // The partitioner leaves a rank empty when one region exceeds a rank's share. A region is
+        // a connected set of halo-grown groups (the partitioner merges groups sharing a cell).
+        const auto grown = partitionCellGroupsWithHalo(*this->grid_);
+        std::vector<std::size_t> root(grown.size());
+        std::iota(root.begin(), root.end(), std::size_t{0});
+        const auto find = [&root](std::size_t g) {
+            while (root[g] != g) { g = root[g] = root[root[g]]; }
+            return g;
+        };
+        std::unordered_map<int, std::size_t> owner;
+        for (std::size_t g = 0; g < grown.size(); ++g) {
+            for (const int cell : grown[g]) {
+                if (const auto [it, inserted] = owner.emplace(cell, g); !inserted) {
+                    root[find(g)] = find(it->second);
+                }
+            }
+        }
+        std::unordered_map<std::size_t, std::size_t> regionSize;
+        std::size_t maxRegion = 0;
+        for (const auto& [cell, g] : owner) {
+            maxRegion = std::max(maxRegion, ++regionSize[find(g)]);
+        }
+        const auto& comm = this->grid_->comm();
+        const auto largest = comm.max(maxRegion);
+        const auto total = comm.max(centres.size());
+        const double share = this->imbalanceTol() * static_cast<double>(total) / comm.size();
+        if (static_cast<double>(largest) > share) {
+            OPM_THROW(std::invalid_argument,
+                      fmt::format("--fracture-partition-radius={} keeps {} of {} cells on one rank "
+                                  "(seed boxes, LGR boxes and their overlap-layer halo, merged where "
+                                  "they touch), more than a rank's share times the imbalance tolerance "
+                                  "({:.0f}). Use fewer ranks or a smaller radius.",
+                                  radius, largest, total, share));
+        }
         return true;
     }
 #endif // HAVE_MPI
