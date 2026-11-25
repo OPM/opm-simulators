@@ -170,9 +170,6 @@ BOOST_AUTO_TEST_CASE(All_Regions)
         BOOST_CHECK_CLOSE(endPoints.maxPcow, 10.0, 1.0e-8);
         BOOST_CHECK_CLOSE(endPoints.maxPcgo,  0.0, 1.0e-8);
 
-        BOOST_CHECK_CLOSE(endPoints.pcowLeverettFactor, 1.0, 1.0e-8);
-        BOOST_CHECK_CLOSE(endPoints.pcgoLeverettFactor, 1.0, 1.0e-8);
-
         BOOST_CHECK_CLOSE(endPoints.Krwr,  0.5,  1.0e-8);
         BOOST_CHECK_CLOSE(endPoints.Krgr,  0.8,  1.0e-8);
         BOOST_CHECK_CLOSE(endPoints.Krorw, 0.53, 1.0e-8);
@@ -205,9 +202,6 @@ BOOST_AUTO_TEST_CASE(All_Regions)
         BOOST_CHECK_CLOSE(endPoints.maxPcow, 10.0, 1.0e-8);
         BOOST_CHECK_CLOSE(endPoints.maxPcgo,  0.0, 1.0e-8);
 
-        BOOST_CHECK_CLOSE(endPoints.pcowLeverettFactor, 1.0, 1.0e-8);
-        BOOST_CHECK_CLOSE(endPoints.pcgoLeverettFactor, 1.0, 1.0e-8);
-
         BOOST_CHECK_CLOSE(endPoints.Krwr,  0.5,  1.0e-8);
         BOOST_CHECK_CLOSE(endPoints.Krgr,  0.8,  1.0e-8);
         BOOST_CHECK_CLOSE(endPoints.Krorw, 0.53, 1.0e-8);
@@ -237,9 +231,6 @@ BOOST_AUTO_TEST_CASE(All_Regions)
 
         BOOST_CHECK_CLOSE(endPoints.maxPcow, 8.5, 1.0e-8);
         BOOST_CHECK_CLOSE(endPoints.maxPcgo, 1.0, 1.0e-8);
-
-        BOOST_CHECK_CLOSE(endPoints.pcowLeverettFactor, 1.0, 1.0e-8);
-        BOOST_CHECK_CLOSE(endPoints.pcgoLeverettFactor, 1.0, 1.0e-8);
 
         BOOST_CHECK_CLOSE(endPoints.Krwr,  0.49, 1.0e-8);
         BOOST_CHECK_CLOSE(endPoints.Krgr,  0.79, 1.0e-8);
@@ -271,9 +262,6 @@ BOOST_AUTO_TEST_CASE(All_Regions)
         BOOST_CHECK_CLOSE(endPoints.maxPcow, 7.0, 1.0e-8);
         BOOST_CHECK_CLOSE(endPoints.maxPcgo, 2.0, 1.0e-8);
 
-        BOOST_CHECK_CLOSE(endPoints.pcowLeverettFactor, 1.0, 1.0e-8);
-        BOOST_CHECK_CLOSE(endPoints.pcgoLeverettFactor, 1.0, 1.0e-8);
-
         BOOST_CHECK_CLOSE(endPoints.Krwr,  0.48, 1.0e-8);
         BOOST_CHECK_CLOSE(endPoints.Krgr,  0.87, 1.0e-8);
         BOOST_CHECK_CLOSE(endPoints.Krorw, 0.82, 1.0e-8);
@@ -303,9 +291,6 @@ BOOST_AUTO_TEST_CASE(All_Regions)
 
         BOOST_CHECK_CLOSE(endPoints.maxPcow, 5.5, 1.0e-8);
         BOOST_CHECK_CLOSE(endPoints.maxPcgo, 3.0, 1.0e-8);
-
-        BOOST_CHECK_CLOSE(endPoints.pcowLeverettFactor, 1.0, 1.0e-8);
-        BOOST_CHECK_CLOSE(endPoints.pcgoLeverettFactor, 1.0, 1.0e-8);
 
         BOOST_CHECK_CLOSE(endPoints.Krwr,  0.45, 1.0e-8);
         BOOST_CHECK_CLOSE(endPoints.Krgr,  0.75, 1.0e-8);
@@ -370,9 +355,6 @@ BOOST_AUTO_TEST_CASE(Same_Region)
         BOOST_CHECK_CLOSE(endPoints.maxPcow, 8.5, 1.0e-8);
         BOOST_CHECK_CLOSE(endPoints.maxPcgo, 1.0, 1.0e-8);
 
-        BOOST_CHECK_CLOSE(endPoints.pcowLeverettFactor, 1.0, 1.0e-8);
-        BOOST_CHECK_CLOSE(endPoints.pcgoLeverettFactor, 1.0, 1.0e-8);
-
         BOOST_CHECK_CLOSE(endPoints.Krwr,  0.49, 1.0e-8);
         BOOST_CHECK_CLOSE(endPoints.Krgr,  0.79, 1.0e-8);
         BOOST_CHECK_CLOSE(endPoints.Krorw, 0.4,  1.0e-8);
@@ -402,9 +384,6 @@ BOOST_AUTO_TEST_CASE(Same_Region)
 
         BOOST_CHECK_CLOSE(endPoints.maxPcow, 8.5, 1.0e-8);
         BOOST_CHECK_CLOSE(endPoints.maxPcgo, 1.0, 1.0e-8);
-
-        BOOST_CHECK_CLOSE(endPoints.pcowLeverettFactor, 1.0, 1.0e-8);
-        BOOST_CHECK_CLOSE(endPoints.pcgoLeverettFactor, 1.0, 1.0e-8);
 
         BOOST_CHECK_CLOSE(endPoints.Krwr,  0.49, 1.0e-8);
         BOOST_CHECK_CLOSE(endPoints.Krgr,  0.79, 1.0e-8);
@@ -436,9 +415,6 @@ BOOST_AUTO_TEST_CASE(Same_Region)
         BOOST_CHECK_CLOSE(endPoints.maxPcow, 8.5, 1.0e-8);
         BOOST_CHECK_CLOSE(endPoints.maxPcgo, 1.0, 1.0e-8);
 
-        BOOST_CHECK_CLOSE(endPoints.pcowLeverettFactor, 1.0, 1.0e-8);
-        BOOST_CHECK_CLOSE(endPoints.pcgoLeverettFactor, 1.0, 1.0e-8);
-
         BOOST_CHECK_CLOSE(endPoints.Krwr,  0.49, 1.0e-8);
         BOOST_CHECK_CLOSE(endPoints.Krgr,  0.79, 1.0e-8);
         BOOST_CHECK_CLOSE(endPoints.Krorw, 0.4,  1.0e-8);
@@ -468,9 +444,6 @@ BOOST_AUTO_TEST_CASE(Same_Region)
 
         BOOST_CHECK_CLOSE(endPoints.maxPcow, 8.5, 1.0e-8);
         BOOST_CHECK_CLOSE(endPoints.maxPcgo, 1.0, 1.0e-8);
-
-        BOOST_CHECK_CLOSE(endPoints.pcowLeverettFactor, 1.0, 1.0e-8);
-        BOOST_CHECK_CLOSE(endPoints.pcgoLeverettFactor, 1.0, 1.0e-8);
 
         BOOST_CHECK_CLOSE(endPoints.Krwr,  0.49, 1.0e-8);
         BOOST_CHECK_CLOSE(endPoints.Krgr,  0.79, 1.0e-8);
@@ -618,9 +591,6 @@ BOOST_AUTO_TEST_CASE(All_Cells)
         BOOST_CHECK_CLOSE(endPoints.maxPcow, 10.0f, 1.0e-6f);
         BOOST_CHECK_CLOSE(endPoints.maxPcgo,  0.0f, 1.0e-6f);
 
-        BOOST_CHECK_CLOSE(endPoints.pcowLeverettFactor, 1.0f, 1.0e-6f);
-        BOOST_CHECK_CLOSE(endPoints.pcgoLeverettFactor, 1.0f, 1.0e-6f);
-
         BOOST_CHECK_CLOSE(endPoints.Krwr,  0.6f,   1.0e-6f);
         BOOST_CHECK_CLOSE(endPoints.Krgr,  0.775f, 1.0e-6f);
         BOOST_CHECK_CLOSE(endPoints.Krorw, 0.55f,  1.0e-6f);
@@ -650,9 +620,6 @@ BOOST_AUTO_TEST_CASE(All_Cells)
 
         BOOST_CHECK_CLOSE(endPoints.maxPcow, 7.0f, 1.0e-6f);
         BOOST_CHECK_CLOSE(endPoints.maxPcgo, 2.0f, 1.0e-6f);
-
-        BOOST_CHECK_CLOSE(endPoints.pcowLeverettFactor, 1.0f, 1.0e-6f);
-        BOOST_CHECK_CLOSE(endPoints.pcgoLeverettFactor, 1.0f, 1.0e-6f);
 
         BOOST_CHECK_CLOSE(endPoints.Krwr,  0.63f,  1.0e-6f);
         BOOST_CHECK_CLOSE(endPoints.Krgr,  0.775f, 1.0e-6f);
@@ -684,9 +651,6 @@ BOOST_AUTO_TEST_CASE(All_Cells)
         BOOST_CHECK_CLOSE(endPoints.maxPcow, 8.5f, 1.0e-6f);
         BOOST_CHECK_CLOSE(endPoints.maxPcgo, 1.0f, 1.0e-6f);
 
-        BOOST_CHECK_CLOSE(endPoints.pcowLeverettFactor, 1.0f, 1.0e-6f);
-        BOOST_CHECK_CLOSE(endPoints.pcgoLeverettFactor, 1.0f, 1.0e-6f);
-
         BOOST_CHECK_CLOSE(endPoints.Krwr,  0.66f,  1.0e-6f);
         BOOST_CHECK_CLOSE(endPoints.Krgr,  0.775f, 1.0e-6f);
         BOOST_CHECK_CLOSE(endPoints.Krorw, 0.65f,  1.0e-6f);
@@ -717,9 +681,6 @@ BOOST_AUTO_TEST_CASE(All_Cells)
         BOOST_CHECK_CLOSE(endPoints.maxPcow, 8.5f, 1.0e-6f);
         BOOST_CHECK_CLOSE(endPoints.maxPcgo, 1.0f, 1.0e-6f);
 
-        BOOST_CHECK_CLOSE(endPoints.pcowLeverettFactor, 1.0f, 1.0e-6f);
-        BOOST_CHECK_CLOSE(endPoints.pcgoLeverettFactor, 1.0f, 1.0e-6f);
-
         BOOST_CHECK_CLOSE(endPoints.Krwr,  0.71f,  1.0e-6f);
         BOOST_CHECK_CLOSE(endPoints.Krgr,  0.775f, 1.0e-6f);
         BOOST_CHECK_CLOSE(endPoints.Krorw, 0.7f,   1.0e-6f);
@@ -749,9 +710,6 @@ BOOST_AUTO_TEST_CASE(All_Cells)
 
         BOOST_CHECK_CLOSE(endPoints.maxPcow, 10.0f, 1.0e-6f);
         BOOST_CHECK_CLOSE(endPoints.maxPcgo,  0.0f, 1.0e-6f);
-
-        BOOST_CHECK_CLOSE(endPoints.pcowLeverettFactor, 1.0f, 1.0e-6f);
-        BOOST_CHECK_CLOSE(endPoints.pcgoLeverettFactor, 1.0f, 1.0e-6f);
 
         BOOST_CHECK_CLOSE(endPoints.Krwr,  0.65f,  1.0e-6f);
         BOOST_CHECK_CLOSE(endPoints.Krgr,  0.775f, 1.0e-6f);
