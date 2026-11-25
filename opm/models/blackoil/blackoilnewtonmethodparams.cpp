@@ -43,7 +43,7 @@ void BlackoilNewtonParams<Scalar>::registerParameters()
     Parameters::Register<Parameters::ChopGasSaturationAtTrappedGas>
         ("Stop a Newton update of the gas saturation at the trapped gas saturation "
          "of the WAG hysteresis imbibition curve (WAGHYSTR), when the update "
-         "crosses it. Gas is immobile below this saturation");
+         "crosses it. Gas is immobile below this saturation. Not applied with solvent");
     Parameters::Register<Parameters::MaxTemperatureChange<Scalar>>
         ("Maximum absolute change of temperature in a single iteration");
     Parameters::Register<Parameters::TemperatureMax<Scalar>>

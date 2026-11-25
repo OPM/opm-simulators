@@ -50,6 +50,45 @@ struct BlackOilNewtonUpdate
     // sees a non-zero derivative of the gas relative permeability.
     static constexpr double trappedGasSaturationOffset = 1.0e-6;
 
+    // The trapped gas saturation limits are kept out of line, such that they do
+    // not affect the compiled update otherwise.
+
+    //! \brief Gas saturation change, limited such that the gas saturation does not
+    //!        cross the trapped gas saturation in one update.
+    template<class Scalar>
+    OPM_HOST_DEVICE __attribute__((noinline))
+    static Scalar trappedGasLimitedDelta(const Scalar sg, const Scalar delta, const Scalar sgTrapped)
+    {
+        const Scalar sgNext = sg - delta;
+        const Scalar sgStop = sgTrapped + Scalar{trappedGasSaturationOffset};
+        const bool crossDown = sg > sgStop + Scalar{trappedGasSaturationOffset} &&
+                               sgNext < sgStop;
+        const bool crossUp = sg < sgTrapped && sgNext > sgStop;
+        return (crossDown || crossUp) ? sg - sgStop : delta;
+    }
+
+    //! \brief Keep a gas saturation on the mobile side of the trapped gas
+    //!        saturation after the saturation projection, if it was there before.
+    template<class PrimaryVariables, class Scalar>
+    OPM_HOST_DEVICE __attribute__((noinline))
+    static void keepGasMobileAfterProjection(PrimaryVariables& nextValue,
+                                             const Scalar sgBeforeProjection,
+                                             const Scalar sgTrapped)
+    {
+        if (nextValue.primaryVarsMeaningGas() != PrimaryVariables::GasMeaning::Sg ||
+            !(sgBeforeProjection >= sgTrapped) ||
+            !(nextValue[Indices::compositionSwitchIdx] < sgTrapped))
+        {
+            return;
+        }
+        const Scalar sgStop = sgTrapped + Scalar{trappedGasSaturationOffset};
+        nextValue[Indices::compositionSwitchIdx] = sgStop;
+        if (nextValue.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw) {
+            nextValue[Indices::waterSwitchIdx] =
+                std::min(nextValue[Indices::waterSwitchIdx], Scalar{1.0} - sgStop);
+        }
+    }
+
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     static constexpr unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
@@ -163,17 +202,12 @@ struct BlackOilNewtonUpdate
                     // imbibition curve, where krg has a kink, and krg may increase
                     // steeply above it. Stop an update crossing it, in either
                     // direction, just on the mobile side. A cell stopped there in
-                    // the previous iteration may cross it in this one.
-                    if (sgTrapped > 0.0) {
-                        const Scalar sg = currentValue[pvIdx];
-                        const Scalar sgNext = sg - delta;
-                        const Scalar sgStop = sgTrapped + Scalar{trappedGasSaturationOffset};
-                        const bool crossDown = sg > sgStop + Scalar{trappedGasSaturationOffset} &&
-                                               sgNext < sgStop;
-                        const bool crossUp = sg < sgTrapped && sgNext > sgStop;
-                        if (crossDown || crossUp) {
-                            delta = sg - sgStop;
-                        }
+                    // the previous iteration may cross it in this one. Only reducing
+                    // the gas saturation change keeps the oil saturation change
+                    // within the limit for two saturation primary variables. Not
+                    // applied with solvent, since krg then depends on Sg + Ss.
+                    if (!enableSolvent && sgTrapped > 0.0) {
+                        delta = trappedGasLimitedDelta(currentValue[pvIdx], delta, sgTrapped);
                     }
                 }
                 else {
@@ -315,7 +349,15 @@ struct BlackOilNewtonUpdate
             params.waterOnlyThreshold_, wasSwitched ? params.priVarOscilationThreshold_ : Scalar{0});
 
         if (params.projectSaturations_) {
+            // The normalization may scale the gas saturation onto the immobile side.
+            const bool keepGasMobile = !enableSolvent && sgTrapped > 0.0 &&
+                currentValue.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg;
+            const Scalar sgBeforeProjection =
+                keepGasMobile ? Scalar{nextValue[Indices::compositionSwitchIdx]} : Scalar{0.0};
             nextValue.chopAndNormalizeSaturations();
+            if (keepGasMobile) {
+                keepGasMobileAfterProjection(nextValue, sgBeforeProjection, sgTrapped);
+            }
         }
 
         nextValue.checkDefined();
