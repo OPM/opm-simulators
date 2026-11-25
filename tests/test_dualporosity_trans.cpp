@@ -71,7 +71,8 @@ public:
     auto getTransmissibilitymap() { return this->trans_; }
 };
 
-Deck dualContinuumDeck(bool nodppm, bool dualperm, const std::string& editKeywords = "")
+Deck dualContinuumDeck(bool nodppm, bool dualperm, const std::string& editKeywords = "",
+                       const std::string& gridKeywords = "")
 {
     // 2x1x4: matrix cells cart 0-3 (k=0,1), fracture cells cart 4-7 (k=2,3),
     // co-located twins, sigma one field value.
@@ -100,7 +101,7 @@ PERMZ
  4*0.5 4*500.0 /
 SIGMA
  0.12 /
-)" + (editKeywords.empty() ? "" : "EDIT\n" + editKeywords) + "END";
+)" + gridKeywords + (editKeywords.empty() ? "" : "EDIT\n" + editKeywords) + "END";
     return Parser{}.parseString(deckData);
 }
 
@@ -213,9 +214,10 @@ TransResult computeTransFromDeck(const Deck& deck)
     return result;
 }
 
-TransResult computeTrans(bool nodppm, bool dualperm = false, const std::string& editKeywords = "")
+TransResult computeTrans(bool nodppm, bool dualperm = false, const std::string& editKeywords = "",
+                         const std::string& gridKeywords = "")
 {
-    return computeTransFromDeck(dualContinuumDeck(nodppm, dualperm, editKeywords));
+    return computeTransFromDeck(dualContinuumDeck(nodppm, dualperm, editKeywords, gridKeywords));
 }
 
 // The coupling transmissibility of every twin pair:
@@ -345,6 +347,21 @@ BOOST_AUTO_TEST_CASE(PositiveTranOfTheMatrixKeepsTheMatrixClosedInDualPorosity)
     BOOST_CHECK_CLOSE(dk.trans(2, 3), dk.trans(6, 7), 1e-6);
     // The array has an effect: the values are not those of the permeability.
     BOOST_CHECK_GT(std::abs(dk.trans(0, 1) - computeTrans(true, true).trans(0, 1)), 0.0);
+}
+
+BOOST_AUTO_TEST_CASE(MatrixNncKeepsTheMatrixClosedInDualPorosity)
+{
+    // An NNC between two matrix cells that are not neighbours: cell (1,1,1) and cell (2,1,2), cart 0 and 3.
+    const std::string nnc = "NNC\n 1 1 1 2 1 2 5.0 /\n/\n";
+
+    const auto dp = computeTrans(true, /* dualperm = */ false, "", nnc);
+    BOOST_CHECK_EQUAL(dp.trans(0, 3), 0.0);
+    for (std::size_t g = 0; g < 4; ++g) {
+        BOOST_CHECK_CLOSE(dp.trans(g, g + 4), expectedCoupling, 1e-4);
+    }
+
+    const auto dk = computeTrans(true, /* dualperm = */ true, "", nnc);
+    BOOST_CHECK_GT(dk.trans(0, 3), 0.0);
 }
 
 int main(int argc, char** argv)
