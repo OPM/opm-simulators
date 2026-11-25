@@ -21,9 +21,30 @@
 #define OPM_PRECONDITIONERWITHUPDATE_HEADER_INCLUDED
 
 #include <dune/istl/preconditioner.hh>
+#include <functional>
 #include <memory>
 #include <tuple>
 #include <utility>
+
+namespace Opm
+{
+
+// Pass through the value-returning factory interface. CPR can fill its
+// persistent vector directly on setup and each subsequent update.
+template<class Vector>
+struct InPlaceCprWeights
+{
+    std::function<void(Vector&)> fill;
+
+    Vector operator()() const
+    {
+        Vector weights;
+        fill(weights);
+        return weights;
+    }
+};
+
+} // namespace Opm
 
 namespace Dune
 {

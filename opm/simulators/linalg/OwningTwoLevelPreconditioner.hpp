@@ -20,7 +20,6 @@
 #ifndef OPM_OWNINGTWOLEVELPRECONDITIONER_HEADER_INCLUDED
 #define OPM_OWNINGTWOLEVELPRECONDITIONER_HEADER_INCLUDED
 
-#include <opm/simulators/linalg/InPlaceCprWeights.hpp>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 #include <opm/simulators/linalg/PressureSolverPolicy.hpp>
 #include <opm/simulators/linalg/twolevelmethodcpr.hh>

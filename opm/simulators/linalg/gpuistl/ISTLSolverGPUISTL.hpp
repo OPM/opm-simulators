@@ -18,20 +18,16 @@
 #define OPM_ISTLSOLVERGPUISTL_HEADER_INCLUDED
 
 #include <dune/istl/operators.hh>
-#include <fmt/format.h>
 #include <algorithm>
 #include <cstddef>
 #include <memory>
-#include <cmath>
-#include <cstdlib>
 #include <optional>
 #include <stdexcept>
 #include <opm/grid/utility/ElementChunks.hpp>
-#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/simulators/linalg/AbstractISTLSolver.hpp>
 #include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 #include <opm/simulators/linalg/ISTLSolver.hpp>
-#include <opm/simulators/linalg/InPlaceCprWeights.hpp>
+#include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
@@ -461,9 +457,8 @@ private:
             } else if (weightsType == "trueimpes" || weightsType == "trueimpesanalytic") {
                 const auto method = weightsType == "trueimpesanalytic" ? Amg::TrueImpesMethod::Analytic
                                                                         : Amg::TrueImpesMethod::Storage;
-                const bool validate = std::getenv("OPM_GPU_VALIDATE_TRUEIMPES") != nullptr;
-                return InPlaceCprWeights<GPUVector>{[this, method, validate](GPUVector& weights) {
-                    updateTrueImpesWeights(weights, method, validate);
+                return InPlaceCprWeights<GPUVector>{[this, method](GPUVector& weights) {
+                    updateTrueImpesWeights(weights, method);
                 }};
             } else {
                 OPM_THROW(std::invalid_argument,
@@ -475,28 +470,22 @@ private:
         return weightsCalculator;
     }
 
-    void updateTrueImpesWeights(GPUVector& weights, Amg::TrueImpesMethod method, bool validate)
+    void updateTrueImpesWeights(GPUVector& weights, Amg::TrueImpesMethod method)
     {
         const auto rows = this->matrixPtr()->N();
         const auto size = rows * this->matrixPtr()->blockSize();
         if (weights.dim() != size) {
             weights.resize(size);
         }
-        bool resident = false;
         auto& model = m_simulator.model();
         const auto dt = m_simulator.timeStepSize();
         if constexpr (requires { model.computeGpuTrueImpesWeights(weights, method, dt); }) {
-            resident = model.computeGpuTrueImpesWeights(weights, method, dt);
-        }
-        if (resident && !validate) {
-            return;
-        }
-
-        if (validate && !resident) {
-            OPM_THROW(std::logic_error, "OPM_GPU_VALIDATE_TRUEIMPES requires GPU-resident true-IMPES weights");
+            if (model.computeGpuTrueImpesWeights(weights, method, dt)) {
+                return;
+            }
         }
 
-        // Allocate host storage on demand for CPU properties or the diagnostic comparison.
+        // CPU properties supply host weights for the GPU solver.
         if (m_cpuWeights.size() != rows) {
             m_pinnedWeightsMemory.reset();
             m_cpuWeights.resize(rows);
@@ -514,31 +503,9 @@ private:
             Amg::getTrueImpesWeights(pressureIndex, m_cpuWeights, elemCtx,
                                     m_simulator.model(), m_element_chunks, parallel);
         }
-        if (resident && rows > 0) {
-            validateResidentWeights(weights);
-        } else if (size > 0) {
+        if (size > 0) {
             weights.copyFromHostAsync(m_cpuWeights);
         }
-    }
-
-    void validateResidentWeights(const GPUVector& weights) const
-    {
-        Vector gpuWeights(m_cpuWeights.size());
-        weights.copyToHost(gpuWeights);
-        real_type maxError = 0;
-        for (std::size_t cell = 0; cell < m_cpuWeights.size(); ++cell) {
-            for (std::size_t eq = 0; eq < Vector::block_type::size(); ++eq) {
-                const auto error = std::abs(gpuWeights[cell][eq] - m_cpuWeights[cell][eq]);
-                if (!std::isfinite(error) || error > 1e-10) {
-                    OPM_THROW(std::runtime_error, fmt::format(
-                        "Resident true-IMPES weight mismatch at cell {}, equation {}: GPU={}, CPU={}",
-                        cell, eq, gpuWeights[cell][eq], m_cpuWeights[cell][eq]));
-                }
-                maxError = std::max(maxError, error);
-            }
-        }
-        OpmLog::info(fmt::format("[GPU true-IMPES validation] cells={} max_absolute_error={}",
-                                m_cpuWeights.size(), maxError));
     }
 
     void updateMatrix(const Matrix& M)
