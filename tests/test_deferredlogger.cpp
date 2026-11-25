@@ -25,6 +25,11 @@
 #include <boost/test/unit_test.hpp>
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/simulators/utils/NonRetryableError.hpp>
+#include <opm/simulators/utils/ParallelCommunication.hpp>
+
+#include <dune/common/parallel/mpihelper.hh>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/OpmLog/LogBackend.hpp>
@@ -97,4 +102,39 @@ BOOST_AUTO_TEST_CASE(deferredlogger)
 
     BOOST_CHECK_EQUAL(log_stream.str(), expected);
 
+}
+
+struct MPIFixture
+{
+    MPIFixture()
+    {
+        auto& suite = boost::unit_test::framework::master_test_suite();
+        Dune::MPIHelper::instance(suite.argc, suite.argv);
+    }
+};
+
+BOOST_GLOBAL_FIXTURE(MPIFixture);
+
+BOOST_AUTO_TEST_CASE(NonRetryableErrorSurvivesParallelCatch)
+{
+    const auto& comm = Dune::MPIHelper::getCommunication();
+    auto throwing = [&comm]() {
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+        throw NonRetryableError("capacity exhausted");
+        OPM_END_PARALLEL_TRY_CATCH("prefix: ", comm);
+    };
+    BOOST_CHECK_THROW(throwing(), NonRetryableError);
+
+    auto plain = [&comm]() {
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+        throw std::runtime_error("other");
+        OPM_END_PARALLEL_TRY_CATCH("prefix: ", comm);
+    };
+    try {
+        plain();
+        BOOST_FAIL("expected an exception");
+    } catch (const NonRetryableError&) {
+        BOOST_FAIL("runtime_error must not become NonRetryableError");
+    } catch (const std::runtime_error&) {
+    }
 }

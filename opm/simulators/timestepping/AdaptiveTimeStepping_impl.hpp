@@ -46,6 +46,7 @@
 #include <opm/models/utils/parametersystem.hpp>
 
 #include <opm/simulators/timestepping/EclTimeSteppingParams.hpp>
+#include <opm/simulators/utils/NonRetryableError.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -1549,6 +1550,9 @@ runSubStep_()
             OpmLog::debug("Overall linear iterations used: "
                           + std::to_string(substep_report.total_linear_iterations));
         }
+    }
+    catch (const NonRetryableError&) {
+        throw;
     }
     catch (const TooManyIterations& e) {
         handleFailure("Solver convergence failure - Iteration limit reached", e);

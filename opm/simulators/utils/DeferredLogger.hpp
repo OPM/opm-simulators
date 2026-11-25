@@ -48,7 +48,8 @@ enum ExcEnum {
     INVALID_ARGUMENT = 2,
     LOGIC_ERROR = 3,
     DEFAULT = 4,   // will throw std::logic_error()
-    NUMERICAL_ISSUE = 5
+    NUMERICAL_ISSUE = 5,
+    NON_RETRYABLE = 6
 };
 }
 
