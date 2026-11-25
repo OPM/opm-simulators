@@ -213,6 +213,23 @@ getWellEcl(const std::string& well_name) const
 }
 
 template<typename Scalar, typename IndexTraits>
+bool BlackoilWellModelGeneric<Scalar, IndexTraits>::
+hasWellEventAtReportStepStart(const std::string& wellName,
+                              const std::uint64_t eventMask,
+                              const int reportStepIdx) const
+{
+    if (!this->report_step_starts_) {
+        return false;
+    }
+
+    const auto mask = this->wells_loaded_from_restart_.contains(wellName)
+        ? (eventMask & ~ScheduleEvents::NEW_WELL)
+        : eventMask;
+
+    return this->schedule()[reportStepIdx].wellgroup_events().hasEvent(wellName, mask);
+}
+
+template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelGeneric<Scalar, IndexTraits>::
 initFromRestartFile(const RestartValue& restartValues,
                     std::unique_ptr<WellTestState> wtestState,
@@ -248,6 +265,10 @@ initFromRestartFile(const RestartValue& restartValues,
                         handle_ms_well,
                         this->wellState(),
                         this->groupState());
+
+    for (const auto& [wname, rst_well] : restartValues.wells) {
+        this->wells_loaded_from_restart_.insert(wname);
+    }
 
     // Reconstruct the retained network THP limit, which the restart file does
     // not carry. A well is attached to the network when its group is a network
