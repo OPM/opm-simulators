@@ -16,8 +16,11 @@
 #ifndef OPM_MODELS_BLACKOIL_MODULEPARAM_HH
 #define OPM_MODELS_BLACKOIL_MODULEPARAM_HH
 
+#include <opm/models/blackoil/blackoildualporositygravitydrainage.hh>
+
 namespace Opm {
-    template<class ConvectiveMixingModuleParamT>
+    template<class ConvectiveMixingModuleParamT,
+             class DualPorosityGravityDrainageParamT = NoDualPorosityGravityDrainageParam>
     struct BlackoilModuleParams
     {
         ConvectiveMixingModuleParamT convectiveMixingModuleParam;
@@ -25,6 +28,10 @@ namespace Opm {
         //! Weight the phase densities by the phase saturations when computing the
         //! face-averaged density in the gravity term of the phase potential.
         bool saturationWeightedDensity = false;
+
+        //! Per-cell data of the dual-porosity gravity drainage; empty unless the
+        //! run selects a gravity drainage model.
+        DualPorosityGravityDrainageParamT dualPorosityGravityDrainageParam{};
     };
 } // namespace Opm
 

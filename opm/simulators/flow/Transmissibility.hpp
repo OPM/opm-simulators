@@ -81,6 +81,20 @@ public:
     Scalar transmissibility(unsigned elemIdx1, unsigned elemIdx2) const;
 
     /*!
+     * \brief Whether two elements are a matrix cell and its fracture twin, for
+     *        the dual-porosity gravity drainage, and which one is the matrix.
+     *
+     * Registered only when the run selects a gravity drainage model.
+     */
+    struct GravityDrainagePairInfo
+    {
+        bool isTwinPair = false;
+        bool firstIsMatrix = false;
+    };
+
+    GravityDrainagePairInfo dualPorosityGravityDrainagePair(unsigned elemIdx1, unsigned elemIdx2) const;
+
+    /*!
      * \brief Return the transmissibility for a given boundary segment.
      */
     Scalar transmissibilityBoundary(unsigned elemIdx, unsigned boundaryFaceIdx) const;
@@ -315,6 +329,9 @@ protected:
     std::vector<Scalar> porosity_;
     std::vector<Scalar> dispersion_;
     std::unordered_map<std::uint64_t, Scalar> trans_;
+    //! The matrix element of each twin pair, keyed by the pair, for the
+    //! dual-porosity gravity drainage.
+    std::unordered_map<std::uint64_t, unsigned> gravityDrainageTwinMatrix_;
     const EclipseState& eclState_;
     const GridView& gridView_;
     const CartesianIndexMapper& cartMapper_;

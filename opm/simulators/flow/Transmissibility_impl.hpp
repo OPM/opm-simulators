@@ -234,6 +234,18 @@ transmissibility(unsigned elemIdx1, unsigned elemIdx2) const
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
+typename Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::GravityDrainagePairInfo
+Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+dualPorosityGravityDrainagePair(unsigned elemIdx1, unsigned elemIdx2) const
+{
+    const auto it = gravityDrainageTwinMatrix_.find(details::isId(elemIdx1, elemIdx2));
+    if (it == gravityDrainageTwinMatrix_.end()) {
+        return {};
+    }
+    return { true, it->second == elemIdx1 };
+}
+
+template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 Scalar Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 transmissibilityBoundary(unsigned elemIdx, unsigned boundaryFaceIdx) const
 {
@@ -747,6 +759,23 @@ update(bool global, const TransUpdateQuantities update_quantities,
         int elemIdx = elemMapper.index(elem);
         int cartElemIdx =  cartMapper_.cartesianIndex(elemIdx);
         globalToLocal[cartElemIdx] = elemIdx;
+    }
+
+    // The twin pairs for the dual-porosity gravity drainage.  A matrix cell and
+    // its fracture twin are on the same process.
+    gravityDrainageTwinMatrix_.clear();
+    if (porosityModel.gravityDrainage() != PorosityModel::GravityDrainage::None) {
+        for (const auto& [cartIdx, elemIdx] : globalToLocal) {
+            if (!isFractureCell(cartIdx)) {
+                continue;
+            }
+            const auto matrix = globalToLocal.find(cartIdx - matrixCellCount);
+            if (matrix != globalToLocal.end()) {
+                gravityDrainageTwinMatrix_.emplace(details::isId(static_cast<std::uint32_t>(matrix->second),
+                                                                 static_cast<std::uint32_t>(elemIdx)),
+                                                   static_cast<unsigned>(matrix->second));
+            }
+        }
     }
 
     if (!disableNNC) {

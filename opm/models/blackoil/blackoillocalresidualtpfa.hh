@@ -37,6 +37,7 @@
 
 #include <opm/models/blackoil/blackoilmodules.hpp>
 #include <opm/models/blackoil/blackoilconvectivemixingmoduleparam.hpp>
+#include <opm/models/blackoil/blackoildualporositygravitydrainage.hh>
 #include <opm/models/blackoil/blackoilmoduleparams.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 
@@ -131,7 +132,8 @@ class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLo
     using SolventModule = BlackOilSolventModule<TypeTag, enableSolvent>;
     using PolymerModule = BlackOilPolymerModule<TypeTag, enablePolymer>;
 
-    using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar>>;
+    using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar>,
+                                              DualPorosityGravityDrainageParam<Scalar>>;
     using Toolbox = MathToolbox<Evaluation>;
 
 public:
@@ -149,6 +151,10 @@ public:
         ConditionalStorage<enableDiffusion, double> diffusivity;
         ConditionalStorage<enableDispersion, double> dispersivity;
         ConditionalStorage<enablePolymer, double> dist;
+        // dual-porosity gravity drainage: whether the connection joins a matrix
+        // cell and its fracture twin, and whether the interior cell is the matrix
+        bool gdTwinPair = false;
+        bool gdInIsMatrix = false;
     };
 
     /*!
@@ -351,7 +357,7 @@ public:
                        .two_norm();
         }
 
-        const ResidualNBInfo res_nbinfo {trans,
+        ResidualNBInfo res_nbinfo {trans,
                                          faceArea,
                                          thpresInToEx,
                                          thpresExToIn,
@@ -364,6 +370,11 @@ public:
                                          diffusivity,
                                          dispersivity,
                                          dist};
+        if constexpr (requires { problem.dualPorosityGravityDrainagePair(globalIndexIn, globalIndexEx); }) {
+            const auto pair = problem.dualPorosityGravityDrainagePair(globalIndexIn, globalIndexEx);
+            res_nbinfo.gdTwinPair = pair.isTwinPair;
+            res_nbinfo.gdInIsMatrix = pair.firstIsMatrix;
+        }
 
         calculateFluxes_(flux,
                          darcy,
@@ -373,6 +384,80 @@ public:
                          globalIndexEx,
                          res_nbinfo,
                          problem.moduleParams());
+    }
+
+    /*!
+     * \brief The dual-porosity gravity drainage heads of a connection, one per
+     *        phase.
+     *
+     * Non-zero only on a connection between a matrix cell and its fracture twin
+     * in a run with gravity drainage: the water-oil and gas-oil heads follow
+     * from the matrix block height, the face-averaged phase densities and the
+     * difference of the mobile water and gas fractions of the two cells, and
+     * are shared among the phases.  They join the phase potentials before the
+     * upstream cell is chosen.  Host only.
+     */
+    template <class IntensiveQuantitiesT,
+              class ResidualNBInfoT,
+              class ModuleParamsT>
+    OPM_HOST_DEVICE static DualPorosityFractions::PhaseGravityHeads<Evaluation>
+    dualPorosityGravityHeads_([[maybe_unused]] const IntensiveQuantitiesT& intQuantsIn,
+                              [[maybe_unused]] const IntensiveQuantitiesT& intQuantsEx,
+                              [[maybe_unused]] const unsigned globalIndexIn,
+                              [[maybe_unused]] const unsigned globalIndexEx,
+                              [[maybe_unused]] const ResidualNBInfoT& nbInfo,
+                              [[maybe_unused]] const ModuleParamsT& moduleParams)
+    {
+        DualPorosityFractions::PhaseGravityHeads<Evaluation> heads{Evaluation(0.0),
+                                                                   Evaluation(0.0),
+                                                                   Evaluation(0.0)};
+#if !OPM_IS_INSIDE_DEVICE_FUNCTION
+        if constexpr (requires { nbInfo.gdTwinPair;
+                                 moduleParams.dualPorosityGravityDrainageParam.cell; }) {
+            const auto& param = moduleParams.dualPorosityGravityDrainageParam;
+            if (!nbInfo.gdTwinPair || param.cell.empty()) {
+                return heads;
+            }
+
+            using namespace DualPorosityFractions;
+            const FluidSystem& fsys = intQuantsIn.getFluidSystem();
+            if (!fsys.phaseIsActive(oilPhaseIdx)) {
+                return heads;
+            }
+
+            const auto& cellIn = param.cell[globalIndexIn];
+            const auto& cellEx = param.cell[globalIndexEx];
+            const double dzMatrix = nbInfo.gdInIsMatrix ? cellIn.dzMatrix : cellEx.dzMatrix;
+            const auto& fsIn = intQuantsIn.fluidState();
+            const auto& fsEx = intQuantsEx.fluidState();
+            const auto rhoAvg = [&fsIn, &fsEx](const unsigned phaseIdx)
+            {
+                return (fsIn.density(phaseIdx) + Toolbox::value(fsEx.density(phaseIdx))) / 2;
+            };
+            const Evaluation rhoOil = rhoAvg(oilPhaseIdx);
+
+            Evaluation gasOilHead(0.0);
+            Evaluation waterOilHead(0.0);
+            if (fsys.phaseIsActive(waterPhaseIdx)) {
+                const Evaluation xwIn = waterFraction(Evaluation(fsIn.saturation(waterPhaseIdx)),
+                                                      cellIn.swi, cellIn.xwi, cellIn.water);
+                const Evaluation xwEx = waterFraction(Evaluation(Toolbox::value(fsEx.saturation(waterPhaseIdx))),
+                                                      cellEx.swi, cellEx.xwi, cellEx.water);
+                waterOilHead = waterOilGravityHead(param.gravity, dzMatrix,
+                                                   rhoAvg(waterPhaseIdx), rhoOil, xwEx, xwIn);
+            }
+            if (fsys.phaseIsActive(gasPhaseIdx)) {
+                const Evaluation xgIn = gasFraction(Evaluation(fsIn.saturation(gasPhaseIdx)),
+                                                    cellIn.sgi, cellIn.xgi, cellIn.gas);
+                const Evaluation xgEx = gasFraction(Evaluation(Toolbox::value(fsEx.saturation(gasPhaseIdx))),
+                                                    cellEx.sgi, cellEx.xgi, cellEx.gas);
+                gasOilHead = gasOilGravityHead(param.gravity, dzMatrix,
+                                               rhoOil, rhoAvg(gasPhaseIdx), xgEx, xgIn);
+            }
+            heads = phaseGravityHeads(gasOilHead, waterOilHead);
+        }
+#endif // !OPM_IS_INSIDE_DEVICE_FUNCTION
+        return heads;
     }
 
     template <class RateVectorT,
@@ -405,6 +490,10 @@ public:
         ConditionalStorage<enableSolvent || enablePolymer, Evaluation> waterVolumeFlux(0.0);
         ConditionalStorage<enablePolymer, bool> waterUpIsIn(true);
 
+        const auto gdHeads = dualPorosityGravityHeads_(intQuantsIn, intQuantsEx,
+                                                       globalIndexIn, globalIndexEx,
+                                                       nbInfo, moduleParams);
+
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!fsys.phaseIsActive(phaseIdx)) {
                 continue;
@@ -432,7 +521,10 @@ public:
                                                              distZg,
                                                              thpresInToEx,
                                                              thpresExToIn,
-                                                             moduleParams);
+                                                             moduleParams,
+                                                             phaseIdx == oilPhaseIdx ? gdHeads.oil
+                                                             : phaseIdx == gasPhaseIdx ? gdHeads.gas
+                                                             : gdHeads.water);
 
             const IntensiveQuantities& up = (upIdx == interiorDofIdx) ? intQuantsIn : intQuantsEx;
             unsigned globalUpIndex = (upIdx == interiorDofIdx) ? globalIndexIn : globalIndexEx;

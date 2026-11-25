@@ -370,6 +370,8 @@ public:
 
         this->readBoundaryConditions_();
 
+        this->updateDualPorosityGravityDrainageParams_();
+
         // compute and set eq weights based on initial b values
         this->computeAndSetEqWeights_();
 
@@ -1179,6 +1181,52 @@ protected:
             return true;
         } else {
             return false;
+        }
+    }
+
+    //! Fill the per-cell data of the dual-porosity gravity drainage: the end
+    //! points of the mobile fractions from the scaled saturation end points,
+    //! the initial saturations and fractions, and the matrix block height.
+    //! Nothing to do unless the run selects a gravity drainage model.
+    void updateDualPorosityGravityDrainageParams_()
+    {
+        const auto& eclState = this->simulator().vanguard().eclState();
+        if (eclState.runspec().porosityModel().gravityDrainage() == PorosityModel::GravityDrainage::None) {
+            return;
+        }
+
+        const auto& fp = eclState.fieldProps();
+        std::vector<double> dzMatrix;
+        if (fp.has_double("DZMTRXV")) {
+            dzMatrix = this->lookUpData_.assignFieldPropsDoubleOnLeaf(fp, "DZMTRXV");
+        }
+
+        using namespace DualPorosityFractions;
+        auto& param = this->moduleParams_.dualPorosityGravityDrainageParam;
+        const std::size_t numDof = this->model().numGridDof();
+        param.gravity = this->gravity_[dim - 1];
+        param.cell.resize(numDof);
+        for (std::size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
+            const auto& eps = this->materialLawManager().oilWaterScaledEpsInfoDrainage(dofIdx);
+            auto& cell = param.cell[dofIdx];
+            // The connate hydrocarbon and liquid saturations follow from the
+            // maximum water and gas saturations; the critical ones add the
+            // residual saturations of both displaced phases.
+            cell.water = { eps.Swl, eps.Swcr,
+                           clampFraction(1.0 - eps.Swu), clampFraction(eps.Sowcr + eps.Sgcr) };
+            cell.gas = { eps.Sgl, eps.Sgcr,
+                         clampFraction(1.0 - eps.Sgu), clampFraction(eps.Sogcr + eps.Swcr) };
+
+            const auto& initialFs = this->initialFluidState(dofIdx);
+            if (FluidSystem::phaseIsActive(waterPhaseIdx)) {
+                cell.swi = initialFs.saturation(waterPhaseIdx);
+            }
+            if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
+                cell.sgi = initialFs.saturation(gasPhaseIdx);
+            }
+            cell.xwi = initialWaterFraction(cell.swi, cell.water);
+            cell.xgi = initialGasFraction(cell.sgi, cell.gas);
+            cell.dzMatrix = dzMatrix.empty() ? 0.0 : dzMatrix[dofIdx];
         }
     }
 

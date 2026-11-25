@@ -536,6 +536,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_milu.cpp
   tests/test_multmatrixtransposed.cpp
   tests/test_networkpressure.cpp
+  tests/test_dualporosity_gravitydrainage.cpp
   tests/test_dualporosity_keywords.cpp
   tests/test_dualporosity_trans.cpp
   tests/test_nonnc.cpp
@@ -864,6 +865,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/blackoil/blackoildarcyfluxmodule.hh
   opm/models/blackoil/blackoildiffusionmodule.hh
   opm/models/blackoil/blackoildispersionmodule.hh
+  opm/models/blackoil/blackoildualporositygravitydrainage.hh
   opm/models/blackoil/blackoilenergymodules.hh
   opm/models/blackoil/blackoilextbomodules.hh
   opm/models/blackoil/blackoilextboparams.hpp
