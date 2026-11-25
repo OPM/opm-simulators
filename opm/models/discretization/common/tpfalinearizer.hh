@@ -795,6 +795,7 @@ public:
             return;
         }
         const unsigned int numCells = model_().numTotalDof();
+        prepareHostIntensiveQuantitiesForParallelRead_(numCells);
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
@@ -948,9 +949,64 @@ private:
         }
     }
 
+    void prepareHostIntensiveQuantitiesForParallelRead_(unsigned numCells)
+    {
+        if constexpr (requires { model_().ensureHostIntensiveQuantities(0); }) {
+            if (numCells != 0) {
+                // A failed allocation or GPU copy must propagate on the calling thread.
+                model_().ensureHostIntensiveQuantities(/*timeIdx=*/0);
+            }
+        }
+    }
+
+    template <class SubDomainType>
+    void prepare_source_intensive_quantities_gpu(unsigned int numCells, const SubDomainType& domain)
+    {
+        // Gather source IQs before launching assembly.  Otherwise the host
+        // download waits for the queued assembly kernel as well as the gather.
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+        if constexpr (enableFullyImplicitThermal &&
+                      requires { model_().prepareHostIntensiveQuantitiesForSources(0, sourceIqCells_); }) {
+            const auto episode = simulatorPtr_->episodeIndex();
+            if (sourceCellsEpisode_ != episode || sourceCellsDomainSize_ != numCells) {
+                sourceIqCells_.clear();
+                const auto& vanguard = simulatorPtr_->vanguard();
+                const auto& source = vanguard.schedule()[episode].source();
+                if (source.size() > 0) {
+                    for (unsigned ii = 0; ii < numCells; ++ii) {
+                        const unsigned cell = domain.cells[ii];
+                        std::array<int, 3> ijk;
+                        vanguard.cartesianCoordinate(cell, ijk);
+                        if (!source.hasSource(ijk)) { continue; }
+                        // The shared CPU source calculation reads IQs whenever
+                        // an active phase lacks an explicit enthalpy rate.
+                        if ((FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)
+                             && !source.hrate(ijk, SourceComponent::WATER))
+                            || (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
+                                && !source.hrate(ijk, SourceComponent::OIL))
+                            || (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)
+                                && !source.hrate(ijk, SourceComponent::GAS))) {
+                            sourceIqCells_.push_back(cell);
+                        }
+                    }
+                }
+                sourceCellsEpisode_ = episode;
+                sourceCellsDomainSize_ = numCells;
+            }
+            model_().prepareHostIntensiveQuantitiesForSources(0, sourceIqCells_);
+        }
+#endif
+    }
+
     template <class SubDomainType>
     void linearize_source_terms(unsigned int numCells, const SubDomainType& domain)
     {
+        // The sparse GPU path has already prepared just the source cells.
+        if constexpr (!requires (ADVectorBlockCPU& source, unsigned cell) {
+            LocalResidual::computeSource(source, problem_(), cell, 0);
+        }) {
+            prepareHostIntensiveQuantitiesForParallelRead_(numCells);
+        }
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
@@ -960,7 +1016,6 @@ private:
             VectorBlockCPU res(0.0);
             MatrixBlockCPU bMat(0.0);
             ADVectorBlockCPU adres(0.0);
-            const IntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
             const double volume = model_().dofTotalVolume(globI);
 
             // Cell-wise source terms.
@@ -968,10 +1023,19 @@ private:
             res = 0.0;
             bMat = 0.0;
             adres = 0.0;
-            if (separateSparseSourceTerms_) {
-                LocalResidual::computeSourceDense(adres, problem_(), intQuantsIn, globI, 0);
+            if constexpr (requires { LocalResidual::computeSource(adres, problem_(), globI, 0); }) {
+                if (separateSparseSourceTerms_) {
+                    LocalResidual::computeSourceDense(adres, problem_(), globI, 0);
+                } else {
+                    LocalResidual::computeSource(adres, problem_(), globI, 0);
+                }
             } else {
-                LocalResidual::computeSource(adres, problem_(), intQuantsIn, globI, 0);
+                const auto& iq = model_().intensiveQuantities(globI, 0);
+                if (separateSparseSourceTerms_) {
+                    LocalResidual::computeSourceDense(adres, problem_(), iq, globI, 0);
+                } else {
+                    LocalResidual::computeSource(adres, problem_(), iq, globI, 0);
+                }
             }
             adres *= -volume;
             setResAndJacobi(res, bMat, adres);
@@ -1225,6 +1289,12 @@ private:
     std::vector<BoundaryInfoCPU> boundaryInfo_;
 
     bool separateSparseSourceTerms_ = false;
+
+#if HAVE_CUDA && OPM_IS_COMPILING_WITH_GPU_COMPILER
+    std::vector<unsigned> sourceIqCells_;
+    std::size_t sourceCellsDomainSize_{0};
+    int sourceCellsEpisode_{std::numeric_limits<int>::min()};
+#endif
 
     FullDomain<> fullDomain_;
 

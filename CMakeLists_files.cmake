@@ -339,12 +339,26 @@ if(CUDA_FOUND OR hip_FOUND)
   ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg FlexibleSolver_gpu_instantiate.cpp)
   ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg PreconditionerFactory_gpu_instantiate.cpp)
   ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg GpuBlackoilIntensiveQuantitiesDispatcher.cu)
+  ADD_CUDA_OR_HIP_FILE(MAIN_SOURCE_FILES opm/simulators/linalg GpuBlackoilNewtonUpdate.cu)
+  # Newton phase switching must round the same operation boundaries as the
+  # CPU reference. Restrict contraction control to its complete device call
+  # graph; property and assembly kernels keep their existing FP settings.
+  if(CUDA_FOUND)
+    set_property(SOURCE opm/simulators/linalg/gpuistl/GpuBlackoilNewtonUpdate.cu
+                 APPEND PROPERTY COMPILE_OPTIONS "--fmad=false")
+  elseif(CONVERT_CUDA_TO_HIP)
+    set_property(SOURCE "${PROJECT_BINARY_DIR}/opm/simulators/linalg/gpuistl_hip/GpuBlackoilNewtonUpdate.hip"
+                 APPEND PROPERTY COMPILE_OPTIONS "-ffp-contract=off")
+  endif()
 
 
   # HEADERS
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuBlackoilIntensiveQuantitiesDispatcher.hpp)
+  ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuBlackoilNewtonUpdate.hpp)
+  ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuBlackoilNewtonValidation.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuFlowGasWaterEnergyBridge.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuFlowGasWaterEnergyContract.hpp)
+  ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuFipCellRecord.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg GpuFlowGasWaterEnergyTypeTags.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/autotuner.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/coloringAndReorderingUtils.hpp)
@@ -377,6 +391,7 @@ if(CUDA_FOUND OR hip_FOUND)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/CuSparseResource.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/CuSparseResource_impl.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/safe_conversion.hpp)
+  ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/scoped_gpu_memory_accounting.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/gpu_type_detection.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/cublas_wrapper.hpp)
   ADD_CUDA_OR_HIP_FILE(PUBLIC_HEADER_FILES opm/simulators/linalg detail/cusparse_wrapper.hpp)
@@ -856,6 +871,7 @@ list (APPEND TEST_DATA_FILES
 # originally generated with the command:
 # find opm -name '*.h*' -a ! -name '*-pch.hpp' -printf '\t%p\n' | sort
 list (APPEND PUBLIC_HEADER_FILES
+  opm/simulators/linalg/gpuistl/GpuFipCellRecord.hpp
   opm/models/blackoil/blackoilbioeffectsmodules.hh
   opm/models/blackoil/blackoilbioeffectsparams.hpp
   opm/models/blackoil/blackoilboundaryratevector.hh
@@ -1236,6 +1252,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/FlowLinearSolverParameters.hpp
   opm/simulators/linalg/foreignoverlapfrombcrsmatrix.hh
   opm/simulators/linalg/getQuasiImpesWeights.hpp
+  opm/simulators/linalg/TrueImpesWeights.hpp
   opm/simulators/linalg/globalindices.hh
   opm/simulators/linalg/gpuistl_assembly_if_available.hpp
   opm/simulators/linalg/GraphColoring.hpp

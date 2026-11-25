@@ -38,6 +38,7 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/grid/utility/ElementChunks.hpp>
 #include <opm/models/blackoil/blackoilmodel.hh>
 #include <opm/models/blackoil/blackoilprimaryvariables.hh>
 #include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
@@ -59,6 +60,7 @@
 #include <opm/simulators/flow/equil/EquilibrationHelpers.hpp>
 #include <opm/simulators/flow/equil/InitStateEquil.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/models/utils/simulator.hh>
@@ -67,6 +69,7 @@
 #include <opm/simulators/utils/moduleVersion.hpp>
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/flow/FlowGenericVanguard.hpp>
+#include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 
@@ -92,6 +95,7 @@
 #include <format>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <new>
 #include <string>
@@ -658,6 +662,13 @@ struct TemporaryFile {
 using ProductionTypeTag = Opm::Properties::TTag::FlowGasWaterEnergyProblem;
 using ProductionSimulator = Opm::GetPropType<ProductionTypeTag, Opm::Properties::Simulator>;
 
+template <class IQ>
+__global__ void makeFirstStorageBlockSingular(Opm::gpuistl::GpuView<IQ> iq)
+{
+    using Evaluation = std::remove_cvref_t<decltype(iq[0].porosity())>;
+    const_cast<Evaluation&>(iq[0].porosity()) = Evaluation(0.0);
+}
+
 /// Read \p deckPath and set up a simulator for the production TypeTag, with
 /// its initial solution and CPU intensive quantities.
 static std::unique_ptr<ProductionSimulator> makeProductionSimulator(const std::string& deckPath)
@@ -689,10 +700,11 @@ static void runProductionDispatcherTest(const std::string& deckPath)
 {
     using IntensiveQuantities =
         Opm::GetPropType<ProductionTypeTag, Opm::Properties::IntensiveQuantities>;
+    using PrimaryVariables = Opm::GetPropType<ProductionTypeTag, Opm::Properties::PrimaryVariables>;
     const auto sim = makeProductionSimulator(deckPath);
 
     const auto& problem = sim->problem();
-    const auto& solution = problem.model().solution(/*timeIdx=*/0);
+    const auto solution = problem.model().solution(/*timeIdx=*/0);
     const std::size_t numCells = problem.model().numGridDof();
     BOOST_REQUIRE_EQUAL(solution.size(), numCells);
 
@@ -721,8 +733,55 @@ static void runProductionDispatcherTest(const std::string& deckPath)
     Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcher<ProductionTypeTag> dispatcher;
     dispatcher.update(problem, solution, /*timeIdx=*/0);
     BOOST_CHECK(dispatcher.bridge().hasIntensiveQuantities(/*timeIdx=*/0));
+    BOOST_CHECK(dispatcher.bridge().hostPrimaryVariablesCurrent(0));
+    const auto firstGeneration = dispatcher.bridge().primaryVariablesGeneration(0);
+    // The allocation/upload diagnostic must observe actual owner construction.
+    const auto initialTransfers = dispatcher.bridge().transferCounters();
+    BOOST_CHECK_GT(initialTransfers.ownedBufferAllocations, 0u);
+    BOOST_CHECK_GT(initialTransfers.ownedBufferAllocationBytes, 0u);
+    BOOST_CHECK_GT(initialTransfers.staticUploadCalls, 0u);
+    BOOST_CHECK_GT(initialTransfers.staticUploadBytes, 0u);
     dispatcher.materializeHostIntensiveQuantities(
         /*timeIdx=*/0, intensiveQuantities.data(), numCells);
+
+    // Compact records must carry the same physical values as a full IQ copy.
+    const auto records = dispatcher.compactFipCells();
+    BOOST_REQUIRE_EQUAL(records.size(), numCells);
+    for (std::size_t i = 0; i < numCells; ++i) {
+        const auto& full = *intensiveQuantities[i];
+        const auto compact = records[i].fluidState();
+        BOOST_CHECK_CLOSE(records[i].porosity().value(), asDouble(full.porosity()), 1e-6);
+        BOOST_CHECK_CLOSE(records[i].referencePorosity(), full.referencePorosity(), 1e-6);
+        for (const unsigned phase : activePhases) {
+            BOOST_CHECK_CLOSE(compact.saturation(phase), asDouble(full.fluidState().saturation(phase)), 1e-6);
+            BOOST_CHECK_CLOSE(compact.pressure(phase), asDouble(full.fluidState().pressure(phase)), 1e-6);
+            BOOST_CHECK_CLOSE(compact.density(phase), asDouble(full.fluidState().density(phase)), 1e-6);
+            BOOST_CHECK_CLOSE(compact.invB(phase), asDouble(full.fluidState().invB(phase)), 1e-6);
+        }
+    }
+    BOOST_CHECK_EQUAL(dispatcher.bridge().outputTransferCounters().compactFipDownloads, 1u);
+    BOOST_CHECK_EQUAL(dispatcher.bridge().outputTransferCounters().compactFipDownloadBytes,
+                      numCells * sizeof(records.front()));
+
+    // Request sparse cells in reversed order to check explicit gather indexing.
+    BOOST_REQUIRE_GT(numCells, 2u);
+    const unsigned blockCells[] = {static_cast<unsigned>(numCells - 1), 0u};
+    std::vector<PrimaryVariables> blockPrimary(2);
+    std::vector<IntensiveQuantities> blockIntensive(2, *intensiveQuantities[0]);
+    PrimaryVariables* primaryDestinations[] = {&blockPrimary[0], &blockPrimary[1]};
+    IntensiveQuantities* intensiveDestinations[] = {&blockIntensive[0], &blockIntensive[1]};
+    dispatcher.materializeHostBlockState(0, blockCells, primaryDestinations,
+                                         intensiveDestinations, 2);
+    for (unsigned i = 0; i < 2; ++i) {
+        for (unsigned pv = 0; pv < blockPrimary[i].size(); ++pv) {
+            BOOST_CHECK_EQUAL(asDouble(blockPrimary[i][pv]), asDouble(solution[blockCells[i]][pv]));
+        }
+        BOOST_CHECK_CLOSE(asDouble(blockIntensive[i].fluidState().density(FluidSystem::waterPhaseIdx)),
+                          waterDensityBefore[blockCells[i]], 1e-6);
+    }
+    BOOST_CHECK_EQUAL(dispatcher.bridge().outputTransferCounters().blockStateDownloads, 1u);
+    BOOST_CHECK_THROW(dispatcher.materializeHostBlockState(0, nullptr, primaryDestinations,
+                                                           intensiveDestinations, 1), std::invalid_argument);
 
     // Compare two distinct states so slot aliasing or overwriting history fails.
     auto changedSolution = solution;
@@ -750,6 +809,12 @@ static void runProductionDispatcherTest(const std::string& deckPath)
     dispatcher.update(problem, changedSolution, /*timeIdx=*/0);
     BOOST_CHECK(currentIqData == dispatcher.bridge().intensiveQuantitiesView(0).data());
     BOOST_CHECK(previousIqData == dispatcher.bridge().intensiveQuantitiesView(1).data());
+    BOOST_CHECK_GT(dispatcher.bridge().primaryVariablesGeneration(0), firstGeneration);
+    BOOST_CHECK_EQUAL(dispatcher.bridge().transferCounters().ownedBufferAllocations,
+                      initialTransfers.ownedBufferAllocations);
+    BOOST_CHECK_EQUAL(dispatcher.bridge().transferCounters().staticUploadCalls,
+                      initialTransfers.staticUploadCalls);
+    BOOST_CHECK(dispatcher.bridge().hostPrimaryVariablesCurrent(0));
     dispatcher.bridge().waitForAssembly(/*timeIdx=*/0);
     dispatcher.materializeHostIntensiveQuantities(
         /*timeIdx=*/0, intensiveQuantities.data(), numCells);
@@ -761,6 +826,64 @@ static void runProductionDispatcherTest(const std::string& deckPath)
                               asDouble(intensiveQuantities[i]->fluidState().density(phaseIdx)), 1e-6);
         }
     }
+
+    // Compare the production resident CPR weights with an independent host
+    // storage-matrix solve on the same state, including normalization.
+    using Evaluation = Opm::GetPropType<ProductionTypeTag, Opm::Properties::Evaluation>;
+    constexpr int numEq = Opm::getPropValue<ProductionTypeTag, Opm::Properties::NumEq>();
+    constexpr int pressureIndex = Indices::pressureSwitchIdx;
+    Opm::gpuistl::GpuVector<double> weights(numCells * numEq);
+    constexpr double dt = 86400.0;
+    BOOST_CHECK_EQUAL(dispatcher.trueImpesWeightUpdates(), 0u);
+    BOOST_REQUIRE(dispatcher.computeTrueImpesWeights(weights, dt));
+    BOOST_CHECK_EQUAL(dispatcher.trueImpesWeightUpdates(), 1u);
+    std::vector<double> hostWeights(numCells * numEq);
+    weights.copyToHost(hostWeights);
+    for (std::size_t cell = 0; cell < numCells; ++cell) {
+        Dune::FieldVector<Evaluation, numEq> storage;
+        Opm::BlackOilLocalResidualTPFA<ProductionTypeTag>::template computeStorage<Evaluation>(
+            storage, changedReference[cell]);
+        Dune::FieldMatrix<double, numEq, numEq> transpose;
+        Dune::FieldVector<double, numEq> rhs(0.0), expected;
+        rhs[pressureIndex] = 1.0;
+        const double scale = sim->model().dofTotalVolume(cell)
+            * changedReference[cell].extrusionFactor() / dt;
+        for (int eq = 0; eq < numEq; ++eq) {
+            for (int pv = 0; pv < numEq; ++pv) {
+                transpose[pv][eq] = storage[eq].derivative(pv) / scale;
+                if (pv == pressureIndex) {
+                    transpose[pv][eq] *= 50e5;
+                }
+            }
+        }
+        transpose.solve(expected, rhs);
+        expected /= expected.infinity_norm();
+        for (int eq = 0; eq < numEq; ++eq) {
+            BOOST_CHECK_SMALL(hostWeights[cell * numEq + eq] - expected[eq], 1e-10);
+        }
+    }
+    BOOST_CHECK_THROW(dispatcher.computeTrueImpesWeights(weights, 0.0), std::invalid_argument);
+    BOOST_CHECK_THROW(dispatcher.computeTrueImpesWeights(weights, -dt), std::invalid_argument);
+    BOOST_CHECK_THROW(dispatcher.computeTrueImpesWeights(
+                          weights, std::numeric_limits<double>::infinity()), std::invalid_argument);
+    BOOST_CHECK_THROW(dispatcher.computeTrueImpesWeights(
+                          weights, std::numeric_limits<double>::quiet_NaN()), std::invalid_argument);
+    Opm::gpuistl::GpuVector<double> wrongSize(1);
+    BOOST_CHECK_THROW(dispatcher.computeTrueImpesWeights(wrongSize, dt), std::invalid_argument);
+    BOOST_CHECK_EQUAL(dispatcher.trueImpesWeightUpdates(), 1u);
+
+    // A singular device block must request CPU fallback. A fresh IQ update
+    // restores the resident path without counting the failed attempt.
+    const auto stream = dispatcher.bridge().stream();
+    makeFirstStorageBlockSingular<<<1, 1, 0, stream>>>(dispatcher.bridge().intensiveQuantitiesView(0));
+    OPM_GPU_SAFE_CALL(cudaGetLastError());
+    OPM_GPU_SAFE_CALL(cudaStreamSynchronize(stream));
+    BOOST_CHECK(!dispatcher.computeTrueImpesWeights(weights, dt));
+    BOOST_CHECK_EQUAL(dispatcher.trueImpesWeightUpdates(), 1u);
+    dispatcher.update(problem, changedSolution, 0);
+    BOOST_REQUIRE(dispatcher.computeTrueImpesWeights(weights, dt));
+    BOOST_CHECK_EQUAL(dispatcher.trueImpesWeightUpdates(), 2u);
+
     for (std::size_t i = 0; i < numCells; ++i) {
         intensiveQuantities[i]->fluidState().setDensity(FluidSystem::waterPhaseIdx, -1.0);
     }
@@ -778,6 +901,103 @@ static void runProductionDispatcherTest(const std::string& deckPath)
                           asDouble(intensiveQuantities[i]->fluidState().density(
                               FluidSystem::waterPhaseIdx)),
                           1e-6);
+    }
+    dispatcher.update(problem, solution, 0);
+    // Compact records must match their full host counterparts without another
+    // IQ/PV download, and retain the accepted previous solution for changes.
+    const auto iqDownloads = dispatcher.bridge().transferCounters().intensiveQuantityDownloads;
+    const auto pvDownloads = dispatcher.bridge().transferCounters().primaryVariableDownloads;
+    const auto factors = dispatcher.compactConvergenceFactors();
+    const auto rockState = dispatcher.compactRockCompactionState();
+    const auto unchanged = dispatcher.compactRelativeChange();
+    BOOST_REQUIRE_EQUAL(factors.size(), numCells * numEq);
+    BOOST_REQUIRE_EQUAL(rockState.size(), numCells * 2);
+    for (std::size_t cell = 0; cell < numCells; ++cell) {
+        const auto& fs = intensiveQuantities[cell]->fluidState();
+        for (const unsigned phase : activePhases) {
+            const auto component = FluidSystem::canonicalToActiveCompIdx(
+                FluidSystem::solventComponentIndex(phase));
+            BOOST_CHECK_CLOSE(factors[cell * numEq + component], 1.0 / asDouble(fs.invB(phase)), 1e-6);
+        }
+        BOOST_CHECK_EQUAL(factors[cell * numEq + Indices::contiEnergyEqIdx], 1.0);
+        BOOST_CHECK_CLOSE(rockState[cell * 2], asDouble(fs.pressure(FluidSystem::gasPhaseIdx)), 1e-6);
+        BOOST_CHECK_CLOSE(rockState[cell * 2 + 1], asDouble(fs.saturation(FluidSystem::waterPhaseIdx)), 1e-6);
+        BOOST_CHECK_EQUAL(unchanged[cell * 2], 0.0);
+    }
+    auto perturbedSolution = solution;
+    perturbedSolution[0][Indices::pressureSwitchIdx] += 100.0;
+    dispatcher.update(problem, perturbedSolution, 0);
+    const auto changed = dispatcher.compactRelativeChange();
+    BOOST_CHECK_CLOSE(changed[0], 10000.0, 1e-6);
+    const auto pressure = perturbedSolution[0][Indices::pressureSwitchIdx];
+    const auto water = perturbedSolution[0].primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw
+        ? perturbedSolution[0][Indices::waterSwitchIdx] : 0.0;
+    BOOST_CHECK_CLOSE(changed[1], pressure * pressure + water * water, 1e-6);
+    BOOST_CHECK_EQUAL(dispatcher.bridge().transferCounters().intensiveQuantityDownloads, iqDownloads);
+    BOOST_CHECK_EQUAL(dispatcher.bridge().transferCounters().primaryVariableDownloads, pvDownloads);
+
+    dispatcher.update(problem, solution, 0);
+    // Sparse reads publish only the requested entries, including reordered
+    // batches, while leaving other host entries untouched.
+    BOOST_REQUIRE_GE(numCells, 3u);
+    for (auto* iq : intensiveQuantities) {
+        iq->fluidState().setDensity(FluidSystem::waterPhaseIdx, -1.0);
+    }
+    dispatcher.materializeHostIntensiveQuantity(0, 1u, *intensiveQuantities[1]);
+    BOOST_CHECK_CLOSE(waterDensityBefore[1],
+        asDouble(intensiveQuantities[1]->fluidState().density(FluidSystem::waterPhaseIdx)), 1e-6);
+    BOOST_CHECK_EQUAL(asDouble(intensiveQuantities[0]->fluidState().density(FluidSystem::waterPhaseIdx)), -1.0);
+    const unsigned selected[] = {2u, 0u};
+    IntensiveQuantities* selectedDestinations[] = {intensiveQuantities[2], intensiveQuantities[0]};
+    dispatcher.materializeHostSourceIntensiveQuantities(0, selected, selectedDestinations, 2u);
+    for (const auto cell : selected) {
+        BOOST_CHECK_CLOSE(waterDensityBefore[cell],
+            asDouble(intensiveQuantities[cell]->fluidState().density(FluidSystem::waterPhaseIdx)), 1e-6);
+    }
+    for (std::size_t cell = 3; cell < numCells; ++cell) {
+        BOOST_CHECK_EQUAL(asDouble(intensiveQuantities[cell]->fluidState().density(
+            FluidSystem::waterPhaseIdx)), -1.0);
+    }
+    const auto transfers = dispatcher.bridge().sourceTransferCounters();
+    BOOST_CHECK_EQUAL(transfers.sourceIntensiveQuantityDownloads, 2u);
+    dispatcher.materializeHostSourceIntensiveQuantities(0, nullptr, nullptr, 0u);
+    BOOST_CHECK_EQUAL(dispatcher.bridge().sourceTransferCounters().sourceIntensiveQuantityDownloads, 2u);
+    BOOST_CHECK_THROW(dispatcher.materializeHostIntensiveQuantity(0, numCells, *intensiveQuantities[0]), std::out_of_range);
+    BOOST_CHECK_THROW(dispatcher.materializeHostSourceIntensiveQuantities(0, nullptr, selectedDestinations, 2u), std::invalid_argument);
+
+    // A declared host edit invalidates only that slot; merely reading host
+    // state and downloading IQs above preserves the resident generation.
+    dispatcher.bridge().invalidateHostEditedPrimaryVariables(0);
+    BOOST_CHECK(!dispatcher.bridge().hasPrimaryVariables(0));
+    BOOST_CHECK(!dispatcher.bridge().hasIntensiveQuantities(0));
+    BOOST_CHECK(dispatcher.bridge().hasIntensiveQuantities(1));
+
+    dispatcher.advanceTimeLevel();
+    BOOST_CHECK(!dispatcher.bridge().hasPrimaryVariables(1));
+    BOOST_CHECK(!dispatcher.bridge().hasIntensiveQuantities(1));
+
+    dispatcher.update(problem, solution, 0);
+    BOOST_CHECK(dispatcher.bridge().hasIntensiveQuantities(0));
+    BOOST_CHECK(!dispatcher.hasDeviceModelView());
+    dispatcher.advanceTimeLevel();
+    BOOST_CHECK(dispatcher.hasDeviceModelView());
+
+    // A singular block in the CPU fallback must still report the cell
+    // when the OpenMP region is serialized by its runtime if clause.
+    sim->setTimeStepSize(dt);
+    const_cast<Evaluation&>(intensiveQuantities[0]->porosity()) = Evaluation(0.0);
+    using ElementContext = Opm::GetPropType<ProductionTypeTag, Opm::Properties::ElementContext>;
+    ElementContext elemCtx(*sim);
+    Opm::ElementChunks chunks(sim->gridView(), Dune::Partitions::all, 2);
+    Dune::BlockVector<Dune::FieldVector<double, numEq>> cpuWeights(numCells);
+    for (bool threaded : {false, true}) {
+        BOOST_CHECK_EXCEPTION(
+            Opm::Amg::getTrueImpesWeights(pressureIndex, cpuWeights, elemCtx, sim->model(), chunks, threaded),
+            std::runtime_error,
+            [](const std::runtime_error& error) {
+                return std::string_view{error.what()}.find("pressure weights for cell 0 (Cartesian index")
+                    != std::string_view::npos;
+            });
     }
 }
 

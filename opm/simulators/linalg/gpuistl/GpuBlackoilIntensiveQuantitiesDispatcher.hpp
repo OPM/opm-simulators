@@ -24,9 +24,11 @@
 #if HAVE_CUDA
 
 #include <opm/models/utils/propertysystem.hh>
+#include <opm/models/blackoil/blackoilnewtonmethodparams.hpp>
 
 #include <cstddef>
 #include <memory>
+#include <vector>
 
 namespace Opm::Parameters {
 
@@ -48,6 +50,8 @@ namespace Opm::gpuistl {
 
 template <class T>
 class GpuView;
+template <class T>
+class GpuVector;
 
 template <class CpuTypeTag,
           class DeviceTypeTag =
@@ -99,6 +103,7 @@ template <class CpuTypeTag>
 class GpuBlackoilIntensiveQuantitiesDispatcher
 {
 public:
+    using Scalar = Opm::GetPropType<CpuTypeTag, Opm::Properties::Scalar>;
     using Problem            = Opm::GetPropType<CpuTypeTag, Opm::Properties::Problem>;
     using PrimaryVariables = Opm::GetPropType<CpuTypeTag, Opm::Properties::PrimaryVariables>;
     using SolutionVector = Opm::GetPropType<CpuTypeTag, Opm::Properties::SolutionVector>;
@@ -119,12 +124,43 @@ public:
                 const SolutionVector& solution,
                 unsigned timeIdx);
 
+    void evaluateResident(unsigned timeIdx);
+    unsigned applyNewtonUpdate(const Problem& problem,
+                               const BlackoilNewtonParams<Scalar>& params,
+                               Scalar relaxation, bool useSOR, bool stabilize,
+                               bool validate);
+    bool hasBridge() const;
+    std::vector<Scalar> compactConvergenceFactors();
+    std::vector<Scalar> compactRelativeChange();
+    std::vector<Scalar> compactRockCompactionState();
+    void reportTransferCounters() const;
+
     /// Explicit CPU-boundary materialization for legacy CPU consumers.
     void materializeHostIntensiveQuantities(unsigned timeIdx,
                                             IntensiveQuantities* const* destination,
                                             std::size_t numDof);
 
+    std::vector<typename Bridge::FipCellRecord> compactFipCells();
+    void materializeHostBlockState(unsigned timeIdx, const unsigned* indices,
+                                   PrimaryVariables* const* primaryDestination,
+                                   IntensiveQuantities* const* intensiveDestination,
+                                   std::size_t count);
+
+
     void advanceTimeLevel();
+
+    void materializeHostIntensiveQuantity(unsigned timeIdx, unsigned globalIdx,
+                                         IntensiveQuantities& destination);
+
+    void materializeHostSourceIntensiveQuantities(unsigned timeIdx,
+                                                  const unsigned* indices,
+                                                  IntensiveQuantities* const* destination,
+                                                  std::size_t count);
+
+    /// Form true-IMPES CPR weights directly from resident storage derivatives.
+    /// Return false for a singular block so the CPU path retains its diagnostics.
+    bool computeTrueImpesWeights(GpuVector<Scalar>& weights, Scalar timeStepSize);
+    std::size_t trueImpesWeightUpdates() const;
 
     bool hasDeviceModelView() const;
     const Bridge& bridge() const;

@@ -878,6 +878,34 @@ public:
         }
     }
 
+    // Models without bioeffects need no cell IQ for source evaluation.  The
+    // problem obtains the few schedule-source IQs it needs through its own
+    // explicit host-cache boundary.
+    static void computeSource(RateVector& source,
+                              const Problem& problem,
+                              unsigned globalSpaceIndex,
+                              unsigned timeIdx) requires (!enableBioeffects)
+    {
+        problem.source(source, globalSpaceIndex, timeIdx);
+        if constexpr (enableFullyImplicitThermal) {
+            source[Indices::contiEnergyEqIdx]
+                *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
+        }
+    }
+
+    static void computeSourceDense(RateVector& source,
+                                   const Problem& problem,
+                                   unsigned globalSpaceIndex,
+                                   unsigned timeIdx) requires (!enableBioeffects)
+    {
+        source = 0.0;
+        problem.addToSourceDense(source, globalSpaceIndex, timeIdx);
+        if constexpr (enableFullyImplicitThermal) {
+            source[Indices::contiEnergyEqIdx]
+                *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
+        }
+    }
+
     static void computeSource(RateVector& source,
                               const Problem& problem,
                               const IntensiveQuantities& insideIntQuants,

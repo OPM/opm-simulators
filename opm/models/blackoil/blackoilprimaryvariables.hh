@@ -32,7 +32,7 @@
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
-#include <opm/material/fluidstates/SimpleModularFluidState.hpp>
+#include <opm/material/fluidstates/BlackOilFluidState.hpp>
 
 #include <opm/models/blackoil/blackoilmodules.hpp>
 #include <opm/models/blackoil/blackoilmeanings.hh>
@@ -177,6 +177,7 @@ public:
         , primaryVarsMeaningSolvent_(other.primaryVarsMeaningSolvent_)
         , pvtRegionIdx_(other.pvtRegionIdx_)
         , pcFactor_(other.pcFactor_)
+        , devicePressureScale_(other.getPressureScale())
     {
     }
 
@@ -211,23 +212,6 @@ public:
     {
         // TODO: these parameters have undocumented non-trivial dependencies
         pressureScale_ = Parameters::Get<Parameters::PressureScale<Scalar>>();
-
-// currently for GPU we do not have a support for the pressureScale_ variable,
-// so we issue a warning if the user has set it to something else than 1.0
-// if we are building with GPU support. Note that we can not only test if we are compiling
-// with a GPU compiler, because we might initialize the parameters from a .cpp compilation unit
-// compiled by a normal C++ compiler.
-#if HAVE_CUDA
-        if (pressureScale_ != Scalar {1.0}) {
-            OpmLog::warning(fmt::format(
-                "Using a pressure scaling different from 1.0 is not supported "
-                "when running with GPU support. We have detected that you are compiling with GPU support, but we can "
-                "not detect whether you are running with GPU support for the assembly or property evaluation. If you "
-                "are doing property evaluation or assembly on the GPU, pressure scaling will be ignored."
-                "Read value of pressure scale: {}",
-                pressureScale_));
-        }
-#endif
     }
 
     static void registerParameters()
@@ -667,7 +651,7 @@ public:
                         std::array<Scalar, numPhases> pC{};
                         const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
                         const Scalar so = 1.0 - sg - solventSaturation_();
-                        computeCapillaryPressures_(pC, so, sg + solventSaturation_(), /*sw=*/ 0.0, matParams);
+                        computeCapillaryPressures_(pC, so, sg + solventSaturation_(), /*sw=*/ 0.0, matParams, fluidSystem);
                         p += pcFactor_ * (pC[gasPhaseIdx] - pC[oilPhaseIdx]);
                     }
                     const Scalar rvwSat =
@@ -688,7 +672,7 @@ public:
                     std::array<Scalar, numPhases> pC = { 0.0 };
                     const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
                     const Scalar so = 1.0 - sw - solventSaturation_();
-                    computeCapillaryPressures_(pC, so,  /*sg=*/ 0.0, sw, matParams);
+                    computeCapillaryPressures_(pC, so,  /*sg=*/ 0.0, sw, matParams, fluidSystem);
                     const Scalar pw = pg + pcFactor_ * (pC[waterPhaseIdx] - pC[gasPhaseIdx]);
                     const Scalar rswSat =
                         fluidSystem.waterPvt().saturatedGasDissolutionFactor(pvtRegionIdx_,
@@ -713,7 +697,7 @@ public:
                     std::array<Scalar, numPhases> pC{};
                     const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
                     const Scalar so = 1.0 - sg - solventSaturation_();
-                    computeCapillaryPressures_(pC, so, sg + solventSaturation_(), /*sw=*/ 0.0, matParams);
+                    computeCapillaryPressures_(pC, so, sg + solventSaturation_(), /*sw=*/ 0.0, matParams, fluidSystem);
                     p += pcFactor_ * (pC[gasPhaseIdx] - pC[oilPhaseIdx]);
                 }
                 const Scalar rvwSat =
@@ -751,7 +735,7 @@ public:
                     setPrimaryVarsMeaningPressure(PressureMeaning::Pg);
                     std::array<Scalar, numPhases> pC{};
                     const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
-                    computeCapillaryPressures_(pC, /*so=*/ 0.0,  /*sg=*/ 0.0, /*sw=*/ 1.0, matParams);
+                    computeCapillaryPressures_(pC, /*so=*/ 0.0,  /*sg=*/ 0.0, /*sw=*/ 1.0, matParams, fluidSystem);
                     const Scalar pg = pw + pcFactor_ * (pC[gasPhaseIdx] - pC[waterPhaseIdx]);
                     this->setScaledPressure_(pg);
                     changed = true;
@@ -812,7 +796,7 @@ public:
                         const Scalar po = this->pressure_();
                         std::array<Scalar, numPhases> pC{};
                         const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
-                        computeCapillaryPressures_(pC, /*so=*/0.0, sg + solventSaturation_(), sw, matParams);
+                        computeCapillaryPressures_(pC, /*so=*/0.0, sg + solventSaturation_(), sw, matParams, fluidSystem);
                         const Scalar pg = po + pcFactor_ * (pC[gasPhaseIdx] - pC[oilPhaseIdx]);
 
                         // we start at the GasMeaning::Rv value that corresponds to that of oil-saturated
@@ -899,7 +883,7 @@ public:
                                                 /*so=*/0.0,
                                                 /*sg=*/sg2 + solventSaturation_(),
                                                 sw,
-                                                matParams);
+                                                matParams, fluidSystem);
                         const Scalar po = pg + pcFactor_ * (pC[oilPhaseIdx] - pC[gasPhaseIdx]);
 
                         setPrimaryVarsMeaningGas(GasMeaning::Sg);
@@ -1006,6 +990,9 @@ public:
         serializer(pvtRegionIdx_);
     }
 
+    OPM_HOST_DEVICE Scalar capillaryPressureFactor() const { return pcFactor_; }
+    OPM_HOST_DEVICE Scalar pressureScale() const { return getPressureScale(); }
+
     OPM_HOST_DEVICE bool operator==(const BlackOilPrimaryVariables& rhs) const
     {
         return
@@ -1078,26 +1065,20 @@ private:
         }
     }
 
-    template <class Container>
+    template <class Container, class FluidSystemInstance>
     OPM_HOST_DEVICE void computeCapillaryPressures_(Container& result,
                                                     Scalar so,
                                                     Scalar sg,
                                                     Scalar sw,
-                                                    const MaterialLawParams& matParams) const
+                                                    const MaterialLawParams& matParams,
+                                                    const FluidSystemInstance& fluidSystem) const
     {
-        using SatOnlyFluidState = SimpleModularFluidState<Scalar,
-                                                          numPhases,
-                                                          numComponents,
-                                                          FluidSystem,
-                                                          /*storePressure=*/false,
-                                                          /*storeTemperature=*/false,
-                                                          /*storeComposition=*/false,
-                                                          /*storeFugacity=*/false,
-                                                          /*storeSaturation=*/true,
-                                                          /*storeDensity=*/false,
-                                                          /*storeViscosity=*/false,
-                                                          /*storeEnthalpy=*/false>;
-        SatOnlyFluidState fluidState;
+        // Reuse the existing device-callable fluid state; material laws read
+        // only its three saturation values here.
+        BlackOilFluidState<Scalar, FluidSystemInstance,
+                           /*storeTemperature=*/false,
+                           /*storeEnthalpy=*/false,
+                           /*enableDissolution=*/false> fluidState(fluidSystem);
         fluidState.setSaturation(waterPhaseIdx, sw);
         fluidState.setSaturation(oilPhaseIdx, so);
         fluidState.setSaturation(gasPhaseIdx, sg);
@@ -1178,12 +1159,16 @@ private:
 
     OPM_HOST_DEVICE constexpr Scalar getPressureScale() const
     {
-        // In device code, we do not have access to static members, so we return 1.0
-        // In most cases, the pressure scale is set to 1.0 anyway, so this is acceptable.
+        // Typed host/device conversions carry the configured scale explicitly.
         #if OPM_IS_INSIDE_DEVICE_FUNCTION
-        return Scalar(1.0);
+        return devicePressureScale_;
         #else
-        return this->pressureScale_;
+        if constexpr (std::is_empty_v<FluidSystem>) {
+            return this->pressureScale_;
+        }
+        else {
+            return devicePressureScale_;
+        }
         #endif
     }
 
@@ -1198,6 +1183,7 @@ private:
     SolventMeaning primaryVarsMeaningSolvent_{SolventMeaning::Disabled};
     unsigned short pvtRegionIdx_{};
     Scalar pcFactor_{};
+    Scalar devicePressureScale_{1.0};
     inline static Scalar pressureScale_ = 1.0;
 
     // Oil saturation below which gasOilRatioOfPresentComponents_() is used

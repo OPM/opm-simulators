@@ -635,6 +635,7 @@ public:
 
         // read in the "real" primary variables of the DOF
         auto& priVars = this->solution(/*timeIdx=*/0)[dofIdx];
+        asImp_().markHostPrimaryVariablesModified(/*timeIdx=*/0);
         for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
             if (!instream.good()) {
                 throw std::runtime_error("Could not deserialize degree of freedom " + std::to_string(dofIdx));
@@ -697,6 +698,8 @@ public:
         // set the PVT indices of the primary variables. This is also done by writing
         // them into the restart file and re-reading them, but it is better to calculate
         // them from scratch because the input could have been changed in this regard...
+        asImp_().ensureHostPrimaryVariables(0);
+        asImp_().markHostPrimaryVariablesModified(0);
         ElementContext elemCtx(this->simulator_);
         for (const auto& elem : elements(this->gridView())) {
             elemCtx.updateStencil(elem);
@@ -710,6 +713,7 @@ public:
         }
 
         this->solution(/*timeIdx=*/1) = this->solution(/*timeIdx=*/0);
+        asImp_().markHostPrimaryVariablesModified(1);
     }
 
 /*
