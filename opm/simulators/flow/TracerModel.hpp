@@ -42,6 +42,7 @@
 
 #include <opm/simulators/flow/GenericTracerModel.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/utils/gatherDeferredLogger.hpp>
 #include <opm/simulators/utils/VectorVectorDataHandle.hpp>
 
@@ -507,7 +508,7 @@ protected:
                     tracerRate[tr.idx_[tIdx]].rate += delta;
                     freeTracerRate[tr.idx_[tIdx]].rate += delta;
                     if (eclWell.isMultiSegment()) {
-                        (*mswTracerRate)[tr.idx_[tIdx]].rate[eclWell.getConnections().get(i).segment()] += delta;
+                        (*mswTracerRate)[tr.idx_[tIdx]].rate[perfSegment_(well, i)] += delta;
                     }
                 }
                 dVol_[Free][tr.phaseIdx_][I] -= rate_f * dt;
@@ -793,10 +794,17 @@ protected:
         sc[tr.idx_[tIdx]][globalDofIdx] = tr.concentration_[tIdx][globalDofIdx][Index];
     }
 
+    template<class WellType>
+    static int perfSegment_(const WellType& well, const std::size_t perf)
+    {
+        return perforationSegment(well.perforationData()[perf],
+                                  well.wellEcl().getConnections());
+    }
+
     template<TracerTypeIdx Index, class TrRe>
     void assignRates(const TrRe& tr,
                      const Well& eclWell,
-                     const std::size_t i,
+                     const int segment,
                      const std::size_t I,
                      const Scalar rate,
                      std::vector<WellTracerRate<Scalar>>& tracerRate,
@@ -810,7 +818,7 @@ protected:
                 tracerRate[tr.idx_[tIdx]].rate += delta;
                 splitRate[tr.idx_[tIdx]].rate += delta;
                 if (eclWell.isMultiSegment()) {
-                    (*mswTracerRate)[tr.idx_[tIdx]].rate[eclWell.getConnections().get(i).segment()] += delta;
+                    (*mswTracerRate)[tr.idx_[tIdx]].rate[segment] += delta;
                 }
             }
         }
@@ -1025,9 +1033,10 @@ protected:
                     }
 
                     const Scalar rate_f = rate - rate_s;
-                    assignRates<Free>(tr, eclWell, i, I, rate_f,
+                    const int segment = eclWell.isMultiSegment() ? perfSegment_(*wellPtr, i) : 0;
+                    assignRates<Free>(tr, eclWell, segment, I, rate_f,
                                       tracerRate, mswTracerRate, freeTracerRate);
-                    assignRates<Solution>(tr, eclWell, i, I, rate_s,
+                    assignRates<Solution>(tr, eclWell, segment, I, rate_s,
                                           tracerRate, mswTracerRate, solTracerRate);
 
                     if (rate < 0) {

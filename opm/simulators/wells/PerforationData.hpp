@@ -87,6 +87,16 @@ struct PerforationRates
     Scalar vap_wat = 0.0;
 };
 
+/// Segment number of a perforation: its schedule connection's, or its own for
+/// an auxiliary perforation.
+template<class Scalar, class Connections>
+int perforationSegment(const PerforationData<Scalar>& pd, const Connections& connections)
+{
+    return pd.ecl_index == AUX_PERFORATION_ECL_INDEX
+        ? pd.segment
+        : connections.get(pd.ecl_index).segment();
+}
+
 } // namespace Opm
 
 #endif // OPM_PERFORATIONDATA_HEADER_INCLUDED

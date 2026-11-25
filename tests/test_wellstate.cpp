@@ -1219,6 +1219,29 @@ BOOST_AUTO_TEST_CASE(TESTSegmentState) {
 
 // ---------------------------------------------------------------------
 
+BOOST_AUTO_TEST_CASE(PerforationSegment) {
+    const Setup setup{ "msw.data" };
+    const auto& conns = setup.sched.getWell("PROD01", 0).getConnections();
+    BOOST_REQUIRE(conns.size() >= 2);
+    BOOST_REQUIRE_NE(conns.get(0).segment(), conns.get(1).segment());
+
+    // With connection 0 not perforated, perforation 0 is connection 1.
+    std::vector<Opm::PerforationData<double>> perfs(conns.size() - 1);
+    for (std::size_t p = 0; p < perfs.size(); ++p) {
+        perfs[p].ecl_index = p + 1;
+    }
+    for (const auto& pd : perfs) {
+        BOOST_CHECK_EQUAL(Opm::perforationSegment(pd, conns),
+                          conns.get(pd.ecl_index).segment());
+    }
+    BOOST_CHECK_NE(Opm::perforationSegment(perfs[0], conns), conns.get(0).segment());
+
+    Opm::PerforationData<double> aux;
+    aux.ecl_index = Opm::AUX_PERFORATION_ECL_INDEX;
+    aux.segment = 3;
+    BOOST_CHECK_EQUAL(Opm::perforationSegment(aux, conns), 3);
+}
+
 BOOST_AUTO_TEST_CASE(TESTSegmentState2) {
     const Setup setup{ "msw.data" };
     std::vector<Opm::ParallelWellInfo<double>> pinfo;
