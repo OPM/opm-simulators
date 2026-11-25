@@ -100,6 +100,9 @@ public:
         if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
             useGpuIntensiveQuantitiesDispatcher_ =
                 Parameters::Get<Parameters::ExperimentalComputePropertiesOnGpu>();
+            OPM_ERROR_IF(useGpuIntensiveQuantitiesDispatcher_ && this->enableThermodynamicHints_,
+                         "--enable-thermodynamic-hints=true is unsupported with "
+                         "--experimental-compute-properties-on-gpu=true.");
         }
 #endif
 

@@ -663,7 +663,8 @@ struct TemporaryFile {
 using ProductionTypeTag = Opm::Properties::TTag::FlowGasWaterEnergyProblem;
 
 template <class SimulatorTypeTag = ProductionTypeTag>
-static auto makeProductionSimulator(const std::string& deckPath, bool gpuProperties = false)
+static auto makeProductionSimulator(const std::string& deckPath, bool gpuProperties = false,
+                                    bool thermodynamicHints = false)
 {
     Opm::resetLocale();
     initSimulatorOnce();
@@ -674,6 +675,7 @@ static auto makeProductionSimulator(const std::string& deckPath, bool gpuPropert
         filenameArg.c_str(),
         gpuProperties ? "--experimental-compute-properties-on-gpu=true"
                       : "--experimental-compute-properties-on-gpu=false",
+        thermodynamicHints ? "--enable-thermodynamic-hints=true" : "--enable-thermodynamic-hints=false",
         "--enable-storage-cache=false",
     };
     Opm::setupParameters_<SimulatorTypeTag>(sizeof(argv) / sizeof(argv[0]),
@@ -1154,9 +1156,20 @@ BOOST_AUTO_TEST_CASE(TestModelOwnedGpuIntensiveQuantities)
         BOOST_CHECK_CLOSE(actual[1], expected[1], 1e-6);
     };
 
+    BOOST_CHECK_EXCEPTION(makeProductionSimulator<GpuAssemblyTypeTag>(deck.path.string(),
+                                                                      /*gpuProperties=*/true,
+                                                                      /*thermodynamicHints=*/true),
+                          std::logic_error, [](const std::logic_error& error) {
+                              const std::string_view message{error.what()};
+                              return message.find("--enable-thermodynamic-hints=true") != std::string_view::npos
+                                  && message.find("--experimental-compute-properties-on-gpu=true") != std::string_view::npos;
+                          });
+
     // Use the same production TypeTag and deck for the CPU reference.
     const auto [initial, changed] = [&] {
-        const auto sim = makeProductionSimulator<GpuAssemblyTypeTag>(deck.path.string());
+        const auto sim = makeProductionSimulator<GpuAssemblyTypeTag>(deck.path.string(),
+                                                                     /*gpuProperties=*/false,
+                                                                     /*thermodynamicHints=*/true);
         auto& model = sim->model();
         const auto initial = waterProperties(model.intensiveQuantities(0, 0));
         changePressure(model, 1.1);
