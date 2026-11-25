@@ -507,6 +507,16 @@ public:
                                      "rank each (largest region {} of {} cells).",
                                      radius, seeds.size(), maxGroup, centres.size()));
         }
+        // The partitioner leaves a rank empty when one group exceeds a rank's share.
+        const auto& comm = this->grid_->comm();
+        const auto largest = comm.max(maxGroup);
+        const auto total = comm.max(centres.size());
+        if (largest * static_cast<std::size_t>(comm.size()) > total) {
+            OPM_THROW(std::invalid_argument,
+                      fmt::format("--fracture-partition-radius={} keeps {} of {} cells on one rank, more "
+                                  "than a 1/{} share. Use fewer ranks or a smaller radius.",
+                                  radius, largest, total, comm.size()));
+        }
         this->grid_->setPartitionCellGroups(std::move(groups),
                                             std::max(halo, this->grid_->partitionCellGroupHalo()));
         return true;
