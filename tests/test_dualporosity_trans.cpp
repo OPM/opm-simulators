@@ -105,6 +105,40 @@ SIGMA
     return Parser{}.parseString(deckData);
 }
 
+Deck singleLayerDeck(bool dualperm, const std::string& editKeywords)
+{
+    // 2x1x2: one matrix layer (cart 0-1) and one fracture layer (cart 2-3), so that the twins
+    // differ in Cartesian index like Z neighbours.
+    const std::string deckData = std::string(R"(RUNSPEC
+OIL
+WATER
+DIMENS
+ 2 1 2 /
+)") + (dualperm ? "DUALPERM\n" : "DUALPORO\n") + R"(NODPPM
+GRID
+DX
+ 4*100. /
+DY
+ 4*100. /
+DZ
+ 4*10. /
+TOPS
+ 2*2000. /
+PORO
+ 2*0.20 2*0.01 /
+PERMX
+ 2*1.0 2*1000.0 /
+PERMY
+ 2*1.0 2*1000.0 /
+PERMZ
+ 2*0.5 2*500.0 /
+SIGMA
+ 0.12 /
+EDIT
+)" + editKeywords + "END";
+    return Parser{}.parseString(deckData);
+}
+
 Deck singlePorosityDeck(double permMd, double permzMd, double poro, double topDepth)
 {
     // The 2x1x2 single-porosity analogue of one half of the dual-continuum
@@ -362,6 +396,18 @@ BOOST_AUTO_TEST_CASE(MatrixNncKeepsTheMatrixClosedInDualPorosity)
 
     const auto dk = computeTrans(true, /* dualperm = */ true, "", nnc);
     BOOST_CHECK_GT(dk.trans(0, 3), 0.0);
+}
+
+BOOST_AUTO_TEST_CASE(TranzDoesNotChangeTheCouplingWithOneLayerPerContinuum)
+{
+    for (const bool dualperm : {false, true}) {
+        const auto plain = computeTransFromDeck(singleLayerDeck(dualperm, ""));
+        const auto tranz = computeTransFromDeck(singleLayerDeck(dualperm, "TRANZ\n 4*3.0 /\n"));
+        for (std::size_t g = 0; g < 2; ++g) {
+            BOOST_CHECK_GT(plain.trans(g, g + 2), 0.0);
+            BOOST_CHECK_EQUAL(tranz.trans(g, g + 2), plain.trans(g, g + 2));
+        }
+    }
 }
 
 int main(int argc, char** argv)

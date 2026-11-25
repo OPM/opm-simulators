@@ -1166,6 +1166,8 @@ resetTransmissibilityFromArrays_(const std::array<bool,3>& is_tran,
 {
     const auto& cartDims = cartMapper_.cartesianDimensions();
     ElementMapper elemMapper(gridView_, Dune::mcmgElementLayout());
+    const bool dualContinuum = eclState_.runspec().porosityModel().dualContinuum();
+    const std::size_t matrixCellCount = EclipseGrid::matrixCellCount(cartDims);
 
     // compute the transmissibilities for all intersections
     for (const auto& elem : elements(gridView_)) {
@@ -1194,6 +1196,15 @@ resetTransmissibilityFromArrays_(const std::array<bool,3>& is_tran,
                 // We do this when gc1 is smaller than the other to find the
                 // correct place to read in parallel when ghost/overlap elements
                 // are ordered last
+                continue;
+            }
+
+            // A matrix cell and its twin are no neighbours in the sense of the arrays, although with
+            // one layer per continuum their Cartesian indices differ like those of a Z neighbour. The
+            // matrix-fracture coupling comes from SIGMA only.
+            if (dualContinuum && static_cast<std::size_t>(gc1) < matrixCellCount &&
+                static_cast<std::size_t>(gc2) >= matrixCellCount)
+            {
                 continue;
             }
 
