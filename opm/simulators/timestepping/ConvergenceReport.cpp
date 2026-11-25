@@ -38,6 +38,8 @@ namespace Opm
             { Type::Invalid    , "Invalid" },
             { Type::MassBalance, "MB"      },
             { Type::Cnv        , "CNV"     },
+            { Type::MaxDP      , "Max(DP)" },
+            { Type::MaxDSeff   , "Max(DS)" },
         };
 
         auto strPos = type_strings.find(t);
