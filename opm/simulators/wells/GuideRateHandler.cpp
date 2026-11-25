@@ -549,9 +549,8 @@ updateGuideRatesForProductionGroups_(const Group& group, std::vector<Scalar>& po
     // NOTE: Even if this is a pure injection group, we still need to compute the
     // group potentials since they may be used by a production group at a higher
     // level in the group hierarchy. See MOD4_UDQ_ACTIONX.DATA for an example.
-    const bool is_master_group = this->isMasterGroup_(group);
 #ifdef RESERVOIR_COUPLING_ENABLED
-    if (is_master_group) {
+    if (this->isMasterGroup_(group)) {
         // This is a master group, so we do not need to compute potentials
         // for sub groups. We just set the guide rates for the master group
         // as submitted from its corresponding slave group.
@@ -579,29 +578,23 @@ updateGuideRatesForProductionGroups_(const Group& group, std::vector<Scalar>& po
         water_pot = pot[pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx)];
     }
 
-    // Synchronize potentials across all ranks
+    // Synchronize potentials across all ranks. The potentials are in SI here,
+    // also for a master group (see updateProductionGroupPotentialFromSlaveGroup_()).
     this->comm().sum(potentials.data(), potentials.size());
-    if (!is_master_group) {
-        // Non-master group potentials are accumulated from sub-groups in SI;
-        // convert them to the display units (e.g. SM3/DAY for METRIC) that
-        // GuideRate::compute() and the stored group potential use. A master
-        // group's potential already arrives in display units from its slave
-        // group (the slave applied from_si before storing and sending it), so
-        // it must not be converted again here.
-        oil_pot = this->unit_system_.from_si(UnitSystem::measure::liquid_surface_rate, oil_pot);
-        water_pot = this->unit_system_.from_si(UnitSystem::measure::liquid_surface_rate, water_pot);
-        gas_pot = this->unit_system_.from_si(UnitSystem::measure::gas_surface_rate, gas_pot);
-    }
-    this->guideRate().compute(
-        group.name(), this->report_step_idx_, this->sim_time_, oil_pot, gas_pot, water_pot
-    );
     // NOTE: For reservoir coupling: We will later need to send the slave group potentials
-    //   to the master. The above call to GuideRate::compute() will as a side-effect store
+    //   to the master. The call to GuideRate::compute() below will as a side-effect store
     //   them in the GuideRate object. But those potentials are meant to be internal to the
     //   GuideRate object, so we choose to store the potentials in the GroupState object
-    //   below for this reason.
+    //   for this reason. They are stored in SI, like the rates that the slave sends.
     this->group_state_.update_group_production_potential(
         group.name(), oil_pot, gas_pot, water_pot
+    );
+    // GuideRate::compute() takes the potentials in display units (e.g. SM3/DAY for METRIC).
+    oil_pot = this->unit_system_.from_si(UnitSystem::measure::liquid_surface_rate, oil_pot);
+    water_pot = this->unit_system_.from_si(UnitSystem::measure::liquid_surface_rate, water_pot);
+    gas_pot = this->unit_system_.from_si(UnitSystem::measure::gas_surface_rate, gas_pot);
+    this->guideRate().compute(
+        group.name(), this->report_step_idx_, this->sim_time_, oil_pot, gas_pot, water_pot
     );
 }
 
@@ -676,13 +669,26 @@ updateProductionGroupPotentialFromSlaveGroup_(const Group& group, std::vector<Sc
 {
     assert(this->isReservoirCouplingMaster());
     auto& rescoup_master = this->reservoirCouplingMaster();
+    // The slave sends its potentials in SI, the unit of the potentials of the
+    // wells and of the other groups, which a parent group adds them to.
     const auto& slave_pot = rescoup_master.getSlaveGroupPotentials(group.name());
     const auto& pu = this->phaseUsage();
     // TODO: Here we should check that the master uses the same phases as the
     //   slave.
-    pot[pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx)] = slave_pot[ReservoirCoupling::Phase::Oil];
-    pot[pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx)] = slave_pot[ReservoirCoupling::Phase::Gas];
-    pot[pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx)] = slave_pot[ReservoirCoupling::Phase::Water];
+    const auto oil_idx = pu.canonicalToActivePhaseIdx(IndexTraits::oilPhaseIdx);
+    const auto gas_idx = pu.canonicalToActivePhaseIdx(IndexTraits::gasPhaseIdx);
+    const auto water_idx = pu.canonicalToActivePhaseIdx(IndexTraits::waterPhaseIdx);
+    // The potentials received from the slave group are the same on all ranks,
+    // but the caller sums the potentials over the ranks, as it does for the
+    // potentials of the wells, which each rank holds only for its own wells.
+    // Set them on rank 0 only, so that they are counted once. The lookups above
+    // are done on all ranks, so that a lookup that throws does so on all ranks.
+    if (this->comm().rank() != 0) {
+        return;
+    }
+    pot[oil_idx] = slave_pot[ReservoirCoupling::Phase::Oil];
+    pot[gas_idx] = slave_pot[ReservoirCoupling::Phase::Gas];
+    pot[water_idx] = slave_pot[ReservoirCoupling::Phase::Water];
 }
 #endif
 
