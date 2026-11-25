@@ -118,8 +118,6 @@ using ScalarToUse = Opm::GetPropType<Opm::Properties::TTag::FlowProblem, Opm::Pr
 
 using FluidSystem = Opm::BlackOilFluidSystem<Scalar>;
 using FluidState = Opm::BlackOilFluidState<Scalar, FluidSystem>;
-using Evaluation = Opm::DenseAd::Evaluation<double, 2>;
-// using Scalar = typename Opm::MathToolbox<Evaluation>::Scalar;
 using BlackOilFluidSystemView
     = Opm::BlackOilFluidSystemNonStatic<Scalar, Opm::BlackOilDefaultFluidSystemIndices, Opm::gpuistl::GpuView,
                                         Opm::Co2StorePvtApproaches>;
