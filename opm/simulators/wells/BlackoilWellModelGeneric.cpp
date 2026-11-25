@@ -266,8 +266,21 @@ initFromRestartFile(const RestartValue& restartValues,
                         this->wellState(),
                         this->groupState());
 
+    // A multisegment well whose restart record has no segment data, for
+    // instance a well that is a multisegment well in this run only, has
+    // not had its complete state restored.  It keeps its NEW_WELL event,
+    // so that its initial well solve builds the segment state.
     for (const auto& [wname, rst_well] : restartValues.wells) {
-        this->wells_loaded_from_restart_.insert(wname);
+        const auto well = std::ranges::find_if(this->wells_ecl_,
+                                               [&wname](const auto& w)
+                                               { return w.name() == wname; });
+        const bool segments_missing = handle_ms_well
+            && (well != this->wells_ecl_.end())
+            && well->isMultiSegment()
+            && rst_well.segments.empty();
+        if (!segments_missing) {
+            this->wells_loaded_from_restart_.insert(wname);
+        }
     }
 
     // Reconstruct the retained network THP limit, which the restart file does

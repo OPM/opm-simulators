@@ -155,18 +155,8 @@ loadRestartWellData(const std::string&                   well_name,
 
     this->loadRestartConnectionData(phs, rst_well, old_perf_data, ws);
 
-    if (handle_ms_well) {
-        if (rst_well.segments.empty()) {
-            // The restart file has no segment data for this well, for instance
-            // a well that is a multisegment well in this run only.  Drop the
-            // placeholder segments, so that the segment state is computed from
-            // the restored well and connection state at the start of the
-            // report step.
-            ws.segments = {};
-        }
-        else {
-            this->loadRestartSegmentData(well_name, phs, rst_well, ws);
-        }
+    if (handle_ms_well && !rst_well.segments.empty()) {
+        this->loadRestartSegmentData(well_name, phs, rst_well, ws);
     }
 }
 
