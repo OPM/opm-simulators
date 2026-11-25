@@ -23,8 +23,6 @@
 #include <opm/common/utility/gpuDecorators.hpp>
 #include <opm/material/common/MathToolbox.hpp>
 
-#include <algorithm>
-#include <cmath>
 #include <type_traits>
 
 namespace Opm::Amg {
@@ -35,47 +33,63 @@ enum class TrueImpesMethod { Storage, Analytic };
 
 namespace Opm::Amg::detail {
 
-// The sequential pressure residual is a linear combination of the mass balance
-// residuals. For three active phases, the coefficients are
-//   water   1/bw
-//   oil     (1/bo - rs/bg)/(1 - rs*rv)
-//   gas     (1/bg - rv/bo)/(1 - rs*rv)
-// Here bw, bo and bg are the inverse formation volume factors (invB).
-// Apply the same coefficients to the residual and the Jacobian.
+// The sequential residual is a linear combination of the
+// mass balance residuals, with coefficients equal to (for
+// water, oil, gas):
+//    1/bw,
+//    (1/bo - rs/bg)/(1-rs*rv)
+//    (1/bg - rv/bo)/(1-rs*rv)
+// These coefficients must be applied for both the residual and
+// Jacobian.
 template<class FluidSystem, class FluidState, class PrimaryVariables, class Weights>
 OPM_HOST_DEVICE void analyticWeights(const FluidSystem& system, const FluidState& fs,
-                                     const PrimaryVariables& priVars, Weights&& weights)
+                                     const PrimaryVariables& priVars, Weights&& bweights)
 {
-    const auto component = [&system](unsigned phase) {
-        return system.canonicalToActiveCompIdx(system.solventComponentIndex(phase));
-    };
-    constexpr auto water = FluidSystem::waterPhaseIdx;
-    constexpr auto oil = FluidSystem::oilPhaseIdx;
-    constexpr auto gas = FluidSystem::gasPhaseIdx;
-
-    if (system.phaseIsActive(water)) {
-        weights[component(water)] = 1 / getValue(fs.invB(water));
+    if (system.phaseIsActive(FluidSystem::waterPhaseIdx)) {
+        const unsigned activeCompIdx = system.canonicalToActiveCompIdx(
+            system.solventComponentIndex(FluidSystem::waterPhaseIdx));
+        bweights[activeCompIdx] = 1 / getValue(fs.invB(FluidSystem::waterPhaseIdx));
     }
 
-    const bool oilActive = system.phaseIsActive(oil);
-    const bool gasActive = system.phaseIsActive(gas);
-    if (oilActive && gasActive) {
-        const auto bo = getValue(fs.invB(oil));
-        const auto bg = getValue(fs.invB(gas));
-        using Scalar = std::remove_cv_t<decltype(bo)>;
-        const auto meaning = priVars.primaryVarsMeaningGas();
-        const Scalar rs = meaning == PrimaryVariables::GasMeaning::Rv ? 0 : getValue(fs.Rs());
-        const Scalar rv = meaning == PrimaryVariables::GasMeaning::Rs ? 0 : getValue(fs.Rv());
-        // Match the value part of the host AD calculation for float and double.
-        const Scalar scale = 1.0 / (1.0 - static_cast<double>(rs) * rv);
-        weights[component(oil)] = (1 / bo - rs / bg) * scale;
-        weights[component(gas)] = (1 / bg - rv / bo) * scale;
+    using Scalar = std::decay_t<decltype(getValue(fs.Rs()))>;
+    double denominator = 1.0;
+    Scalar rs = 0.0;
+    Scalar rv = 0.0;
+    // The dissolved gas and vaporised oil terms only exist when both
+    // oil and gas are active.
+    const bool oilAndGas = system.phaseIsActive(FluidSystem::oilPhaseIdx)
+        && system.phaseIsActive(FluidSystem::gasPhaseIdx);
+    if (oilAndGas) {
+        rs = getValue(fs.Rs());
+        rv = getValue(fs.Rv());
+        if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
+            rs = 0.0;
+        }
+        if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs) {
+            rv = 0.0;
+        }
+        denominator = 1.0 - static_cast<double>(rs) * rv;
     }
-    else if (oilActive) {
-        weights[component(oil)] = 1 / getValue(fs.invB(oil));
+    // DenseAd divides by a scalar by multiplying by its reciprocal in the value type.
+    const Scalar inverseDenominator = 1.0 / denominator;
+
+    if (system.phaseIsActive(FluidSystem::oilPhaseIdx)) {
+        const unsigned activeCompIdx = system.canonicalToActiveCompIdx(
+            system.solventComponentIndex(FluidSystem::oilPhaseIdx));
+        auto oilWeight = 1 / getValue(fs.invB(FluidSystem::oilPhaseIdx));
+        if (oilAndGas) {
+            oilWeight -= rs / getValue(fs.invB(FluidSystem::gasPhaseIdx));
+        }
+        bweights[activeCompIdx] = oilWeight * inverseDenominator;
     }
-    else if (gasActive) {
-        weights[component(gas)] = 1 / getValue(fs.invB(gas));
+    if (system.phaseIsActive(FluidSystem::gasPhaseIdx)) {
+        const unsigned activeCompIdx = system.canonicalToActiveCompIdx(
+            system.solventComponentIndex(FluidSystem::gasPhaseIdx));
+        auto gasWeight = 1 / getValue(fs.invB(FluidSystem::gasPhaseIdx));
+        if (oilAndGas) {
+            gasWeight -= rv / getValue(fs.invB(FluidSystem::oilPhaseIdx));
+        }
+        bweights[activeCompIdx] = gasWeight * inverseDenominator;
     }
 }
 
@@ -93,50 +107,22 @@ OPM_HOST_DEVICE inline auto& trueImpesJacobianEntry(Matrix& block, Index pv, Ind
 // Use the native matrix on the host and a flat row-major block in the kernel.
 template <int numEq, class Storage, class Scale, class Index, class Matrix>
 OPM_HOST_DEVICE inline void formTrueImpesStorageJacobian(const Storage& storage,
-                                                        Scale storageScale,
-                                                        Index pressureVariable,
-                                                        Matrix& block)
+                                                        Scale storage_scale,
+                                                        Index pressureVarIndex,
+                                                        Matrix& block_transpose)
 {
-    constexpr double pressureScale = 50e5;
-    for (Index eq = 0; eq < numEq; ++eq) {
-        for (Index pv = 0; pv < numEq; ++pv) {
-            auto& entry = trueImpesJacobianEntry<numEq>(block, pv, eq);
-            entry = storage[eq].derivative(pv) / storageScale;
-            if (pv == pressureVariable) {
-                entry *= pressureScale;
+    const double pressure_scale = 50e5;
+
+    // Build the transposed matrix directly to avoid separate transpose step
+    for (Index ii = 0; ii < numEq; ++ii) {
+        for (Index jj = 0; jj < numEq; ++jj) {
+            auto& entry = trueImpesJacobianEntry<numEq>(block_transpose, jj, ii);
+            entry = storage[ii].derivative(jj)/storage_scale;
+            if (jj == pressureVarIndex) {
+                entry *= pressure_scale;
             }
         }
     }
-}
-
-// The result may alias the solution or point directly into the output vector.
-template <int numEq, class Scalar>
-OPM_HOST_DEVICE inline bool normalizeTrueImpesWeights(const Scalar* solution, Scalar* weights)
-{
-#if OPM_IS_INSIDE_DEVICE_FUNCTION
-    using ::fabs;
-    using ::isfinite;
-    using ::max;
-#else
-    using std::fabs;
-    using std::isfinite;
-    using std::max;
-#endif
-    Scalar maxAbs = 0;
-    for (int eq = 0; eq < numEq; ++eq) {
-        const Scalar weight = solution[eq];
-        if (!isfinite(weight)) {
-            return false;
-        }
-        maxAbs = max(maxAbs, fabs(weight));
-    }
-    if (maxAbs == 0) {
-        return false;
-    }
-    for (int eq = 0; eq < numEq; ++eq) {
-        weights[eq] = solution[eq] / maxAbs;
-    }
-    return true;
 }
 
 } // namespace Opm::Amg::detail

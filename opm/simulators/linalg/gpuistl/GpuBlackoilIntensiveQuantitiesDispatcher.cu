@@ -175,6 +175,29 @@ dispatcherUpdateAllCellsKernel(GpuProblem problem,
     iq.updateEnergyQuantities_(problem, static_cast<unsigned>(i), 0u);
 }
 
+template <int numEq, class Scalar>
+__device__ bool normalizeTrueImpesWeights(const Scalar* solution, Scalar* weights)
+{
+    using ::fabs;
+    using ::isfinite;
+    using ::max;
+    Scalar maxAbs = 0;
+    for (int eq = 0; eq < numEq; ++eq) {
+        const Scalar weight = solution[eq];
+        if (!isfinite(weight)) {
+            return false;
+        }
+        maxAbs = max(maxAbs, fabs(weight));
+    }
+    if (maxAbs == 0) {
+        return false;
+    }
+    for (int eq = 0; eq < numEq; ++eq) {
+        weights[eq] = solution[eq] / maxAbs;
+    }
+    return true;
+}
+
 template <class DeviceTypeTag, class ModelView>
 __global__ void trueImpesWeightsKernel(ModelView model,
                                        GetPropType<DeviceTypeTag, Properties::Scalar>* weights,
@@ -203,7 +226,7 @@ __global__ void trueImpesWeightsKernel(ModelView model,
     Amg::detail::formTrueImpesStorageJacobian<numEq>(storage, storageScale,
                                                      pressureIndex, block);
     if (!solveBlock<Scalar, numEq>(block, rhs, result)
-        || !Amg::detail::normalizeTrueImpesWeights<numEq>(result, weights + cell * numEq)) {
+        || !normalizeTrueImpesWeights<numEq>(result, weights + cell * numEq)) {
         // Reserve zero for success and report a deterministic cell on failure.
         atomicMax(failedCell, static_cast<unsigned>(cell) + 1u);
     }
@@ -232,7 +255,7 @@ __global__ void analyticWeightsKernel(Quantities quantities, Variables variables
 template <class CpuTypeTag>
 struct GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::Impl {
     std::unique_ptr<Bridge> bridge;
-    std::unique_ptr<GpuBuffer<unsigned>> trueImpesStatus;
+    GpuBuffer<unsigned> trueImpesStatus;
 };
 
 template <class CpuTypeTag>
@@ -311,11 +334,9 @@ void GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::computeTrueImpesWeigh
         || !std::isfinite(timeStepSize)) {
         OPM_THROW(std::invalid_argument, "Invalid resident true-IMPES weights dimensions or timestep");
     }
-    if (!impl_->trueImpesStatus) {
-        impl_->trueImpesStatus = std::make_unique<GpuBuffer<unsigned>>(1);
-    }
+    impl_->trueImpesStatus.resize(1);
     unsigned failedCell = 0;
-    detail::gpuMemsetZero(impl_->trueImpesStatus->data(), sizeof(failedCell));
+    detail::gpuMemsetZero(impl_->trueImpesStatus.data(), sizeof(failedCell));
     // Both CPR and TPFA consume data on the default stream. Order this read
     // after the property's writer without materializing any host IQs.
     owner.waitForAssembly(0);
@@ -323,9 +344,9 @@ void GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::computeTrueImpesWeigh
     constexpr unsigned blockSize = 256;
     const auto gridSize = (numCells + blockSize - 1) / blockSize;
     trueImpesWeightsKernel<DeviceTypeTag><<<gridSize, blockSize, 0, detail::DEFAULT_STREAM>>>(
-        owner.modelView(), weights.data(), timeStepSize, numCells, impl_->trueImpesStatus->data());
+        owner.modelView(), weights.data(), timeStepSize, numCells, impl_->trueImpesStatus.data());
     OPM_GPU_SAFE_CALL(cudaGetLastError());
-    impl_->trueImpesStatus->copyToHost(&failedCell, 1);
+    impl_->trueImpesStatus.copyToHost(&failedCell, 1);
     if (failedCell != 0) {
         OPM_THROW(std::runtime_error, std::format(
             "Cannot form GPU true-IMPES pressure weights for cell {}: "

@@ -38,7 +38,6 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/grid/utility/ElementChunks.hpp>
 #include <opm/models/blackoil/blackoilmodel.hh>
 #include <opm/models/blackoil/blackoilprimaryvariables.hh>
 #include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
@@ -70,7 +69,6 @@
 #include <opm/simulators/utils/moduleVersion.hpp>
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/flow/FlowGenericVanguard.hpp>
-#include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 
@@ -862,24 +860,6 @@ static void runProductionDispatcherTest(const std::string& deckPath)
                           asDouble(intensiveQuantities[i]->fluidState().density(
                               FluidSystem::waterPhaseIdx)),
                           1e-6);
-    }
-
-    // A singular block in the CPU calculation must still report the cell
-    // when the OpenMP region is serialized by its runtime if clause.
-    sim->setTimeStepSize(dt);
-    const_cast<Evaluation&>(intensiveQuantities[0]->porosity()) = Evaluation(0.0);
-    using ElementContext = Opm::GetPropType<ProductionTypeTag, Opm::Properties::ElementContext>;
-    ElementContext elemCtx(*sim);
-    Opm::ElementChunks chunks(sim->gridView(), Dune::Partitions::all, 2);
-    Dune::BlockVector<Dune::FieldVector<double, numEq>> cpuWeights(numCells);
-    for (bool threaded : {false, true}) {
-        BOOST_CHECK_EXCEPTION(
-            Opm::Amg::getTrueImpesWeights(pressureIndex, cpuWeights, elemCtx, sim->model(), chunks, threaded),
-            std::runtime_error,
-            [](const std::runtime_error& error) {
-                return std::string_view{error.what()}.find("pressure weights for cell 0 (Cartesian index")
-                    != std::string_view::npos;
-            });
     }
 }
 

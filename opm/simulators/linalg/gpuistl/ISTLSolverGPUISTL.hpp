@@ -495,15 +495,16 @@ private:
                 &m_cpuWeights[0][0], m_cpuWeights.dim());
         }
         ElementContext elemCtx(m_simulator);
-        const bool parallel = m_parameters.cpr_weights_thread_parallel_;
+        const bool enableThreadParallel = m_parameters.cpr_weights_thread_parallel_;
         if (method == Amg::TrueImpesMethod::Analytic) {
             Amg::getTrueImpesWeightsAnalytic(pressureIndex, m_cpuWeights, elemCtx,
-                                            m_simulator.model(), m_element_chunks, parallel);
+                                            m_simulator.model(), m_element_chunks, enableThreadParallel);
         } else {
             Amg::getTrueImpesWeights(pressureIndex, m_cpuWeights, elemCtx,
-                                    m_simulator.model(), m_element_chunks, parallel);
+                                    m_simulator.model(), m_element_chunks, enableThreadParallel);
         }
         if (size > 0) {
+            // Copy CPU vector to GPU vector using main stream and asynchronous transfer
             weights.copyFromHostAsync(m_cpuWeights);
         }
     }
