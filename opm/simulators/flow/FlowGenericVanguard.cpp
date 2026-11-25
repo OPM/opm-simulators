@@ -183,6 +183,7 @@ FlowGenericVanguard::FlowGenericVanguard(SimulationModelParams&& params)
     metisParams_ = Parameters::Get<Parameters::MetisParams>();
 
     externalPartitionFile_ = Parameters::Get<Parameters::ExternalPartition>();
+    fracturePartitionRadius_ = Parameters::Get<Parameters::FracturePartitionRadius>();
 #endif // HAVE_MPI
 
     enableDistributedWells_ = Parameters::Get<Parameters::AllowDistributedWells>();
@@ -573,6 +574,10 @@ void FlowGenericVanguard::registerParameters_()
          "distribution purposes. If empty, the built-in partitioning "
          "method will be employed.");
     Parameters::Hide<Parameters::ExternalPartition>();
+    Parameters::Register<Parameters::FracturePartitionRadius>
+        ("Keep all cells within this distance [m] (per axis) of each WSEED fracture "
+         "seed cell on one rank, so fractures can grow without reaching another rank. "
+         "0 disables.");
 
     Parameters::Hide<Parameters::ZoltanImbalanceTol<Scalar>>();
     Parameters::Hide<Parameters::ZoltanParams>();

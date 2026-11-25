@@ -58,6 +58,7 @@ struct EnableDryRun { static constexpr auto value = "auto"; };
 struct EnableEclOutput { static constexpr auto value = true; };
 struct EnableOpmRstFile { static constexpr bool value = false; };
 struct ExternalPartition { static constexpr auto* value = ""; };
+struct FracturePartitionRadius { static constexpr double value = 0.0; };
 
 template<class Scalar>
 struct ImbalanceTol { static constexpr Scalar value = 1.1; };
@@ -325,6 +326,11 @@ public:
     {
         return this->externalPartitionFile_;
     }
+
+    double fracturePartitionRadius() const
+    {
+        return this->fracturePartitionRadius_;
+    }
 #endif // HAVE_MPI
 
     /*!
@@ -420,6 +426,7 @@ protected:
     std::string metisParams_;
 
     std::string externalPartitionFile_{};
+    double fracturePartitionRadius_{0.0};
 #endif // HAVE_MPI
 
     bool enableDistributedWells_;

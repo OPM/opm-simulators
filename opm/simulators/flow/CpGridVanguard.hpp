@@ -32,6 +32,7 @@
 
 #include <opm/input/eclipse/EclipseState/Grid/LgrConnectionCheck.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellFractureSeeds.hpp>
 
 #include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
@@ -449,6 +450,69 @@ public:
         return outputTrans_ ? *outputTrans_ : this->globalTransmissibility();
     }
 
+#if HAVE_MPI
+    /// Adds, per WSEED seed cell of the whole schedule, the cells whose centre lies
+    /// within the radius (per axis) of the seed's centre to the partition cell groups.
+    bool applyFracturePartitionCellGroups_([[maybe_unused]] int halo)
+    {
+        const double radius = this->fracturePartitionRadius();
+        if (radius <= 0.0) {
+            return false;
+        }
+        std::set<int> seeds;
+        const auto& sched = this->schedule();
+        for (std::size_t step = 0; step < sched.size(); ++step) {
+            const auto& wseed = sched[step].wseed;
+            for (const auto& well : wseed.keys()) {
+                for (const auto cell : wseed(well).seedCells()) {
+                    seeds.insert(static_cast<int>(cell));
+                }
+            }
+        }
+        if (seeds.empty()) {
+            OpmLog::warning("--fracture-partition-radius is set but the deck has no WSEED.");
+            return false;
+        }
+        if (const auto& f = this->externalPartitionFile(); !f.empty() && f != "none") {
+            OPM_THROW(std::invalid_argument, "--fracture-partition-radius and "
+                      "--external-partition cannot be combined.");
+        }
+
+        // Before distribution only the root rank holds cells; the others add empty groups.
+        const auto& level0 = *this->grid_->currentData().front();
+        const auto& globalCell = level0.globalCell();
+        std::vector<std::pair<int, Dune::FieldVector<double, 3>>> centres;
+        centres.reserve(globalCell.size());
+        for (const auto& element : Dune::elements(this->grid_->levelGridView(0))) {
+            centres.emplace_back(globalCell[element.index()], element.geometry().center());
+        }
+        auto groups = this->grid_->partitionCellGroups();
+        std::size_t maxGroup = 0;
+        for (const auto& [seedCell, seedCentre] : centres) {
+            if (seeds.count(seedCell) == 0) {
+                continue;
+            }
+            auto& group = groups.emplace_back();
+            for (const auto& [cell, centre] : centres) {
+                auto d = centre;
+                d -= seedCentre;
+                if (d.infinity_norm() <= radius) {
+                    group.insert(cell);
+                }
+            }
+            maxGroup = std::max(maxGroup, group.size());
+        }
+        if (!centres.empty()) {
+            OpmLog::info(fmt::format("Keeping the cells within {} m of {} fracture seed cell(s) on one "
+                                     "rank each (largest region {} of {} cells).",
+                                     radius, seeds.size(), maxGroup, centres.size()));
+        }
+        this->grid_->setPartitionCellGroups(std::move(groups),
+                                            std::max(halo, this->grid_->partitionCellGroupHalo()));
+        return true;
+    }
+#endif // HAVE_MPI
+
     /*!
      * \brief Tell the partitioner to keep each LGR region on one rank.
      *
@@ -583,6 +647,9 @@ public:
                     overlapLayers = lgrOverlap;
                     partMethod = Dune::PartitionMethod::zoltanGoG;
                 }
+            }
+            if (applyFracturePartitionCellGroups_(overlapLayers)) {
+                partMethod = Dune::PartitionMethod::zoltanGoG;
             }
         }
 
