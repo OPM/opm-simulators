@@ -21,6 +21,9 @@
 
 #include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
 #include <opm/models/blackoil/blackoildiffusionmodule.hh>
+#include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
+
+#include <opm/models/discretization/common/tpfalinearizer.hh>
 
 #include <opm/simulators/flow/python/PyGasWaterSimulator.hpp>
 // NOTE: This file will be generated at compile time and placed in the build directory
@@ -32,6 +35,22 @@
 
 namespace Opm {
     namespace Properties {
+
+        template<class TypeTag>
+        struct Linearizer<TypeTag, TTag::FlowGasWaterProblem>
+        { using type = TpfaLinearizer<TypeTag>; };
+
+        template<class TypeTag>
+        struct LocalResidual<TypeTag, TTag::FlowGasWaterProblem>
+        { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+
+        template<class TypeTag>
+        struct EnableDiffusion<TypeTag, TTag::FlowGasWaterProblem>
+        { static constexpr bool value = false; };
+
+        template<class TypeTag>
+        struct EnergyModuleType<TypeTag, TTag::FlowGasWaterProblem>
+        { static constexpr EnergyModules value = EnergyModules::ConstantTemperature; };
 
         //! The indices required by the model
         template<class TypeTag>

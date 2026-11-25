@@ -20,7 +20,11 @@
 
 #include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
 #include <opm/models/blackoil/blackoildiffusionmodule.hh>
+#include <opm/models/blackoil/blackoildispersionmodule.hh>
+#include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
+
+#include <opm/models/discretization/common/tpfalinearizer.hh>
 
 #include <opm/simulators/flow/python/PyOnePhaseSimulator.hpp>
 // NOTE: This file will be generated at compile time and placed in the build directory
@@ -31,6 +35,22 @@
 #include <string>
 
 namespace Opm::Properties {
+
+    template<class TypeTag>
+    struct Linearizer<TypeTag, TTag::FlowOnePhaseProblem>
+    { using type = TpfaLinearizer<TypeTag>; };
+
+    template<class TypeTag>
+    struct LocalResidual<TypeTag, TTag::FlowOnePhaseProblem>
+    { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+
+    template<class TypeTag>
+    struct EnableDiffusion<TypeTag, TTag::FlowOnePhaseProblem>
+    { static constexpr bool value = true; };
+
+    template<class TypeTag>
+    struct EnableDispersion<TypeTag, TTag::FlowOnePhaseProblem>
+    { static constexpr bool value = true; };
 
     //! The indices required by the model
     template<class TypeTag>
