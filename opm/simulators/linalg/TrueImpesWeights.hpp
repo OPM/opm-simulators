@@ -35,8 +35,13 @@ enum class TrueImpesMethod { Storage, Analytic };
 
 namespace Opm::Amg::detail {
 
-// Volume coefficients of the water, oil and gas mass balances in the
-// sequential pressure equation. Only the values of the PVT quantities enter.
+// The sequential pressure residual is a linear combination of the mass balance
+// residuals. For three active phases, the coefficients are
+//   water   1/bw
+//   oil     (1/bo - rs/bg)/(1 - rs*rv)
+//   gas     (1/bg - rv/bo)/(1 - rs*rv)
+// Here bw, bo and bg are the inverse formation volume factors (invB).
+// Apply the same coefficients to the residual and the Jacobian.
 template<class FluidSystem, class FluidState, class PrimaryVariables, class Weights>
 OPM_HOST_DEVICE void analyticWeights(const FluidSystem& system, const FluidState& fs,
                                      const PrimaryVariables& priVars, Weights&& weights)
