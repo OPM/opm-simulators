@@ -166,6 +166,7 @@ public:
 
     void update() override
     {
+        // target() returns a pointer if the stored callback is the adapter that refills weights_ in place.
         if (const auto* inPlace = weightsCalculator_.template target<Opm::InPlaceCprWeights<VectorType>>()) {
             inPlace->fill(weights_);
         } else {
