@@ -584,7 +584,8 @@ accelerationPressureLossContribution(const int seg,
             mass_rate.clearDerivatives();
         }
     }
-    const Scalar sign = mass_rate > 0 ? -1.0 : 1.0;
+    // Momentum flux is even in velocity; unless symmetric, injection gets the opposite sign.
+    const Scalar sign = (mass_rate > 0 && !symmetric_acceleration_) ? -1.0 : 1.0;
     return sign * mswellhelpers::velocityHead(area, mass_rate, density);
 }
 

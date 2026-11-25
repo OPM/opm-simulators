@@ -110,6 +110,7 @@ namespace Opm
         }
 
         this->thp_update_iterations = true;
+        this->segments_.setSymmetricAcceleration(this->param_.msw_symmetric_acceleration_);
     }
 
 

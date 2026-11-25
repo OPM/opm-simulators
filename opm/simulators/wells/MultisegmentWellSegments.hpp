@@ -169,7 +169,14 @@ public:
 
     void copyPhaseDensities(SegmentState<Scalar>& segSol) const;
 
+    void setSymmetricAcceleration(const bool symmetric)
+    {
+        symmetric_acceleration_ = symmetric;
+    }
+
 private:
+    bool symmetric_acceleration_ = false;
+
     // TODO: trying to use the information from the Well opm-parser as much
     // as possible, it will possibly be re-implemented later for efficiency reason.
 

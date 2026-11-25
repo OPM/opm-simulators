@@ -147,6 +147,7 @@ struct MaximumNumberOfWellSwitches { static constexpr int value = 3; };
 struct MaximumNumberOfGroupSwitches { static constexpr int value = 3; };
 struct UseAverageDensityMsWells { static constexpr bool value = false; };
 struct ContinuousFluidPropertiesMsWells { static constexpr bool value = false; };
+struct MswSymmetricAcceleration { static constexpr bool value = false; };
 struct LocalWellSolveControlSwitching { static constexpr bool value = true; };
 struct UseImplicitIpr { static constexpr bool value = true; };
 struct CheckGroupConstraintsInnerWellIterations { static constexpr bool value = true; };
@@ -338,6 +339,9 @@ public:
 
     /// Whether segment fluid properties stay continuous as the gas or oil fraction goes to zero
     bool continuous_fluid_properties_ms_wells_;
+
+    /// Whether the MSW acceleration term has the same sign for injection and production
+    bool msw_symmetric_acceleration_;
 
     /// Whether to allow control switching during local well solutions
     bool local_well_solver_control_switching_;
