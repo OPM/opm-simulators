@@ -279,8 +279,8 @@ public:
         const auto& nameToLevel = this->grid().getLgrNameToLevel();
         const auto& dims0 = this->grid().logicalCartesianSize(); // global level-0 dims
 
-        struct Box { int i0,j0,k0,i1,j1,k1, rx,ry,rz, nx,ny, level; };
-        std::vector<Box> boxes;
+        struct LgrBox { int i0,j0,k0,i1,j1,k1, rx,ry,rz, nx,ny, level; };
+        std::vector<LgrBox> boxes;
         int maxLevel = 0;
         for (const auto& [name, level] : nameToLevel) {
             if (level == 0) {
