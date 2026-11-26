@@ -52,7 +52,7 @@ ParallelFileMerger::ParallelFileMerger(const fs::path& output_dir,
 void ParallelFileMerger::operator()(const fs::path& file)
 {
     std::smatch matches;
-    std::string filename = file.filename().native();
+    std::string filename = file.filename().string();
 
     if (std::regex_match(filename, matches, fileWarningRegex_)) {
         std::string rank = std::regex_replace(filename, fileWarningRegex_, "$1");

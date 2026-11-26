@@ -90,7 +90,7 @@ class VtkMultiWriter : public BaseOutputWriter
             // current time step
             // The file names in the pvd file are relative, the path should therefore be stripped.
             const std::filesystem::path fullPath{fileName};
-            const std::string localFileName = fullPath.filename();
+            const std::string localFileName = fullPath.filename().string();
             multiWriter_.multiFile_.precision(16);
             multiWriter_.multiFile_ << "   <DataSet timestep=\"" << multiWriter_.curTime_ << "\" file=\""
                                     << localFileName << "\"/>\n";
