@@ -34,7 +34,7 @@ namespace Opm::Linear
 // TpsaVector<ScalarT>::EntryProxy implementation
 //
 template <class ScalarT>
-TpsaVector<ScalarT>::EntryProxy::operator EqVector() const
+TpsaVector<ScalarT>::EntryProxy::operator typename TpsaVector<ScalarT>::EqVector() const
 {
     EqVector res;
     for (std::size_t eqIdx = 0; eqIdx < numTpsaEq; ++eqIdx) {
