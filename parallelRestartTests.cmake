@@ -162,6 +162,31 @@ add_test_compare_parallel_restarted_simulation(
     --solver-max-time-step-in-days=1
 )
 
+# Restart in the middle of a guide rate update interval, in parallel.  Every
+# process must restore the guide rates of all wells, also of the wells on
+# other processes.  See the serial test of the same deck in
+# restartTests.cmake for the relative tolerance.
+add_test_compare_parallel_restarted_simulation(
+  CASENAME
+    guiderat_restart
+  FILENAME
+    0A1_GRCTRL_LRAT_ORAT_GUIDERAT_RST_MODEL2_STW
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol_restart}
+  REL_TOL
+    1e-2
+  RESTART_STEP
+    8
+  DIR
+    model2
+  TEST_ARGS
+    --enable-tuning=true
+)
+
 # Serialized restart tests
 if(HDF5_FOUND)
   opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-serialization-regressionTest.sh "")
