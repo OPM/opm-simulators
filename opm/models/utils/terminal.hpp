@@ -23,9 +23,17 @@
 #ifndef OPM_TERMINAL_HPP
 #define OPM_TERMINAL_HPP
 
+#include <cstdio>
 #include <string>
 
 namespace Opm {
+
+/*!
+ * \brief Is the given stream attached to a terminal?
+ * \param stream Stream to test, e.g. stdout
+ * \return True when the stream is a tty
+ */
+bool isTty(std::FILE* stream);
 
 /*!
  * \brief Break up a string in lines suitable for terminal output.
