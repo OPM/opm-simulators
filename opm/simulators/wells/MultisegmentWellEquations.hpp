@@ -29,7 +29,6 @@
 #include <opm/simulators/linalg/BlockVector.hpp>
 #include <dune/common/fmatrix.hh>
 #include <dune/common/fvector.hh>
-#include <dune/istl/bvector.hh>
 
 #include <memory>
 #include <type_traits>
