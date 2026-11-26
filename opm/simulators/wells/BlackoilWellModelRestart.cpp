@@ -55,7 +55,8 @@ namespace {
 
     Opm::GuideRate::GuideRateValue
     makeGuideRateValue(const Opm::data::GuideRateValue&  restart,
-                       const Opm::GuideRateModel::Target target)
+                       const Opm::GuideRateModel::Target target,
+                       const double                      sim_time)
     {
         const auto item = guideRateRestartItem(target);
 
@@ -63,7 +64,7 @@ namespace {
             return {};
         }
 
-        return { 0.0, restart.get(item), target };
+        return { sim_time, restart.get(item), target };
     }
 } // Anonymous
 
@@ -191,6 +192,7 @@ void BlackoilWellModelRestart<Scalar, IndexTraits>::
 loadRestartGuideRates(const int                    report_step,
                       const GuideRateModel::Target target,
                       const data::Wells&           rst_wells,
+                      const double                 last_update,
                       GuideRate&                   guide_rate) const
 {
     for (const auto& [well_name, rst_well] : rst_wells) {
@@ -201,7 +203,7 @@ loadRestartGuideRates(const int                    report_step,
         }
 
         guide_rate.init_grvalue_SI(report_step, well_name,
-                                   makeGuideRateValue(rst_well.guide_rates, target));
+                                   makeGuideRateValue(rst_well.guide_rates, target, last_update));
     }
 }
 
@@ -210,6 +212,7 @@ void BlackoilWellModelRestart<Scalar, IndexTraits>::
 loadRestartGuideRates(const int                                     report_step,
                       const GuideRateConfig&                        config,
                       const std::map<std::string, data::GroupData>& rst_groups,
+                      const double                                  last_update,
                       GuideRate&                                    guide_rate) const
 {
     const auto target = config.model().target();
@@ -225,7 +228,7 @@ loadRestartGuideRates(const int                                     report_step,
         }
 
         guide_rate.init_grvalue_SI(report_step, group_name,
-                                   makeGuideRateValue(rst_group.guideRates.production, target));
+                                   makeGuideRateValue(rst_group.guideRates.production, target, last_update));
     }
 }
 
