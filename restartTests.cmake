@@ -340,6 +340,32 @@ add_test_compare_restarted_simulation(
     --enable-tuning=true
 )
 
+# Restart in the middle of a guide rate update interval (GUIDERAT item 1 is
+# 30 days).  The restarted run must recompute the guide rates at the same
+# times as the continuous run.  The first time step after the restart differs
+# by up to about 5e-3 in the well rates of this model, hence the larger
+# relative tolerance.
+add_test_compare_restarted_simulation(
+  CASENAME
+    guiderat_restart
+  FILENAME
+    0A1_GRCTRL_LRAT_ORAT_GUIDERAT_RST_MODEL2_STW
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol_restart}
+  REL_TOL
+    1e-2
+  RESTART_STEP
+    8
+  DIR
+    model2
+  TEST_ARGS
+    --enable-tuning=true
+)
+
 # The dynamic MSW data is not written to /read from the restart file
 # We therefore accept significant deviation in the results.
 # Note also that we use --sched-restart=true since some necessary
