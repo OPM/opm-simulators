@@ -69,6 +69,8 @@ public:
 
     const std::vector<std::size_t>& cells() const { return well_cells_; }
 
+    const std::vector<RateVector>& connectionRates() const { return connectionRates_; }
+
     virtual void apply(BVector& r) const = 0;
 
     /// Ax = Ax - C^T D^-1 B x, the well part of the reservoir operator

@@ -327,6 +327,7 @@ reservoirResidualMetrics() const
     const auto& constraintsMap = model.linearizer().constraintsMap();
 
     std::vector<Scalar> residualMetrics(numEq, 0.0);
+    constexpr bool volumetricResidual = getPropValue<TypeTag, Properties::UseVolumetricResidual>();
 
     // Ghost-cell residuals may omit fluxes from neighbors beyond the overlap.
     // Use the owning rank's residual to assess convergence.
@@ -341,11 +342,14 @@ reservoirResidualMetrics() const
             continue;
         }
 
+        // The tolerances apply to rates per unit volume, so divide by the cell
+        // volume when the residual holds total rates.
+        const Scalar volume = volumetricResidual ? 1.0 : model.dofTotalVolume(dofIdx);
         const auto& localResidual = residual[dofIdx];
         for (int eqIdx = 0; eqIdx < numEq; ++eqIdx) {
             residualMetrics[eqIdx] = std::max(
                 residualMetrics[eqIdx],
-                std::abs(localResidual[eqIdx] * model.eqWeight(dofIdx, eqIdx)));
+                std::abs(localResidual[eqIdx] / volume * model.eqWeight(dofIdx, eqIdx)));
         }
     }
 

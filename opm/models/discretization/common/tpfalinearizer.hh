@@ -587,7 +587,7 @@ private:
                         const auto& exFluidState = problem_().boundaryFluidState(myIdx, dir_id);
                         BoundaryConditionDataCPU bcdata {type,
                                                          massrate,
-                                                         exFluidState.pvtRegionIndex(),
+                                                         problem_().pvtRegionIndex(myIdx),
                                                          bfIndex,
                                                          bf.area(),
                                                          bf.integrationPos()[dimWorld - 1],

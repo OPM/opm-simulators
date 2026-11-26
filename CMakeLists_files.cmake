@@ -1038,6 +1038,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/models/ptflash/flashindices.hh
   opm/models/ptflash/flashintensivequantities.hh
   opm/models/ptflash/flashlocalresidual.hh
+  opm/models/ptflash/flashlocalresidualtpfa.hh
   opm/models/ptflash/flashmodel.hh
   opm/models/ptflash/flashnewtonmethod.hh
   opm/models/ptflash/flashparameters.hh
