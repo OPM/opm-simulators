@@ -28,6 +28,7 @@
 #if BOOST_VERSION / 100000 == 1 && BOOST_VERSION / 100 % 1000 > 66
 #include <boost/test/data/test_case.hpp>
 #endif
+#include <opm/simulators/linalg/BlockVector.hpp>
 
 #include <dune/common/parallel/mpihelper.hh>
 #include <dune/common/fvector.hh>
@@ -110,7 +111,7 @@ BOOST_AUTO_TEST_CASE(RstConvTest)
     std::vector<int> cellMapping(10);
     std::iota(cellMapping.begin(), cellMapping.end(), cc.rank()*10);
 
-    Dune::BlockVector<Dune::FieldVector<double,6>> residual(10);
+    Opm::BlockVector<Dune::FieldVector<double,6>> residual(10);
 
     // generate data
     std::vector<std::vector<int>> max(6);

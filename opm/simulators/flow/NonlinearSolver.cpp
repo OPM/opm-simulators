@@ -21,6 +21,7 @@
 #include <opm/simulators/flow/NonlinearSolver.hpp>
 
 #include <dune/common/fvector.hh>
+#include <opm/simulators/linalg/BlockVector.hpp>
 #include <dune/istl/bvector.hh>
 
 #include <opm/common/ErrorMacros.hpp>
@@ -105,7 +106,7 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
 }
 
 template<class Scalar, int Size>
-using BV = Dune::BlockVector<Dune::FieldVector<Scalar,Size>>;
+using BV = Opm::BlockVector<Dune::FieldVector<Scalar,Size>>;
 
 #define INSTANTIATE(T,Size)                                                 \
     template void stabilizeNonlinearUpdate(BV<T,Size>&, BV<T,Size>&,        \

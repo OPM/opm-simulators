@@ -27,6 +27,8 @@
 #include <opm/simulators/linalg/ilufirstelement.hh>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>
+#include <opm/simulators/linalg/BCRSMatrix.hpp>
+#include <opm/simulators/linalg/BlockVector.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/Preconditioner2InverseOperator.hpp>
 #include <opm/simulators/linalg/WellOperators.hpp>
@@ -388,9 +390,9 @@ namespace Dune
 
 // Vectors and matrices.
 template<class Scalar, int N>
-using BV = Dune::BlockVector<Dune::FieldVector<Scalar, N>>;
+using BV = Opm::BlockVector<Dune::FieldVector<Scalar, N>>;
 template<class Scalar, int N>
-using OBM = Dune::BCRSMatrix<Opm::MatrixBlock<Scalar, N, N>>;
+using OBM = Opm::BCRSMatrix<Opm::MatrixBlock<Scalar, N, N>>;
 
 // Sequential operators.
 template<class Scalar, int N>

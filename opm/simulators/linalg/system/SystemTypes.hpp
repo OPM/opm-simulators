@@ -20,6 +20,8 @@
 #define OPM_SYSTEMTYPES_HEADER_INCLUDED
 
 #include <opm/simulators/linalg/matrixblock.hh>
+#include <opm/simulators/linalg/BCRSMatrix.hpp>
+#include <opm/simulators/linalg/BlockVector.hpp>
 
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/bvector.hh>
@@ -49,18 +51,18 @@ inline constexpr int numResDofs = 3;
 inline constexpr int numWellDofs = 4;
 
 template<typename Scalar>
-using RRMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<Scalar, numResDofs, numResDofs>>;
+using RRMatrix = Opm::BCRSMatrix<Opm::MatrixBlock<Scalar, numResDofs, numResDofs>>;
 template<typename Scalar>
-using RWMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numResDofs, numWellDofs>>;
+using RWMatrix = Opm::BCRSMatrix<Dune::FieldMatrix<Scalar, numResDofs, numWellDofs>>;
 template<typename Scalar>
-using WRMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numResDofs>>;
+using WRMatrix = Opm::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numResDofs>>;
 template<typename Scalar>
-using WWMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numWellDofs>>;
+using WWMatrix = Opm::BCRSMatrix<Dune::FieldMatrix<Scalar, numWellDofs, numWellDofs>>;
 
 template<typename Scalar>
-using ResVector = Dune::BlockVector<Dune::FieldVector<Scalar, numResDofs>>;
+using ResVector = Opm::BlockVector<Dune::FieldVector<Scalar, numResDofs>>;
 template<typename Scalar>
-using WellVector = Dune::BlockVector<Dune::FieldVector<Scalar, numWellDofs>>;
+using WellVector = Opm::BlockVector<Dune::FieldVector<Scalar, numWellDofs>>;
 template<typename Scalar>
 using SystemVector = Dune::MultiTypeBlockVector<ResVector<Scalar>, WellVector<Scalar>>;
 

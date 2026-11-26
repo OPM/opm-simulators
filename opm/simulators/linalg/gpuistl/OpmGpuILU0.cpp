@@ -23,6 +23,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/linalg/GraphColoring.hpp>
+#include <opm/simulators/linalg/BCRSMatrix.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/OpmGpuILU0.hpp>
@@ -431,10 +432,10 @@ OpmGpuILU0<M, X, Y, l>::tuneThreadBlockSizes()
 
 } // namespace Opm::gpuistl
 #define INSTANTIATE_GPUILU_DUNE(realtype, blockdim)                                                                    \
-    template class ::Opm::gpuistl::OpmGpuILU0<Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,         \
+    template class ::Opm::gpuistl::OpmGpuILU0<Opm::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,         \
                                             ::Opm::gpuistl::GpuVector<realtype>,                                         \
                                             ::Opm::gpuistl::GpuVector<realtype>>;                                        \
-    template class ::Opm::gpuistl::OpmGpuILU0<Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,          \
+    template class ::Opm::gpuistl::OpmGpuILU0<Opm::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,          \
                                             ::Opm::gpuistl::GpuVector<realtype>,                                         \
                                             ::Opm::gpuistl::GpuVector<realtype>>
 

@@ -28,11 +28,12 @@
 #include <opm/simulators/linalg/PreconditionerFactory_impl.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
+#include <opm/simulators/linalg/BCRSMatrix.hpp>
+#include <opm/simulators/linalg/BlockVector.hpp>
 #include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 
 #include <dune/common/fvector.hh>
 #include <dune/istl/bvector.hh>
-#include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixmarket.hh>
 #include <dune/istl/solvers.hh>
 
@@ -65,18 +66,18 @@ public:
 
 
 template <int bz>
-Dune::BlockVector<Dune::FieldVector<double, bz>>
+Opm::BlockVector<Dune::FieldVector<double, bz>>
 testPrec(const Opm::PropertyTree& prm, const std::string& matrix_filename, const std::string& rhs_filename)
 {
-    using Matrix = Dune::BCRSMatrix<Opm::MatrixBlock<double, bz, bz>>;
-    using Vector = Dune::BlockVector<Dune::FieldVector<double, bz>>;
+    using Matrix = Opm::BCRSMatrix<Opm::MatrixBlock<double, bz, bz>>;
+    using Vector = Opm::BlockVector<Dune::FieldVector<double, bz>>;
     Matrix matrix;
     {
         std::ifstream mfile(matrix_filename);
         if (!mfile) {
             throw std::runtime_error("Could not read matrix file");
         }
-        using M = Dune::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
+        using M = Opm::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
         readMatrixMarket(reinterpret_cast<M&>(matrix), mfile); // Hack to avoid hassle
     }
     Vector rhs;
@@ -116,7 +117,8 @@ void test1(const Opm::PropertyTree& prm)
 {
     constexpr int bz = 1;
     auto sol = testPrec<bz>(prm, "matr33.txt", "rhs3.txt");
-    Dune::BlockVector<Dune::FieldVector<double, bz>> expected {-1.62493,
+    using Vector = Opm::BlockVector<Dune::FieldVector<double, bz>>;
+    Vector expected {-1.62493,
             -1.76435e-06,
             1.86991e-10,
             -458.542,
@@ -137,7 +139,8 @@ void test3(const Opm::PropertyTree& prm)
 {
     constexpr int bz = 3;
     auto sol = testPrec<bz>(prm, "matr33.txt", "rhs3.txt");
-    Dune::BlockVector<Dune::FieldVector<double, bz>> expected {{-1.62493, -1.76435e-06, 1.86991e-10},
+    using Vector = Opm::BlockVector<Dune::FieldVector<double, bz>>;
+    Vector expected {{-1.62493, -1.76435e-06, 1.86991e-10},
             {-458.542, 2.28308e-06, -2.45341e-07},
                 {-1.48005, -5.02264e-07, -1.049e-05}};
     BOOST_REQUIRE_EQUAL(sol.size(), expected.size());
@@ -171,9 +174,9 @@ BOOST_AUTO_TEST_CASE(TestDefaultPreconditionerFactory)
 
 
 template <int bz>
-using M = Dune::BCRSMatrix<Opm::MatrixBlock<double, bz, bz>>;
+using M = Opm::BCRSMatrix<Opm::MatrixBlock<double, bz, bz>>;
 template <int bz>
-using V = Dune::BlockVector<Dune::FieldVector<double, bz>>;
+using V = Opm::BlockVector<Dune::FieldVector<double, bz>>;
 template <int bz>
 using O = Dune::MatrixAdapter<M<bz>, V<bz>, V<bz>>;
 template <int bz>
@@ -281,7 +284,7 @@ protected:
 
 
 template <int bz>
-Dune::BlockVector<Dune::FieldVector<double, bz>>
+Opm::BlockVector<Dune::FieldVector<double, bz>>
 testPrecRepeating(const Opm::PropertyTree& prm, const std::string& matrix_filename, const std::string& rhs_filename)
 {
     using Matrix = M<bz>;
@@ -292,7 +295,7 @@ testPrecRepeating(const Opm::PropertyTree& prm, const std::string& matrix_filena
         if (!mfile) {
             throw std::runtime_error("Could not read matrix file");
         }
-        using M = Dune::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
+        using M = Opm::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
         readMatrixMarket(reinterpret_cast<M&>(matrix), mfile); // Hack to avoid hassle
@@ -328,7 +331,7 @@ void test1rep(const Opm::PropertyTree& prm)
 {
     constexpr int bz = 1;
     auto sol = testPrecRepeating<bz>(prm, "matr33rep.txt", "rhs3rep.txt");
-    Dune::BlockVector<Dune::FieldVector<double, bz>> expected {0.285714285714286,
+    Opm::BlockVector<Dune::FieldVector<double, bz>> expected {0.285714285714286,
                                                                0.285714285714286,
                                                                0.285714285714286,
                                                                -0.214285714285714,
@@ -349,7 +352,7 @@ void test3rep(const Opm::PropertyTree& prm)
 {
     constexpr int bz = 3;
     auto sol = testPrecRepeating<bz>(prm, "matr33rep.txt", "rhs3rep.txt");
-    Dune::BlockVector<Dune::FieldVector<double, bz>> expected {
+    Opm::BlockVector<Dune::FieldVector<double, bz>> expected {
         {0.285714285714286, 0.285714285714286, 0.285714285714286},
         {-0.214285714285714, -0.214285714285714, -0.214285714285714},
         {-0.214285714285714, -0.214285714285714, -0.214285714285714}
