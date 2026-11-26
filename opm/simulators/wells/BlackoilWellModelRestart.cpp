@@ -25,6 +25,7 @@
 
 #include <opm/input/eclipse/Schedule/Group/GuideRateConfig.hpp>
 #include <opm/input/eclipse/Schedule/MSW/WellSegments.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 
 #include <opm/output/data/Groups.hpp>
@@ -195,9 +196,15 @@ loadRestartGuideRates(const int                    report_step,
                       const double                 last_update,
                       GuideRate&                   guide_rate) const
 {
+    // Every process holds the guide rates of all wells, including the wells
+    // of other processes, since the group targets are distributed using the
+    // guide rates of all wells in a group.  The restart values hold all
+    // wells on every process.
+    const auto& sched = wellModel_.schedule();
+
     for (const auto& [well_name, rst_well] : rst_wells) {
-        if (!wellModel_.hasLocalWell(well_name) ||
-            wellModel_.getWellEcl(well_name).isInjector())
+        if (!sched.hasWell(well_name, report_step) ||
+            sched.getWell(well_name, report_step).isInjector())
         {
             continue;
         }
