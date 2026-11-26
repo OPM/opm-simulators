@@ -1015,8 +1015,12 @@ namespace Opm
         }
         OPM_TIMEFUNCTION();
         // Given an unconverged well or closed well, estimate an operable bhp (if any)
-        // Get minimal bhp from vfp-curve
-        Scalar bhp_min =  WellBhpThpCalculator(*this).calculateMinimumBhpFromThp(well_state, this->well_ecl_, summary_state, this->getRefDensity());
+        // Get minimal bhp from vfp-curve. The well can not operate below its bhp limit,
+        // and the minimum of the vfp-curve can be far below it (even negative), which
+        // gives a bhp the well equations can not be solved for.
+        const WellBhpThpCalculator bhp_calc(*this);
+        const Scalar bhp_min = std::max(bhp_calc.calculateMinimumBhpFromThp(well_state, this->well_ecl_, summary_state, this->getRefDensity()),
+                                        bhp_calc.mostStrictBhpFromBhpLimits(summary_state));
         // Solve
         const bool converged = solveWellWithBhp(
             simulator, dt, bhp_min, groupStateHelper, well_state

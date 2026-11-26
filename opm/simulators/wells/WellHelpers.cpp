@@ -183,19 +183,19 @@ bool rateControlWithZeroProdTarget(const WellProductionControls& controls,
 {
     switch (mode) {
         case WellProducerCMode::ORAT:
-            return controls.oil_rate == 0.0;
+            return isZeroRateTarget(controls.oil_rate);
         case WellProducerCMode::WRAT:
-            return controls.water_rate == 0.0;
+            return isZeroRateTarget(controls.water_rate);
         case WellProducerCMode::GRAT:
-            return controls.gas_rate == 0.0;
+            return isZeroRateTarget(controls.gas_rate);
         case WellProducerCMode::LRAT:
-            return controls.liquid_rate == 0.0;
+            return isZeroRateTarget(controls.liquid_rate);
         case WellProducerCMode::CRAT:
             // Unsupported, will cause exception elsewhere, treat as nonzero target here.
             return false;
         case WellProducerCMode::RESV:
             if (controls.prediction_mode) {
-                return controls.resv_rate == 0.0;
+                return isZeroRateTarget(controls.resv_rate);
             } else {
                 return controls.water_rate == 0.0 && controls.oil_rate == 0.0 && controls.gas_rate == 0.0;
             }
@@ -209,9 +209,9 @@ bool rateControlWithZeroInjTarget(const WellInjectionControls& controls,
 {
     switch (mode) {
         case WellInjectorCMode::RATE:
-            return controls.surface_rate == 0.0;
+            return isZeroRateTarget(controls.surface_rate);
         case WellInjectorCMode::RESV:
-            return controls.reservoir_rate == 0.0;
+            return isZeroRateTarget(controls.reservoir_rate);
         default:
             return false;
     }

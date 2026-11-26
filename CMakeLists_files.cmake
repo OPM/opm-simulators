@@ -577,6 +577,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_WellPerformanceEventTracker.cpp
   tests/test_WaterSatfuncConsistencyChecks.cpp
   tests/test_wellmodel.cpp
+  tests/test_wellhelpers.cpp
   tests/test_wellprodindexcalculator.cpp
   tests/test_wellstate.cpp
 )

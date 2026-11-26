@@ -34,6 +34,7 @@
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
 #include <opm/simulators/wells/GroupStateHelper.hpp>
+#include <opm/simulators/wells/WellHelpers.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
@@ -315,7 +316,7 @@ getGroupProductionTargetRate(const Group& group,
     if (!group_target) {
         return 1.0;
     }
-    if (group_target->target_value == 0.0) {
+    if (wellhelpers::isZeroRateTarget(group_target->target_value)) {
         return 0.0;
     }
     GroupStateHelpers::TargetCalculator<Scalar, IndexTraits> tcalc{groupStateHelper,

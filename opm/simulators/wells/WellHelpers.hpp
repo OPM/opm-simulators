@@ -26,6 +26,7 @@
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/common/dynmatrix.hh>
 
+#include <cmath>
 #include <cstdint>
 
 namespace Opm {
@@ -88,6 +89,22 @@ void sumDistributedWellEntries(MatrixType& mat,
 // used for calculating quasiimpes well weights
 template <class DenseMatrix>
 DenseMatrix transposeDenseDynMatrix(const DenseMatrix& M);
+
+/// \brief Whether a rate target (in SI units) is to be treated as a zero target.
+///
+/// A rate given by a UDA that evaluates to zero or a negative value (or to an
+/// undefined UDQ, e.g., before the UDQ is evaluated the first time after a restart)
+/// is set to a very small positive value, UDAValue::epsilonLimit() in input units,
+/// since a zero rate would mean a defaulted rate, i.e., no limit at all. Such a
+/// target, and any other target this small, is a zero target.
+template<class Scalar>
+bool isZeroRateTarget(const Scalar rate)
+{
+    // Far below any meaningful rate, and far above UDAValue::epsilonLimit() in any
+    // input unit converted to SI units.
+    constexpr Scalar zero_rate_tolerance = 1.0e-20;
+    return std::abs(rate) <= zero_rate_tolerance;
+}
 
 /// Helper to check whether the well is under zero production rate control
 bool rateControlWithZeroProdTarget(const WellProductionControls& controls,
