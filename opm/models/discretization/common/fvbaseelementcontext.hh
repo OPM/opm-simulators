@@ -105,7 +105,7 @@ public:
     { return aligned_alloc(alignof(FvBaseElementContext), size); }
 
     static void operator delete(void *ptr)
-    { aligned_free(ptr); }
+    { aligned_free(ptr, alignof(FvBaseElementContext)); }
 
     /*!
      * \brief Construct all volume and extensive quantities of an element

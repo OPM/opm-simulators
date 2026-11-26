@@ -5,9 +5,8 @@
  * \brief This is a stand-alone version of boost::alignment::aligned_allocator from Boost
  *        1.58
  *
- * The file has been modified to assume a C++-2011 compatible compiler on a POSIX
- * operating system to remove the boost dependencies which the original version
- * contained. The original copyright notice for this file is:
+ * The file has been modified to remove the boost dependencies which the
+ * original version contained. The original copyright notice for this file is:
  *
 <pre>
  (c) 2014 Glen Joseph Fernandes
@@ -24,6 +23,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <memory>
+#include <new>
 #include <type_traits>
 #include <utility>
 
@@ -79,17 +79,16 @@ inline void* aligned_alloc(std::size_t alignment,
     if (alignment < sizeof(void*)) {
         alignment = sizeof(void*);
     }
-    void* p;
-    if (::posix_memalign(&p, alignment, size) != 0) {
-        p = 0;
-    }
-    return p;
+    return ::operator new(size, std::align_val_t{alignment}, std::nothrow);
 }
 
-inline void aligned_free(void* ptr)
-    noexcept
+inline void aligned_free(void* ptr,
+                         std::size_t alignment) noexcept
 {
-    ::free(ptr);
+    if (alignment < sizeof(void*)) {
+        alignment = sizeof(void*);
+    }
+    ::operator delete(ptr, std::align_val_t{alignment});
 }
 
 template<class T, std::size_t Alignment>
@@ -148,7 +147,7 @@ public:
 
     void deallocate(pointer ptr, size_type)
     {
-        aligned_free(ptr);
+        aligned_free(ptr, MaxAlign::value);
     }
 
     constexpr size_type max_size() const noexcept
