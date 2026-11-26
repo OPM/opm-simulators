@@ -22,17 +22,38 @@
 */
 /*!
  * \file
- *
+ * \brief Selects the BCRS matrix implementation used by OPM.
  */
 #ifndef OPM_BCRSMATRIX_HEADER_INCLUDED
 #define OPM_BCRSMATRIX_HEADER_INCLUDED
 
+#if defined(OPM_USE_EXPERIMENTAL_BCRSMATRIX) && OPM_USE_EXPERIMENTAL_BCRSMATRIX
+#include <dune/istl/experimental/bcrsmatrix.hh>
+#else
 #include <dune/istl/bcrsmatrix.hh>
+#endif
 
 namespace Opm {
 
+#if defined(OPM_USE_EXPERIMENTAL_BCRSMATRIX) && OPM_USE_EXPERIMENTAL_BCRSMATRIX
+/// \brief Block-compressed row-storage matrix used by the ISTL solvers.
+///
+/// The experimental implementation is selected when
+/// `OPM_USE_EXPERIMENTAL_BCRSMATRIX` is enabled.
+/// \tparam B Scalar or block type stored in each nonzero matrix entry.
+/// \tparam A Allocator used for matrix blocks.
+template<class B, class A = std::allocator<B>>
+using BCRSMatrix = Dune::Experimental::BCRSMatrix<B, std::uint_least32_t, A>;
+#else
+/// \brief Block-compressed row-storage matrix used by the ISTL solvers.
+///
+/// This aliases DUNE's standard implementation when the experimental
+/// implementation is not enabled.
+/// \tparam B Scalar or block type stored in each nonzero matrix entry.
+/// \tparam A Allocator used for matrix blocks.
 template<class B, class A = std::allocator<B>>
 using BCRSMatrix = Dune::BCRSMatrix<B, A>;
+#endif
 
 } // namespace Opm
 
