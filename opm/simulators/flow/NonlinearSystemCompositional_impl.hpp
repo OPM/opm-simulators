@@ -49,6 +49,9 @@ NonlinearSystemCompositional(Simulator& simulator,
                              CompWellModel<TypeTag>& wellModel,
                              const bool terminalOutput)
     : ParentType(simulator, param, wellModel, terminalOutput)
+      // Not from param, which a TUNING at the restart step has already changed
+    , cli_newton_max_iter_(Parameters::Get<Parameters::NewtonMaxIterations>())
+    , cli_newton_min_iter_(Parameters::Get<Parameters::NewtonMinIterations>())
 {
     if (Parameters::linearSolverAcceleratorTypeFromCLI() != Parameters::LinearSolverAcceleratorType::CPU
         || Parameters::Get<Parameters::AcceleratorMode>() != "none") {
@@ -260,6 +263,19 @@ nonlinearIterationNewton(const SimulatorTimerInterface& timer,
     }
 
     return report;
+}
+
+template <class TypeTag>
+void
+NonlinearSystemCompositional<TypeTag>::
+updateCVCRIT(const Cvcrit& cvcrit)
+{
+    // An item the keyword defaults has no value, and the command-line value
+    // stands in for the default, which depends on the solution method
+    this->param_.newton_max_iter_ =
+        cvcrit.max_nonlinear_iterations.value_or(this->cli_newton_max_iter_);
+    this->param_.newton_min_iter_ =
+        cvcrit.min_nonlinear_iterations.value_or(this->cli_newton_min_iter_);
 }
 
 template <class TypeTag>
