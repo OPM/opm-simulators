@@ -891,6 +891,9 @@ public:
     }
 
 private:
+#if defined(__GNUC__) && !OPM_IS_COMPILING_WITH_GPU_COMPILER
+    [[gnu::noinline]]
+#endif
     OPM_HOST_DEVICE const Evaluation& directionalMobility_(unsigned phaseIdx, FaceDir::DirEnum facedir) const
     {
         using Dir = FaceDir::DirEnum;
