@@ -36,7 +36,6 @@
 #include <opm/common/TimingMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
-#include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <opm/material/common/Valgrind.hpp>
@@ -131,7 +130,6 @@ public:
                    getPropValue<TypeTag, Properties::EnableBioeffects>(),
                    getPropValue<TypeTag, Properties::EnableGeochemistry>())
         , simulator_(simulator)
-        , eosType_(simulator.vanguard().eclState().compositionalConfig().eosType(0))
     {
         for (auto& region_pair : this->regions_) {
             this->createLocalRegion_(region_pair.second);
@@ -845,7 +843,7 @@ private:
             getValue(fluidState.pressure(oilPhaseIdx)),
             moleFractions,
             getValue(fluidState.temperature(oilPhaseIdx)),
-            this->eosType_);
+            this->simulator_.problem().eosRegionIndex(globalDofIdx));
         if (!psat) {
             // A false result means only that no saturation pressure was resolved;
             // it does not distinguish a physically absent boundary from numerical
@@ -861,7 +859,6 @@ private:
 
     const Simulator& simulator_;
     CompositionalContainer<FluidSystem> compC_;
-    CompositionalConfig::EOSType eosType_;
     std::size_t numUnresolvedSaturationPressures_{};
     std::vector<typename Extractor::Entry> extractors_;
     typename BlockExtractor::ExecMap blockExtractors_;

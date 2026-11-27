@@ -109,6 +109,7 @@ public:
              Scalar dwell_fraction_max,
              Scalar dbhp_max_rel,
              unsigned pvt_region_idx,
+             unsigned eos_region,
              bool damp_section_densities);
 
     void init() override;
@@ -163,6 +164,9 @@ private:
     const Scalar dbhp_max_rel_;
     // PVT region of the connection cell, which gives the water properties
     const unsigned pvt_region_idx_;
+    // reservoir EOS region of the wellbore flash, from the cell of the first
+    // open connection
+    const unsigned eos_region_;
     // damp the density of each wellbore section rather than the hydrostatic
     // offset of each connection
     const bool damp_section_densities_;

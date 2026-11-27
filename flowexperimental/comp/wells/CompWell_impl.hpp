@@ -48,11 +48,13 @@ CompWell(const Well& well,
          const Scalar dwell_fraction_max,
          const Scalar dbhp_max_rel,
          const unsigned pvt_region_idx,
+         const unsigned eos_region,
          const bool damp_section_densities)
   : CompWellInterface<TypeTag>(well, index_of_well, well_connection_data)
   , dwell_fraction_max_(dwell_fraction_max)
   , dbhp_max_rel_(dbhp_max_rel)
   , pvt_region_idx_(pvt_region_idx)
+  , eos_region_(eos_region)
   , damp_section_densities_(damp_section_densities)
 {
 }
@@ -79,8 +81,7 @@ waterDensity_(const T& pressure, const Scalar temperature) const
     FluidState<T> fluid_state;
     fluid_state.setPressure(FluidSystem::waterPhaseIdx, pressure);
     fluid_state.setTemperature(temperature);
-    typename FluidSystem::template ParameterCache<T> param_cache
-        {CompositionalConfig::EOSType::PR};
+    typename FluidSystem::template ParameterCache<T> param_cache {eos_region_};
     param_cache.setPvtRegionIndex(this->pvt_region_idx_);
     return FluidSystem::density(fluid_state, param_cache, FluidSystem::waterPhaseIdx);
 }
@@ -95,7 +96,8 @@ calculateExplicitQuantities(const Simulator& simulator,
     {
         // flash calculation in the wellbore to obtain the explicit
         // component masses
-        auto fluid_state_scalar = this->primary_variables_.template toFluidState<Scalar>();
+        auto fluid_state_scalar =
+            this->primary_variables_.template toFluidState<Scalar>(eos_region_);
         const Scalar water_fraction = getValue(this->primary_variables_.getWaterVolumeFraction());
 
         Scalar water_density = 0.;
@@ -238,7 +240,7 @@ streamDensity_(const std::array<Scalar, PrimaryVariables::numWellConservationEq>
         fluid_state.setPressure(FluidSystem::gasPhaseIdx, pressure);
         fluid_state.setTemperature(temperature);
         for (unsigned comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
-            fluid_state.setKvalue(comp_idx, fluid_state.wilsonK_(comp_idx));
+            fluid_state.setKvalue(comp_idx, fluid_state.wilsonK_(comp_idx, eos_region_));
         }
         fluid_state.setLvalue(-1.);
         flashFluidState_(fluid_state);
@@ -290,13 +292,14 @@ updateWellboreContents()
 
     WellboreContents<EvalWell, num_comp> contents;
     if (getValue(water_fraction) < 1.) {
-        auto fluid_state = this->primary_variables_.template toFluidState<EvalWell>();
+        auto fluid_state = this->primary_variables_.template toFluidState<EvalWell>(eos_region_);
         flashFluidState_(fluid_state);
         contents = wellboreContents(fluid_state, water_fraction,
                                     water_density(getValue(fluid_state.temperature(0))),
                                     this->wellbore_volume_);
     } else {
-        const auto fluid_state = this->primary_variables_.template toFluidState<Scalar>();
+        const auto fluid_state =
+            this->primary_variables_.template toFluidState<Scalar>(eos_region_);
         contents = waterOnlyWellboreContents(fluid_state, water_fraction,
                                              water_density(fluid_state.temperature(0)),
                                              this->wellbore_volume_);
@@ -347,7 +350,7 @@ updateSurfaceQuantities(const Simulator& simulator)
         updateSurfaceCondition_(surface_cond, surface_water_density, fluid_state, Scalar{0.});
     } else { // the composition will be from the wellbore
         // here, it will use the composition from the wellbore and the pressure and temperature from the surface condition
-        auto fluid_state = this->primary_variables_.template toFluidState<EvalWell>();
+        auto fluid_state = this->primary_variables_.template toFluidState<EvalWell>(eos_region_);
         updateSurfaceCondition_(surface_cond, surface_water_density, fluid_state,
                                 this->water_mass_fraction_);
      }
@@ -862,7 +865,7 @@ updateWellStateFromPrimaryVariables(SingleWellState& well_state) const
     well_state.bhp = this->primary_variables_.getBhp().value();
 
     auto& total_molar_fractions = well_state.total_molar_fractions;
-    const auto fluid_state = this->primary_variables_.template toFluidState<Scalar>();
+    const auto fluid_state = this->primary_variables_.template toFluidState<Scalar>(eos_region_);
     for (unsigned comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
         total_molar_fractions[comp_idx] = fluid_state.moleFraction(comp_idx);
     }
@@ -1128,6 +1131,8 @@ updateSurfaceCondition_(const StandardCond& surface_cond,
 {
     static_assert(std::is_same_v<T, Scalar> || std::is_same_v<T, EvalWell>, "Unsupported type in CompWell::updateSurfaceCondition_");
 
+    // The stock-tank flash uses the first reservoir EOS region until the
+    // surface equation of state is supported.
     flashAtSurfaceConditions(fluid_state, surface_cond.pressure, surface_cond.temperature);
 
     for (unsigned compidx = 0; compidx < num_comp; ++compidx) {
@@ -1177,7 +1182,7 @@ flashFluidState_(FluidState<T>& fluid_state)
 
     // The wellbore flash is a free function so it can be unit tested in
     // isolation (see tests/test_compwell_jacobian.cpp).
-    flashWellboreFluidState(fluid_state);
+    flashWellboreFluidState(fluid_state, 1.e-6, eos_region_);
 }
 
 } // end of namespace Opm

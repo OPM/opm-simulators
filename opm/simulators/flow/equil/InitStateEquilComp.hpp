@@ -38,7 +38,6 @@
 #include <opm/material/constraintsolvers/SaturationPressure.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 
-#include <opm/input/eclipse/EclipseState/Compositional/CompositionalConfig.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/InitConfig/Equil.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/CompvdTable.hpp>
@@ -103,12 +102,12 @@ public:
     EosDensityODE(CompositionFunction composition,
                   const TabulatedFunction& tempVdTable,
                   const unsigned phaseIdx,
-                  const CompositionalConfig::EOSType eosType,
+                  const unsigned eosRegion,
                   const Scalar normGrav)
         : composition_(std::move(composition))
         , tempVdTable_(tempVdTable)
         , phaseIdx_(phaseIdx)
-        , eosType_(eosType)
+        , eosRegion_(eosRegion)
         , g_(normGrav)
     {}
 
@@ -126,7 +125,7 @@ public:
             fs.setMoleFraction(phaseIdx_, compIdx, z[compIdx]);
         }
 
-        typename FluidSystem::template ParameterCache<Scalar> paramCache(eosType_);
+        typename FluidSystem::template ParameterCache<Scalar> paramCache(eosRegion_);
         paramCache.updatePhase(fs, phaseIdx_);
 
         return FluidSystem::density(fs, paramCache, phaseIdx_) * g_;
@@ -136,7 +135,7 @@ private:
     CompositionFunction composition_;
     const TabulatedFunction& tempVdTable_;
     unsigned phaseIdx_;
-    CompositionalConfig::EOSType eosType_;
+    unsigned eosRegion_;
     Scalar g_;
 };
 
@@ -150,11 +149,11 @@ public:
     using TabulatedFunction = Tabulated1DFunction<Scalar>;
 
     WaterDensityODE(const TabulatedFunction& tempVdTable,
-                    const CompositionalConfig::EOSType eosType,
+                    const unsigned eosRegion,
                     const unsigned pvtRegion,
                     const Scalar normGrav)
         : tempVdTable_(tempVdTable)
-        , eosType_(eosType)
+        , eosRegion_(eosRegion)
         , pvtRegion_(pvtRegion)
         , g_(normGrav)
     {}
@@ -166,7 +165,7 @@ public:
         fs.setTemperature(evalDepthTable(tempVdTable_, depth));
         fs.setPressure(FluidSystem::waterPhaseIdx, press);
 
-        typename FluidSystem::template ParameterCache<Scalar> paramCache(eosType_);
+        typename FluidSystem::template ParameterCache<Scalar> paramCache(eosRegion_);
         paramCache.setPvtRegionIndex(pvtRegion_);
 
         return FluidSystem::density(fs, paramCache, FluidSystem::waterPhaseIdx) * g_;
@@ -174,7 +173,7 @@ public:
 
 private:
     const TabulatedFunction& tempVdTable_;
-    CompositionalConfig::EOSType eosType_;
+    unsigned eosRegion_;
     unsigned pvtRegion_;
     Scalar g_;
 };
@@ -235,6 +234,9 @@ private:
  * PVT regions with water-zone cells; they must reach the contact at the same
  * pressure. Regions confined above the contact take their water pressure from
  * the hydrocarbon pressure there.
+ *
+ * Each equilibration region is integrated with one equation of state, so its
+ * cells must belong to a single reservoir EOS region.
  */
 template <class FluidSystem>
 class InitialStateComputer
@@ -245,7 +247,8 @@ public:
 
     /// \param[in] inputState      Input state, provides EQUIL, ZMFVD or COMPVD,
     ///                            RTEMP(VD).
-    /// \param[in] eosType         Equation of state used by the fluid system.
+    /// \param[in] eosnum          Zero-based reservoir EOS region of each cell,
+    ///                            or empty for a single EOS region.
     /// \param[in] cellCenterDepth Depth of each cell centre.
     /// \param[in] eqlnum          Zero-based equilibration region of each cell.
     /// \param[in] pvtnum          Zero-based PVT region of each cell, or empty
@@ -258,7 +261,7 @@ public:
     /// \param[in] maxWater        Scaled maximum water saturation of each cell,
     ///                            empty when the water phase is inactive.
     InitialStateComputer(const EclipseState& inputState,
-                         const CompositionalConfig::EOSType eosType,
+                         const std::vector<int>& eosnum,
                          const std::vector<Scalar>& cellCenterDepth,
                          const std::vector<int>& eqlnum,
                          const std::vector<int>& pvtnum,
@@ -267,8 +270,7 @@ public:
                          const int numSamplePoints,
                          const std::vector<Scalar>& connateWater = {},
                          const std::vector<Scalar>& maxWater = {})
-        : eosType_(eosType)
-        , gravity_(gravity)
+        : gravity_(gravity)
         , numSamplePoints_(numSamplePoints)
         , connateWater_(connateWater)
         , maxWater_(maxWater)
@@ -312,6 +314,21 @@ public:
                                       cell, region + 1, numPvtRegions));
             }
         }
+        if (!eosnum.empty() && (eosnum.size() != cellCenterDepth.size())) {
+            OPM_THROW(std::runtime_error,
+                      fmt::format("EOSNUM contains {} entries for {} cell depths.",
+                                  eosnum.size(), cellCenterDepth.size()));
+        }
+        const auto numEosRegions = inputState.runspec().tabdims().getNumEosRes();
+        for (std::size_t cell = 0; cell < eosnum.size(); ++cell) {
+            const auto region = eosnum[cell];
+            if (region < 0 || std::cmp_greater_equal(region, numEosRegions)) {
+                OPM_THROW(std::runtime_error,
+                          fmt::format("Cell {} has EOSNUM {} outside the {} "
+                                      "EOS regions.",
+                                      cell, region + 1, numEosRegions));
+            }
+        }
         // The endpoint vectors are optional, but a non-empty one is indexed for
         // every cell.
         for (const auto& [name, limits] : {std::pair{"connate water", std::cref(connateWater)},
@@ -327,11 +344,12 @@ public:
 
         const auto pvtRegions =
             pvtRegionsOfEachRegion(eqlnum, pvtnum, records.size(), numPvtRegions, comm);
+        const auto eosRegions = eosRegionOfEachEqlRegion(eqlnum, eosnum, records.size(), comm);
         regions_.reserve(records.size());
         for (std::size_t r = 0; r < records.size(); ++r) {
             regions_.push_back(setupRegion(records.getRecord(r), tables, pvtRegions[r],
-                                           cellCenterDepth, eqlnum, pvtnum, comm, gravity,
-                                           numSamplePoints, r));
+                                           eosRegions[r], cellCenterDepth, eqlnum, pvtnum, comm,
+                                           gravity, numSamplePoints, r));
         }
 
         const bool waterActive = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
@@ -461,6 +479,8 @@ private:
         Scalar statedGoc{};
         /// Zero-based PVT regions of the region's cells on all processes.
         std::vector<unsigned> pvtRegions;
+        /// Reservoir EOS region holding the region's cells.
+        unsigned eosRegion{0};
         /// Gas-oil contact. A two-zone COMPVD table may move it, see zoneBoundary().
         Scalar zgoc{};
         /// Name of the selected composition keyword, used in diagnostics.
@@ -768,9 +788,45 @@ private:
         return pvtRegions;
     }
 
+    /// The zero-based EOS region of each equilibration region, from the cells
+    /// on all processes. A region without cells takes the first EOS region.
+    static std::vector<unsigned>
+    eosRegionOfEachEqlRegion(const std::vector<int>& eqlnum,
+                             const std::vector<int>& eosnum,
+                             const std::size_t numRegions,
+                             const Parallel::Communication& comm)
+    {
+        std::vector<int> lowest(numRegions, std::numeric_limits<int>::max());
+        std::vector<int> highest(numRegions, std::numeric_limits<int>::min());
+        for (std::size_t cell = 0; cell < eosnum.size(); ++cell) {
+            const auto region = eqlnum[cell];
+            lowest[region] = std::min(lowest[region], eosnum[cell]);
+            highest[region] = std::max(highest[region], eosnum[cell]);
+        }
+        comm.min(lowest.data(), static_cast<int>(numRegions));
+        comm.max(highest.data(), static_cast<int>(numRegions));
+
+        std::vector<unsigned> eosRegions(numRegions, 0);
+        for (std::size_t r = 0; r < numRegions; ++r) {
+            if (lowest[r] > highest[r]) {
+                continue;
+            }
+            if (lowest[r] != highest[r]) {
+                OPM_THROW(std::runtime_error,
+                          fmt::format("Equilibration region {} holds cells of EOS regions "
+                                      "{} and {}; each equilibration region must lie "
+                                      "within one EOS region.",
+                                      r + 1, lowest[r] + 1, highest[r] + 1));
+            }
+            eosRegions[r] = static_cast<unsigned>(lowest[r]);
+        }
+        return eosRegions;
+    }
+
     Region setupRegion(const EquilRecord& record,
                        const TableManager& tables,
                        const std::vector<unsigned>& pvtRegions,
+                       const unsigned eosRegion,
                        const std::vector<Scalar>& cellCenterDepth,
                        const std::vector<int>& eqlnum,
                        const std::vector<int>& pvtnum,
@@ -782,6 +838,7 @@ private:
         Region reg;
 
         reg.pvtRegions = pvtRegions;
+        reg.eosRegion = eosRegion;
         reg.initType = record.compositionalInitType();
         if (reg.initType != 1 && reg.initType != 3) {
             OPM_THROW(std::runtime_error,
@@ -1097,7 +1154,7 @@ private:
                                 const Scalar pressure) const
     {
         for (const auto pvtRegion : pvtRegions) {
-            const WaterODE ode(reg.tempVdTable, eosType_, pvtRegion, gravity);
+            const WaterODE ode(reg.tempVdTable, reg.eosRegion, pvtRegion, gravity);
             reg.waterPressure.try_emplace(pvtRegion, ode,
                                           typename WaterPressFunc::InitCond{depth, pressure},
                                           numSamplePoints, waterContactSpan(reg, span));
@@ -1197,7 +1254,7 @@ private:
         }
 
         const ODE ode([&reg](const Scalar depth) { return composition(reg, depth); },
-                      reg.tempVdTable, phaseIdx, eosType_, gravity);
+                      reg.tempVdTable, phaseIdx, reg.eosRegion, gravity);
         reg.oilPressure.emplace(ode,
                                 typename PressFunc::InitCond{datum, datumPressure},
                                 numSamplePoints, waterContactSpan(reg, span));
@@ -1221,8 +1278,8 @@ private:
                             const Scalar datumPressure) const
     {
         const auto z = [&reg](const Scalar depth) { return composition(reg, depth); };
-        const ODE liquidOde(z, reg.tempVdTable, FluidSystem::oilPhaseIdx, eosType_, gravity);
-        const ODE gasOde(z, reg.tempVdTable, FluidSystem::gasPhaseIdx, eosType_, gravity);
+        const ODE liquidOde(z, reg.tempVdTable, FluidSystem::oilPhaseIdx, reg.eosRegion, gravity);
+        const ODE gasOde(z, reg.tempVdTable, FluidSystem::gasPhaseIdx, reg.eosRegion, gravity);
 
         // The datum-side pressure function must reach the actual contact even
         // when it lies outside the cell span, because the other pressure function
@@ -1292,7 +1349,7 @@ private:
         const Scalar temp = Details::evalDepthTable(reg.tempVdTable, reg.zgoc);
         Scalar psat{};
         CompVec vapor{};
-        if (!SaturationPressure<Scalar, FluidSystem>::bubblePressure(liquid, temp, eosType_,
+        if (!SaturationPressure<Scalar, FluidSystem>::bubblePressure(liquid, temp, reg.eosRegion,
                                                                      psat, vapor)) {
             OPM_THROW(std::runtime_error,
                       fmt::format("The saturation pressure calculation at the gas-oil "
@@ -1328,13 +1385,13 @@ private:
         }
 
         const ODE oilOde([&reg](const Scalar depth) { return composition(reg, depth); },
-                         reg.tempVdTable, FluidSystem::oilPhaseIdx, eosType_, gravity);
+                         reg.tempVdTable, FluidSystem::oilPhaseIdx, reg.eosRegion, gravity);
         reg.oilPressure.emplace(oilOde,
                                 typename PressFunc::InitCond{reg.zgoc, referencePressure},
                                 numSamplePoints, waterContactSpan(reg, span));
 
         const ODE gasOde(gasColumnComposition(reg),
-                         reg.tempVdTable, FluidSystem::gasPhaseIdx, eosType_, gravity);
+                         reg.tempVdTable, FluidSystem::gasPhaseIdx, reg.eosRegion, gravity);
         reg.gasPressure.emplace(gasOde,
                                 typename PressFunc::InitCond{reg.zgoc, referencePressure},
                                 numSamplePoints, waterContactSpan(reg, span));
@@ -1433,7 +1490,7 @@ private:
         Scalar psat{};
         CompVec vapour{};
         const Scalar temp = Details::evalDepthTable(reg.tempVdTable, depth);
-        if (!SaturationPressure<Scalar, FluidSystem>::bubblePressure(liquid, temp, eosType_,
+        if (!SaturationPressure<Scalar, FluidSystem>::bubblePressure(liquid, temp, reg.eosRegion,
                                                                      psat, vapour)) {
             return std::nullopt;
         }
@@ -1462,14 +1519,14 @@ private:
                 return bubble.has_value() ? bubble->second : gasZoneComposition(depth);
             };
         // The columns' hydrostatic gradients, and with unit gravity their densities.
-        const ODE oilOde(oilComposition, reg.tempVdTable, reg.nominalPhaseIdx, eosType_,
+        const ODE oilOde(oilComposition, reg.tempVdTable, reg.nominalPhaseIdx, reg.eosRegion,
                          gravity_);
-        const ODE oilDensity(oilComposition, reg.tempVdTable, reg.nominalPhaseIdx, eosType_,
+        const ODE oilDensity(oilComposition, reg.tempVdTable, reg.nominalPhaseIdx, reg.eosRegion,
                              Scalar{1});
         const ODE gasOde(gasComposition, reg.tempVdTable, FluidSystem::gasPhaseIdx,
-                         eosType_, gravity_);
+                         reg.eosRegion, gravity_);
         const ODE gasDensity(gasComposition, reg.tempVdTable, FluidSystem::gasPhaseIdx,
-                             eosType_, Scalar{1});
+                             reg.eosRegion, Scalar{1});
 
         // Each column starts where the equilibration anchored the one it
         // extends, so the zone the cells take from it is integrated alike and
@@ -1495,10 +1552,10 @@ private:
                 water = reg.waterPressure.begin();
             }
             if (water != reg.waterPressure.end()) {
-                const WaterODE waterOde(reg.tempVdTable, eosType_, water->first, gravity_);
+                const WaterODE waterOde(reg.tempVdTable, reg.eosRegion, water->first, gravity_);
                 waterColumn.emplace(waterOde, water->second.initialCondition(),
                                     numSamplePoints_, span);
-                waterDensity.emplace(reg.tempVdTable, eosType_, water->first, Scalar{1});
+                waterDensity.emplace(reg.tempVdTable, reg.eosRegion, water->first, Scalar{1});
             }
         }
 
@@ -1578,7 +1635,6 @@ private:
         return rows;
     }
 
-    CompositionalConfig::EOSType eosType_;
     Scalar gravity_;
     int numSamplePoints_;
     /// Per-cell scaled water saturation endpoints. The saturation functions are
