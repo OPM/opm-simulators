@@ -24,8 +24,9 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
-#include <boost/property_tree/json_parser.hpp>
+#include <opm/simulators/linalg/PropertyTree.hpp>
 
+#include <exception>
 #include <filesystem>
 #include <map>
 #include <optional>
@@ -37,40 +38,38 @@
 
 namespace {
 
+    /// Read partitioning parameters from the top-level key/value pairs of
+    /// a TOML or JSON configuration file.
     std::map<std::string, std::string>
-    jsonConfiguration(const std::string&    conf,
-                      std::string_view   /* paramName */)
+    fileConfiguration(const std::string& conf,
+                      std::string_view   paramName)
     {
         if (! std::filesystem::exists(conf)) {
             OPM_THROW(std::invalid_argument,
-                      fmt::format("JSON file {} does not exist", conf));
+                      fmt::format("Configuration file {} given in {} does not exist",
+                                  conf, paramName));
         }
 
-        boost::property_tree::ptree tree;
+        auto tree = Opm::PropertyTree{};
         try {
-            boost::property_tree::read_json(conf, tree);
+            tree = Opm::PropertyTree { conf };
         }
-        catch (const boost::property_tree::json_parser::json_parser_error& err) {
+        catch (const std::exception& err) {
             Opm::OpmLog::error(err.what());
         }
 
         auto result = std::map<std::string, std::string>{};
 
-        for (const auto& node : tree) {
-            auto value = node.second.get_value_optional<std::string>();
-            if (value) {
-                result.insert_or_assign(node.first, *value);
+        for (const auto& key : tree.get_child_keys()) {
+            // Only scalar values are meaningful partitioning parameters.
+            if (key.empty() || ! tree.get_child(key).get_child_keys().empty()) {
+                continue;
             }
+
+            result.insert_or_assign(key, tree.get<std::string>(key));
         }
 
         return result;
-    }
-
-    bool isJsonConfiguration(const std::string& conf)
-    {
-        const auto ext = std::string_view { ".json" };
-
-        return conf.rfind(ext) == conf.size() - ext.size();
     }
 
 } // Anonymous namespace
@@ -140,8 +139,8 @@ Opm::setupZoltanParams(const std::string&           conf,
         return zoltanScotchParameters();
     }
 
-    else if (isJsonConfiguration(conf)) {
-        return jsonConfiguration(conf, "--zoltan-params");
+    else if (Opm::PropertyTree::isConfigFileName(conf)) {
+        return fileConfiguration(conf, "--zoltan-params");
     }
 
     else {
@@ -149,7 +148,8 @@ Opm::setupZoltanParams(const std::string&           conf,
         OPM_THROW(std::invalid_argument,
                   fmt::format("{} is not a valid setting for --zoltan-params. "
                               "Please use \"graph\", \"hypergraph\", \"scotch\", "
-                              "or a JSON file containing the Zoltan parameters.",
+                              "or a TOML (.toml) or JSON (.json) file containing "
+                              "the Zoltan parameters.",
                               conf));
     }
 }
@@ -161,15 +161,15 @@ Opm::setupMetisParams(const std::string& conf)
         return {};
     }
 
-    else if (isJsonConfiguration(conf)) {
-        return jsonConfiguration(conf, "--metis-params");
+    else if (Opm::PropertyTree::isConfigFileName(conf)) {
+        return fileConfiguration(conf, "--metis-params");
     }
 
     else {
         // No valid configuration option found.
         OPM_THROW(std::invalid_argument,
                   fmt::format("{} is not a valid setting for --metis-params. "
-                              "Please use \"default\" or a JSON file containing "
-                              "the METIS parameters.", conf));
+                              "Please use \"default\" or a TOML (.toml) or JSON "
+                              "(.json) file containing the METIS parameters.", conf));
     }
 }
