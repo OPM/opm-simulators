@@ -82,7 +82,7 @@ struct FixedFlash
     static inline double liquidFraction = 0.4;
 
     template<class FluidState, class Method>
-    static void solve(FluidState& fs, Method, double, unsigned, int)
+    static void solve(FluidState& fs, Method, double, int)
     {
         fs.setLvalue(Evaluation{liquidFraction});
         for (unsigned phase = 0; phase < 2; ++phase) {

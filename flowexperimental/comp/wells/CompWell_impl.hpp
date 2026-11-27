@@ -232,6 +232,7 @@ streamDensity_(const std::array<Scalar, PrimaryVariables::numWellConservationEq>
         // the floor the mole fractions of the wellbore fluid have as well
         constexpr Scalar min_mole_fraction = 1.e-10;
         FluidState<Scalar> fluid_state;
+        fluid_state.setEosRegionIndex(eos_region_);
         for (unsigned comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
             const Scalar mole_fraction = molar_rates[comp_idx] / molar_rate;
             fluid_state.setMoleFraction(comp_idx, std::max(mole_fraction, min_mole_fraction));
@@ -240,7 +241,7 @@ streamDensity_(const std::array<Scalar, PrimaryVariables::numWellConservationEq>
         fluid_state.setPressure(FluidSystem::gasPhaseIdx, pressure);
         fluid_state.setTemperature(temperature);
         for (unsigned comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
-            fluid_state.setKvalue(comp_idx, fluid_state.wilsonK_(comp_idx, eos_region_));
+            fluid_state.setKvalue(comp_idx, fluid_state.wilsonK_(comp_idx));
         }
         fluid_state.setLvalue(-1.);
         flashFluidState_(fluid_state);
@@ -1182,7 +1183,7 @@ flashFluidState_(FluidState<T>& fluid_state)
 
     // The wellbore flash is a free function so it can be unit tested in
     // isolation (see tests/test_compwell_jacobian.cpp).
-    flashWellboreFluidState(fluid_state, 1.e-6, eos_region_);
+    flashWellboreFluidState(fluid_state);
 }
 
 } // end of namespace Opm
