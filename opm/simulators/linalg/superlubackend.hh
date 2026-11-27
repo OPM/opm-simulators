@@ -40,6 +40,7 @@
 #include <opm/models/utils/parametersystem.hh>
 
 #include <opm/simulators/linalg/linalgproperties.hh>
+#include <opm/simulators/linalg/ISTLDirectSolverHelper.hpp>
 #include <opm/simulators/linalg/BCRSMatrix.hpp>
 #include <opm/simulators/linalg/BlockVector.hpp>
 
@@ -118,7 +119,7 @@ public:
 
         int verbosity = Parameters::Get<Parameters::LinearSolverVerbosity>();
         Dune::InverseOperatorResult result;
-        Dune::SuperLU<Matrix> solver(A, verbosity > 0);
+        Opm::SuperLU<Matrix, Vector, Vector> solver(A, verbosity > 0);
         solver.apply(x, bTmp, result);
 
         if (result.converged) {
