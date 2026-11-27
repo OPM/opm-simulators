@@ -22,7 +22,7 @@
 */
 /*!
  * \file
- *
+ * \brief Provides the block-vector type used by OPM's ISTL linear algebra code.
  */
 #ifndef OPM_BLOCKVECTOR_HEADER_INCLUDED
 #define OPM_BLOCKVECTOR_HEADER_INCLUDED
@@ -31,6 +31,9 @@
 
 namespace Opm {
 
+/// \brief Block vector type used for ISTL linear systems and solver operations.
+/// \tparam B Scalar or block type stored in each vector entry.
+/// \tparam A Allocator used for vector blocks.
 template<class B, class A = std::allocator<B>>
 using BlockVector = Dune::BlockVector<B, A>;
 
