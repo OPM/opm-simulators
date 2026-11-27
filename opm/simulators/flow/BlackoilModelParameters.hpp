@@ -146,6 +146,7 @@ struct RelaxedPressureTolMsw { static constexpr Scalar value = 1e4; };
 struct MaximumNumberOfWellSwitches { static constexpr int value = 3; };
 struct MaximumNumberOfGroupSwitches { static constexpr int value = 3; };
 struct UseAverageDensityMsWells { static constexpr bool value = false; };
+struct ContinuousFluidPropertiesMsWells { static constexpr bool value = false; };
 struct LocalWellSolveControlSwitching { static constexpr bool value = true; };
 struct UseImplicitIpr { static constexpr bool value = true; };
 struct CheckGroupConstraintsInnerWellIterations { static constexpr bool value = true; };
@@ -334,6 +335,9 @@ public:
 
     /// Whether to approximate segment densities by averaging over segment and its outlet
     bool use_average_density_ms_wells_;
+
+    /// Whether segment fluid properties stay continuous as the gas or oil fraction goes to zero
+    bool continuous_fluid_properties_ms_wells_;
 
     /// Whether to allow control switching during local well solutions
     bool local_well_solver_control_switching_;

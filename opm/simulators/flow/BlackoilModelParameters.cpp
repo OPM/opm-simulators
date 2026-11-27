@@ -85,6 +85,7 @@ BlackoilModelParameters<Scalar>::BlackoilModelParameters()
     max_number_of_well_switches_ = Parameters::Get<Parameters::MaximumNumberOfWellSwitches>();
     max_number_of_group_switches_ = Parameters::Get<Parameters::MaximumNumberOfGroupSwitches>();
     use_average_density_ms_wells_ = Parameters::Get<Parameters::UseAverageDensityMsWells>();
+    continuous_fluid_properties_ms_wells_ = Parameters::Get<Parameters::ContinuousFluidPropertiesMsWells>();
     local_well_solver_control_switching_ = Parameters::Get<Parameters::LocalWellSolveControlSwitching>();
     use_implicit_ipr_ = Parameters::Get<Parameters::UseImplicitIpr>();
     check_group_constraints_inner_well_iterations_ = Parameters::Get<Parameters::CheckGroupConstraintsInnerWellIterations>();
@@ -258,6 +259,9 @@ void BlackoilModelParameters<Scalar>::registerParameters()
         ("Maximum number of times a group can switch to the same control");
     Parameters::Register<Parameters::UseAverageDensityMsWells>
         ("Approximate segment densitities by averaging over segment and its outlet");
+    Parameters::Register<Parameters::ContinuousFluidPropertiesMsWells>
+        ("Keep multisegment well fluid properties continuous as the gas or oil fraction "
+         "of a segment goes to zero");
     Parameters::Register<Parameters::LocalWellSolveControlSwitching>
         ("Allow control switching during local well solutions");
     Parameters::Register<Parameters::UseImplicitIpr>
