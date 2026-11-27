@@ -36,6 +36,7 @@
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 
 #include <opm/material/Constants.hpp>
+#include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/constraintsolvers/PTFlashMethod.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
@@ -96,6 +97,8 @@ class FlashIntensiveQuantities
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using FlashSolver = GetPropType<TypeTag, Properties::FlashSolver>;
+    using ParameterCache = typename FluidSystem::template ParameterCache<Evaluation>;
+    using Toolbox = MathToolbox<Evaluation>;
 
     using ComponentVector = Dune::FieldVector<Evaluation, numComponents>;
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
@@ -125,6 +128,21 @@ public:
 
     FlashIntensiveQuantities& operator=(const FlashIntensiveQuantities& other) = default;
 
+    //! The run-time parameters of the flash
+    struct FlashSettings
+    {
+        Scalar tolerance;
+        int verbosity;
+        PTFlashMethod method;
+
+        static FlashSettings fromParameters()
+        {
+            return {Parameters::Get<Parameters::FlashTolerance<Scalar>>(),
+                    Parameters::Get<Parameters::FlashVerbosity>(),
+                    ptFlashMethodFromString(Parameters::Get<Parameters::FlashTwoPhaseMethod>())};
+        }
+    };
+
     /*!
      * \copydoc IntensiveQuantities::update
      */
@@ -136,12 +154,87 @@ public:
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
         const auto& problem = elemCtx.problem();
         const unsigned globalIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
-        const unsigned eosRegionIdx = problem.eosRegionIndex(globalIdx);
 
-        const Scalar flashTolerance = Parameters::Get<Parameters::FlashTolerance<Scalar>>();
-        const int flashVerbosity = Parameters::Get<Parameters::FlashVerbosity>();
-        const auto ptFlashMethod =
-            ptFlashMethodFromString(Parameters::Get<Parameters::FlashTwoPhaseMethod>());
+        // Get initial K and L from storage initially (if enabled), else from the
+        // previous time step
+        const auto* hint = elemCtx.thermodynamicHint(dofIdx, timeIdx);
+        if (!hint && timeIdx == 0) {
+            hint = elemCtx.thermodynamicHint(dofIdx, 1);
+        }
+
+        ParameterCache paramCache(problem.eosRegionIndex(globalIdx));
+        updatePhaseProperties_(problem, priVars, globalIdx, timeIdx,
+                               hint, problem.pvtRegionIndex(elemCtx, dofIdx, timeIdx),
+                               problem.materialLawParams(elemCtx, dofIdx, timeIdx), paramCache,
+                               FlashSettings::fromParameters());
+
+        const Scalar rockCompressibility = problem.rockCompressibility(elemCtx, dofIdx, timeIdx);
+        updatePorosity_(priVars, timeIdx, problem.porosity(elemCtx, dofIdx, timeIdx),
+                        rockCompressibility,
+                        rockCompressibility > 0.0
+                            ? problem.rockReferencePressure(elemCtx, dofIdx, timeIdx) : 0.0);
+
+        // intrinsic permeability
+        intrinsicPerm_ = problem.intrinsicPermeability(elemCtx, dofIdx, timeIdx);
+
+        // update the quantities specific for the velocity model
+        FluxIntensiveQuantities::update_(elemCtx, dofIdx, timeIdx);
+
+        // energy related quantities
+        EnergyIntensiveQuantities::update_(fluidState_, paramCache, elemCtx, dofIdx, timeIdx);
+
+        // update the diffusion specific quantities of the intensive quantities
+        DiffusionIntensiveQuantities::update_(fluidState_, paramCache, elemCtx, dofIdx, timeIdx);
+    }
+
+    /*!
+     * \brief Update the quantities of a cell from its primary variables, without
+     *        an element context.
+     */
+    template <class Problem, class PrimaryVariables>
+    void update(const Problem& problem,
+                const PrimaryVariables& priVars,
+                unsigned globalIdx,
+                unsigned timeIdx,
+                const FlashSettings& flashSettings)
+    {
+        // the energy and diffusion modules need an element context
+        static_assert(!enableEnergy);
+        static_assert(!enableDiffusion);
+
+        this->extrusionFactor_ = problem.extrusionFactor();
+        const Scalar T = problem.temperature(globalIdx, timeIdx);
+        fluidState_.setTemperature(Toolbox::createConstant(T));
+
+        // No hint: the cache entry of this cell has just been invalidated, so the
+        // flash starts from Wilson K-values.
+        ParameterCache paramCache(problem.eosRegionIndex(globalIdx));
+        updatePhaseProperties_(problem, priVars, globalIdx, timeIdx, /*hint=*/nullptr,
+                               problem.pvtRegionIndex(globalIdx),
+                               problem.materialLawParams(globalIdx), paramCache, flashSettings);
+
+        const Scalar rockCompressibility = problem.rockCompressibility(globalIdx);
+        updatePorosity_(priVars, timeIdx, problem.porosity(globalIdx, timeIdx), rockCompressibility,
+                        rockCompressibility > 0.0 ? problem.rockReferencePressure(globalIdx) : 0.0);
+
+        intrinsicPerm_ = problem.intrinsicPermeability(globalIdx);
+    }
+
+private:
+    // The flash and the phase properties, shared by both update() overloads
+    template <class Problem, class PrimaryVariables>
+    void updatePhaseProperties_(const Problem& problem,
+                                const PrimaryVariables& priVars,
+                                unsigned globalIdx,
+                                unsigned timeIdx,
+                                const FlashIntensiveQuantities* hint,
+                                unsigned pvtRegionIdx,
+                                const MaterialLawParams& materialParams,
+                                ParameterCache& paramCache,
+                                const FlashSettings& flashSettings)
+    {
+        const unsigned eosRegionIdx = problem.eosRegionIndex(globalIdx);
+        const auto [flashTolerance, flashVerbosity, ptFlashMethod] = flashSettings;
         // Extract the overall component mole fractions; the last fraction is dependent.
         ComponentVector z(0.);
         {
@@ -175,24 +268,12 @@ public:
             fluidState_.setPressure(phaseIdx, p);
         }
 
-        // Get initial K and L from storage initially (if enabled)
-        const auto* hint = elemCtx.thermodynamicHint(dofIdx, timeIdx);
         if (hint) {
              for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                  const Evaluation& Ktmp = hint->fluidState().K(compIdx);
                  fluidState_.setKvalue(compIdx, Ktmp);
              }
              const Evaluation& Ltmp = hint->fluidState().L();
-             fluidState_.setLvalue(Ltmp);
-        }
-        else if (timeIdx == 0 && elemCtx.thermodynamicHint(dofIdx, 1)) {
-             // checking the storage cache
-             const auto& hint2 = elemCtx.thermodynamicHint(dofIdx, 1);
-             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                 const Evaluation& Ktmp = hint2->fluidState().K(compIdx);
-                 fluidState_.setKvalue(compIdx, Ktmp);
-             }
-             const Evaluation& Ltmp = hint2->fluidState().L();
              fluidState_.setLvalue(Ltmp);
         }
         else {
@@ -209,7 +290,7 @@ public:
         /////////////
         if (flashVerbosity >= 1) {
             OpmLog::debug(fmt::format("Updating the intensive quantities for cell {}",
-                                      elemCtx.globalSpaceIndex(dofIdx, timeIdx)));
+                                      globalIdx));
         }
         FlashSolver::solve(fluidState_, ptFlashMethod, flashTolerance, eosRegionIdx,
                            flashVerbosity);
@@ -225,15 +306,14 @@ public:
                     getValue(fluidState_.moleFraction(FluidSystem::gasPhaseIdx, compIdx)));
             }
             OpmLog::debug(fmt::format("After the flash for cell {}: liquid fraction = {}\n{}",
-                                      elemCtx.globalSpaceIndex(dofIdx, timeIdx),
+                                      globalIdx,
                                       getValue(fluidState_.L()),
                                       phaseCompositions));
         }
 
         // Update phases
-        typename FluidSystem::template ParameterCache<Evaluation> paramCache(eosRegionIdx);
         // the water properties of the cell's PVT region
-        paramCache.setPvtRegionIndex(problem.pvtRegionIndex(elemCtx, dofIdx, timeIdx));
+        paramCache.setPvtRegionIndex(pvtRegionIdx);
         paramCache.updatePhase(fluidState_, FluidSystem::oilPhaseIdx);
         paramCache.updatePhase(fluidState_, FluidSystem::gasPhaseIdx);
 
@@ -289,7 +369,7 @@ public:
             OpmLog::debug(fmt::format("Flash phase properties for cell {}: "
                                       "oil saturation = {}, gas saturation = {}, "
                                       "oil molar volume = {}, gas molar volume = {}",
-                                      elemCtx.globalSpaceIndex(dofIdx, timeIdx),
+                                      globalIdx,
                                       getValue(So),
                                       getValue(Sg),
                                       getValue(Vm_L),
@@ -299,7 +379,6 @@ public:
         /////////////
         // Compute rel. perm and viscosity and densities
         /////////////
-        const MaterialLawParams& materialParams = problem.materialLawParams(elemCtx, dofIdx, timeIdx);
 
         // calculate relative permeability
         MaterialLaw::relativePermeabilities(relativePermeability_,
@@ -324,34 +403,27 @@ public:
             const Evaluation& rho = FluidSystem::density(fluidState_, paramCache, phaseIdx);
             fluidState_.setDensity(phaseIdx, rho);
         }
+    }
 
-        /////////////
-        // Compute the remaining quantities
-        /////////////
-
-        // porosity, scaled with the pressure by the rock compressibility of the
-        // cell's region as in the black-oil model
-        porosity_ = problem.porosity(elemCtx, dofIdx, timeIdx);
-        const Scalar rockCompressibility = problem.rockCompressibility(elemCtx, dofIdx, timeIdx);
+    // porosity, scaled with the pressure by the rock compressibility of the
+    // cell's region as in the black-oil model
+    template <class PrimaryVariables>
+    void updatePorosity_(const PrimaryVariables& priVars,
+                         unsigned timeIdx,
+                         const Evaluation& referencePorosity,
+                         Scalar rockCompressibility,
+                         Scalar rockRefPressure)
+    {
+        porosity_ = referencePorosity;
         if (rockCompressibility > 0.0) {
-            const Scalar rockRefPressure = problem.rockReferencePressure(elemCtx, dofIdx, timeIdx);
+            const Evaluation p = priVars.makeEvaluation(pressure0Idx, timeIdx);
             const Evaluation x = rockCompressibility * (p - rockRefPressure);
             porosity_ *= 1.0 + x + 0.5 * x * x;
         }
         Valgrind::CheckDefined(porosity_);
-
-        // intrinsic permeability
-        intrinsicPerm_ = problem.intrinsicPermeability(elemCtx, dofIdx, timeIdx);
-
-        // update the quantities specific for the velocity model
-        FluxIntensiveQuantities::update_(elemCtx, dofIdx, timeIdx);
-
-        // energy related quantities
-        EnergyIntensiveQuantities::update_(fluidState_, paramCache, elemCtx, dofIdx, timeIdx);
-
-        // update the diffusion specific quantities of the intensive quantities
-        DiffusionIntensiveQuantities::update_(fluidState_, paramCache, elemCtx, dofIdx, timeIdx);
     }
+
+public:
 
     /*!
      * \copydoc ImmiscibleIntensiveQuantities::fluidState

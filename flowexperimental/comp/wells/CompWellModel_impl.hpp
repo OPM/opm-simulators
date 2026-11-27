@@ -378,13 +378,19 @@ void
 CompWellModel<TypeTag>::
 beginIteration()
 {
-    // do we need to do every iteration here?
-    const auto& grid = simulator_.vanguard().grid();
-    const auto& gridView = grid.leafGridView();
-    ElementContext elemCtx(simulator_);
-    for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
-        elemCtx.updatePrimaryStencil(elem);
-        elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+    // The wells read the cached intensive quantities of their cells. flow_comp
+    // keeps the cache current, while the Newton method of flowexp_comp
+    // invalidates it after each update.
+    const auto& model = simulator_.model();
+    const bool cacheCurrent
+        = std::ranges::all_of(well_connection_data_, [&model](const auto& connections) {
+              return std::ranges::all_of(connections, [&model](const auto& connection) {
+                  return model.cachedIntensiveQuantities(connection.cell_index, /*timeIdx=*/0)
+                      != nullptr;
+              });
+          });
+    if (!cacheCurrent) {
+        model.invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
     }
 
     assemble(simulator_.timeStepSize());

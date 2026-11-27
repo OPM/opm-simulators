@@ -1124,6 +1124,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/FacePropertiesTPSA_impl.hpp
   opm/simulators/flow/FemCpGridCompat.hpp
   opm/simulators/flow/FIBlackoilModel.hpp
+  opm/simulators/flow/FICompositionalModel.hpp
   opm/simulators/flow/GpuFlowProblem.hpp
   opm/simulators/flow/SimpleFIBlackOilModel.hpp
   opm/simulators/flow/FIPContainer.hpp
