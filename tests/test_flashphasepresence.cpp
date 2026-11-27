@@ -48,9 +48,13 @@ struct TestFluidSystem
 
     static bool phaseIsActive(unsigned phase) { return phase < numPhases; }
     static double molarMass(unsigned) { return 0.02; }
-    static double acentricFactor(unsigned, unsigned) { return 0.0; }
-    static double criticalTemperature(unsigned, unsigned) { return 300.0; }
-    static double criticalPressure(unsigned, unsigned) { return 1.0e6; }
+
+    struct EosRegion {
+        double acentricFactor(unsigned) const { return 0.0; }
+        double criticalTemperature(unsigned) const { return 300.0; }
+        double criticalPressure(unsigned) const { return 1.0e6; }
+    };
+    static EosRegion eosRegion(unsigned) { return {}; }
 
     template<class Eval>
     struct ParameterCache {
