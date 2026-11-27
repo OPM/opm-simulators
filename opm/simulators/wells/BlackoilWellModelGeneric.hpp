@@ -531,6 +531,17 @@ protected:
                                const int reportStepIndex) const;
 
     void assignWellTargets(data::Wells& wsrpt) const;
+
+    /// Report WINJMULT injectivity multipliers (retained maximum for CIRR)
+    /// for restart output also for shut wells, whose connection results
+    /// are incomplete.  Gathers the multipliers of distributed wells onto
+    /// the owning rank, so this is a collective operation.
+    void assignInjMultipliers(data::Wells& wsrpt) const;
+
+    /// Restore WINJMULT injectivity multipliers from restart file
+    /// connection results.
+    void loadRestartInjMultipliers(const data::Wells& rst_wells);
+
     void assignProductionWellTargets(const Well& well, data::WellControlLimits& limits) const;
     void assignInjectionWellTargets(const Well& well, data::WellControlLimits& limits) const;
 

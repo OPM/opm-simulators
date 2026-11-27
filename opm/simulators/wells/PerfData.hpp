@@ -85,6 +85,7 @@ public:
         serializer(connFracStatistics);
         serializer(gas_mass_rates);
         serializer(wat_mass_rates);
+        serializer(inj_mult);
     }
 
     bool operator==(const PerfData&) const;
@@ -117,6 +118,10 @@ public:
     std::vector<std::size_t> global_index{};
     std::vector<Scalar> gas_mass_rates{};
     std::vector<Scalar> wat_mass_rates{};
+
+    // WINJMULT injectivity multiplier retained from the previous time step
+    // (maximum attained for CIRR).  Reported to the restart file.
+    std::vector<Scalar> inj_mult{};
 
     // The water_throughput, skin_pressure and water_velocity variables are
     // only used for injectors to check the injectivity.
