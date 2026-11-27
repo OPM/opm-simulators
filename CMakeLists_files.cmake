@@ -597,6 +597,10 @@ if(CUDA_FOUND)
 endif()
 
 if(CUDA_FOUND OR hip_FOUND)
+  # Headers included by the GPU tests. Not in TEST_SOURCE_FILES, since every entry
+  # there becomes a test executable. With HIP, they are hipified next to the tests.
+  ADD_CUDA_OR_HIP_FILE(TEST_HELPER_HEADER_FILES tests GpuTestHelpers.hpp)
+
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_converttofloatadapter.cpp)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_cublas_handle.cpp)
   ADD_CUDA_OR_HIP_FILE(TEST_SOURCE_FILES tests test_cublas_safe_call.cpp)
@@ -1641,5 +1645,5 @@ if(AMGX_FOUND)
 endif()
 
 if(CONVERT_CUDA_TO_HIP)
-  add_custom_target(hipified_headers  DEPENDS ${PUBLIC_HEADER_FILES_HIPIFIED})
+  add_custom_target(hipified_headers  DEPENDS ${PUBLIC_HEADER_FILES_HIPIFIED} ${TEST_HELPER_HEADER_FILES_HIPIFIED})
 endif()

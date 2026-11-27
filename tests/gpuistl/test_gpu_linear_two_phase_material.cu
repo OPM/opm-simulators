@@ -32,8 +32,9 @@
 
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
+
+#include "GpuTestHelpers.hpp"
 
 #include <array>
 #include <algorithm>
@@ -79,21 +80,13 @@ BOOST_AUTO_TEST_CASE(TestSimpleInterpolation)
 
     ValueVector testXs = {-1.0, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99, 1.0, 1.1};
 
-    NorneEvaluation* gpuAdInput;
-    NorneEvaluation* gpuAdResOnGPU;
-    auto gpuAdInputOwner = Opm::gpuistl::make_gpu_unique_ptr<NorneEvaluation>();
-    auto gpuAdResOnGPUOwner = Opm::gpuistl::make_gpu_unique_ptr<NorneEvaluation>();
-    gpuAdInput = gpuAdInputOwner.get();
-    gpuAdResOnGPU = gpuAdResOnGPUOwner.get();
-
     for (Scalar x_i : testXs){
         auto cpuMadeAd = NorneEvaluation(x_i, 0);
         NorneEvaluation cpuInterpolatedEval = CPUTwoPhaseMaterialLaw::twoPhaseSatPcnw<NorneEvaluation>(cpuParams, cpuMadeAd);
 
-        Opm::gpuistl::copyToGPU(cpuMadeAd, gpuAdInputOwner);
-        gpuTwoPhaseSatPcnwWrapper<<<1,1>>>(gpuViewParams, gpuAdInput, gpuAdResOnGPU);
-        OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-        const auto gpuAdResOnCPU = Opm::gpuistl::copyFromGPU(gpuAdResOnGPUOwner);
+        const auto gpuAdInput = Opm::gpuistl::make_gpu_unique_ptr(cpuMadeAd);
+        const auto gpuAdResOnCPU = Opm::gpuistl::test::runSingleThreadKernel<NorneEvaluation>(
+            gpuTwoPhaseSatPcnwWrapper, gpuViewParams, gpuAdInput.get());
 
         BOOST_CHECK(gpuAdResOnCPU == cpuInterpolatedEval);
     }

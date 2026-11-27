@@ -47,11 +47,9 @@
 
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 
-#include <cuda_runtime.h>
+#include "GpuTestHelpers.hpp"
 
-#include <algorithm>
 #include <cmath>
 #include <concepts>
 #include <cstddef>
@@ -64,6 +62,10 @@
 #include <vector>
 
 namespace {
+
+using Opm::gpuistl::test::evaluateOnCpu;
+using Opm::gpuistl::test::evaluateOnGpu;
+using Opm::gpuistl::test::evaluateOnGpuThroughConstPointer;
 
 // One derivative, with respect to pressure.
 template <class Scalar>
@@ -306,87 +308,13 @@ concept CallableOnConstView = requires(const GpuViewPvt<Scalar>& pvt,
 static_assert(CallableOnConstView<double>);
 static_assert(CallableOnConstView<float>);
 
-template <class Functor, class Pvt, class Point, class Result>
-__global__ void evaluateKernel(Functor f, Pvt pvt, const Point* points, Result* results, std::size_t n)
-{
-    const std::size_t i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i < n) {
-        results[i] = f(pvt, points[i]);
-    }
-}
-
-//! As evaluateKernel(), but with the PVT object in device memory, accessed through a
-//! pointer to const (as when it is a member of a fluid system in device memory).
-template <class Functor, class Pvt, class Point, class Result>
-__global__ void evaluateThroughConstPointerKernel(Functor f, const Pvt* pvt, const Point* points,
-                                                  Result* results, std::size_t n)
-{
-    const std::size_t i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i < n) {
-        results[i] = f(*pvt, points[i]);
-    }
-}
-
-constexpr unsigned threadsPerBlock = 128;
-
-unsigned numBlocks(std::size_t n)
-{ return static_cast<unsigned>((n + threadsPerBlock - 1) / threadsPerBlock); }
-
-template <class Functor, class Pvt, class Point>
-auto evaluateOnCpu(Functor f, const Pvt& pvt, const std::vector<Point>& points)
-{
-    using Result = decltype(f(pvt, points.front()));
-    std::vector<Result> results;
-    results.reserve(points.size());
-    for (const auto& pt : points) {
-        results.push_back(f(pvt, pt));
-    }
-    return results;
-}
-
-template <class Functor, class Pvt, class Point>
-auto evaluateOnGpu(Functor f, Pvt pvt, const std::vector<Point>& points)
-{
-    using Result = decltype(f(pvt, points.front()));
-    const Opm::gpuistl::GpuBuffer<Point> gpuPoints(points);
-    Opm::gpuistl::GpuBuffer<Result> gpuResults(points.size());
-
-    evaluateKernel<<<numBlocks(points.size()), threadsPerBlock>>>(f, pvt, gpuPoints.data(),
-                                                                  gpuResults.data(), points.size());
-    OPM_GPU_SAFE_CALL(cudaPeekAtLastError());
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-
-    return gpuResults.asStdVector();
-}
-
-template <class Functor, class Pvt, class Point>
-auto evaluateOnGpuThroughConstPointer(Functor f, Pvt pvt, const std::vector<Point>& points)
-{
-    using Result = decltype(f(pvt, points.front()));
-    const Opm::gpuistl::GpuBuffer<Pvt> gpuPvt(std::vector<Pvt>{pvt});
-    const Opm::gpuistl::GpuBuffer<Point> gpuPoints(points);
-    Opm::gpuistl::GpuBuffer<Result> gpuResults(points.size());
-
-    evaluateThroughConstPointerKernel<<<numBlocks(points.size()), threadsPerBlock>>>(
-        f, gpuPvt.data(), gpuPoints.data(), gpuResults.data(), points.size());
-    OPM_GPU_SAFE_CALL(cudaPeekAtLastError());
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-
-    return gpuResults.asStdVector();
-}
-
 template <std::integral T>
 bool isClose(T a, T b)
 { return a == b; }
 
 template <std::floating_point Scalar>
 bool isClose(Scalar a, Scalar b)
-{
-    if (a == b) {
-        return true;
-    }
-    return std::abs(a - b) <= relTol<Scalar> * std::max(std::abs(a), std::abs(b));
-}
+{ return Opm::gpuistl::test::isRelClose(a, b, relTol<Scalar>); }
 
 // [1/Pa] Upper bound of the compressibilities and viscosibilities in the deck, so the
 // pressure derivatives are at most of order value * pressureDerivativeScale.
@@ -396,19 +324,13 @@ constexpr Scalar pressureDerivativeScale = 1e-9;
 template <class Scalar>
 bool isClose(const Evaluation<Scalar>& a, const Evaluation<Scalar>& b)
 {
-    bool close = isClose(a.value(), b.value());
     // A derivative may be zero up to rounding: With zero viscosibility (region 1) the
     // viscosity does not depend on pressure, and its derivative is the cancellation of
     // terms of order value * compressibility. A purely relative tolerance would then
     // compare rounding noise, so the tolerance has an absolute floor relative to that
     // scale.
     const Scalar derivativeFloor = std::abs(a.value()) * pressureDerivativeScale<Scalar>;
-    for (int varIdx = 0; varIdx < Evaluation<Scalar>::numVars; ++varIdx) {
-        const Scalar da = a.derivative(varIdx);
-        const Scalar db = b.derivative(varIdx);
-        close = close && std::abs(da - db) <= relTol<Scalar> * std::max({std::abs(da), std::abs(db), derivativeFloor});
-    }
-    return close;
+    return Opm::gpuistl::test::isRelClose(a, b, relTol<Scalar>, derivativeFloor);
 }
 
 template <class Scalar>
@@ -419,19 +341,21 @@ template <class Scalar>
 std::ostream& operator<<(std::ostream& os, const InvBAndMu<Scalar>& r)
 { return os << "(" << r.invB << ", " << r.mu << ")"; }
 
+template <class Scalar>
+std::ostream& operator<<(std::ostream& os, const TestPoint<Scalar>& pt)
+{
+    return os << "region " << pt.regionIdx << ", p = " << pt.p;
+}
+
 template <class Result, class Scalar>
 void checkResults(const std::vector<Result>& cpu,
                   const std::vector<Result>& gpu,
                   const std::vector<TestPoint<Scalar>>& points,
                   const std::string& name)
 {
-    BOOST_REQUIRE_EQUAL(cpu.size(), gpu.size());
-    for (std::size_t i = 0; i < cpu.size(); ++i) {
-        BOOST_CHECK_MESSAGE(isClose(cpu[i], gpu[i]),
-                            name << " at point " << i << " (region " << points[i].regionIdx
-                                 << ", p = " << points[i].p << "): CPU = " << cpu[i]
-                                 << ", GPU = " << gpu[i]);
-    }
+    Opm::gpuistl::test::checkResults(
+        cpu, gpu, [](const Result& a, const Result& b) { return isClose(a, b); },
+        [&points](std::size_t i) { return points[i]; }, name);
 }
 
 template <class Functor, class Scalar>

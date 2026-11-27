@@ -25,6 +25,9 @@
 #include <opm/simulators/linalg/gpuistl/MiniVector.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
+
+#include "GpuTestHelpers.hpp"
+
 #include <utility> // for std::ignore
 
 BOOST_AUTO_TEST_CASE(DefaultConstructor)
@@ -98,7 +101,7 @@ BOOST_AUTO_TEST_CASE(GPUFill)
 
     // Fill the vector from the device
     fillKernel<<<1, 3>>>(dvec.get(), 7);
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
+    Opm::gpuistl::test::checkLaunchAndSynchronize();
 
     // Copy back and verify
     ::Opm::gpuistl::MiniVector<int, 3> hvec = ::Opm::gpuistl::copyFromGPU(dvec);
@@ -115,7 +118,7 @@ BOOST_AUTO_TEST_CASE(GPUSum)
     auto dout = ::Opm::gpuistl::make_gpu_shared_ptr<int>();
 
     sumKernel<<<1, 1>>>(dsrc.get(), dout.get());
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
+    Opm::gpuistl::test::checkLaunchAndSynchronize();
 
     int sum = ::Opm::gpuistl::copyFromGPU(dout);
     BOOST_TEST(sum == 4);

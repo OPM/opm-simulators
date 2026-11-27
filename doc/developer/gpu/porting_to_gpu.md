@@ -675,7 +675,11 @@ errors are turned into `OPM_THROW`-style exceptions on the host.
 ## 7. Adding tests
 
 Tests live in **`opm-simulators/tests/gpuistl/`** — that is the only
-place where `.cu` files are actually compiled. The pattern is:
+place where `.cu` files are actually compiled. Before writing kernel
+launchers, CPU/GPU comparisons or launch checks for a new test, look in
+the shared helper header `tests/gpuistl/GpuTestHelpers.hpp`: reuse what
+is there instead of reimplementing it in the test, and add a helper there
+when several tests need it. The pattern is:
 
 1. Create `tests/gpuistl/test_my_composite.cu`. Use Boost.Test as in
    the surrounding files. The header skeleton looks like:
@@ -691,7 +695,9 @@ place where `.cu` files are actually compiled. The pattern is:
    #include <opm/path/to/MyComposite.hpp>
    #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
    #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
-   #include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
+
+   // Must come after BOOST_TEST_MODULE and <boost/test/unit_test.hpp>.
+   #include "GpuTestHelpers.hpp"
    ```
 
 2. Define one or more `__global__` wrapper kernels that take the *view*
@@ -701,7 +707,11 @@ place where `.cu` files are actually compiled. The pattern is:
    back, and `BOOST_CHECK` against the CPU reference computed from the
    exact same inputs. Always compare GPU output to a CPU reference
    computed from the *same* class — that is what guarantees identical
-   semantics on both backends.
+   semantics on both backends. For a kernel writing one result,
+   `runSingleThreadKernel` does the launch, check and copy-back; to
+   evaluate a functor over many points on both backends, use
+   `evaluateOnCpu` / `evaluateOnGpu` with `checkResults`. After any
+   other launch, call `checkLaunchAndSynchronize()`.
 4. Register the test in
    **`opm-simulators/CMakeLists_files.cmake`** by adding a single
    line next to the existing GPU tests, e.g.:
@@ -785,6 +795,12 @@ Practical implications when porting a class:
 * If you add a new GPU source file to `opm-simulators`, register it
   through `ADD_CUDA_OR_HIP_FILE` so that it is picked up automatically
   by the HIP build. Never list `.cu` files unconditionally.
+* A header shared by the GPU tests (such as
+  `tests/gpuistl/GpuTestHelpers.hpp`) must be hipified as well, so the
+  hipified tests can include it. Register it with
+  `ADD_CUDA_OR_HIP_FILE(TEST_HELPER_HEADER_FILES tests MyHeader.hpp)`,
+  not in `TEST_SOURCE_FILES`, where every entry becomes a test
+  executable.
 * If you add a new public header that should *not* be hipified (for
   example because it must remain reachable from non-GPU translation
   units that are built without HIP), add it to `PUBLIC_HEADER_FILES`

@@ -18,12 +18,13 @@
 
 #include <boost/test/unit_test.hpp>
 #include <opm/material/densead/Evaluation.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
 #include <cuda_runtime.h>
 
+#include "GpuTestHelpers.hpp"
+
 namespace{
-__global__ void instantiate_ad_object(Opm::DenseAd::Evaluation<float, 3>* adObj, double value){
+__global__ void instantiate_ad_object(double value, Opm::DenseAd::Evaluation<float, 3>* adObj){
     *adObj = Opm::DenseAd::Evaluation<float, 3>(value, 0);
 }
 
@@ -38,12 +39,8 @@ BOOST_AUTO_TEST_CASE(TestInstantiateADObject)
     double testValue = 123.456;
     Evaluation cpuMadeAd = Evaluation(testValue, 0);
 
-    auto d_ad = Opm::gpuistl::make_gpu_unique_ptr<Evaluation>();
-
     // allocate space on GPU, run kernel, and move results back to the CPU
-    instantiate_ad_object<<<1,1>>>(d_ad.get(), testValue);
-    OPM_GPU_SAFE_CALL(cudaDeviceSynchronize());
-    const auto gpuMadeAd = Opm::gpuistl::copyFromGPU(d_ad);
+    const auto gpuMadeAd = Opm::gpuistl::test::runSingleThreadKernel<Evaluation>(instantiate_ad_object, testValue);
 
     // Check that the object made in a GPU kernel is equivalent to that made on the CPU
     BOOST_CHECK(cpuMadeAd == gpuMadeAd);

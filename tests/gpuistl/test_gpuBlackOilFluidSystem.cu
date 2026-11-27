@@ -59,7 +59,8 @@
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/gpuistl/gpu_smart_pointer.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
+
+#include "GpuTestHelpers.hpp"
 
 static constexpr const char* deckString1 =
 "-- =============== RUNSPEC\n"
@@ -165,19 +166,20 @@ BOOST_AUTO_TEST_CASE(BlackOilFluidSystemOnGpu)
     BOOST_CHECK_EQUAL(FluidSystem::numRegions(), 1);
     BOOST_CHECK_EQUAL(FluidSystem::numActivePhases(), 2);
 
-    double GpuComputedVal = 0.0;
-    auto gpuComputedValPtr = Opm::gpuistl::make_gpu_unique_ptr<double>();
-    getReservoirTemperature<<<1, 1>>>(dynamicGpuFluidSystemView, gpuComputedValPtr.get());
-    Opm::gpuistl::detail::gpuMemcpyDeviceToHost(&GpuComputedVal, gpuComputedValPtr.get(), 1);
-    BOOST_CHECK_CLOSE(FluidSystem::reservoirTemperature(), GpuComputedVal, 1e-10);
+    using IndexTraits = typename decltype(dynamicGpuFluidSystemView)::IndexTraitsType;
+    using Opm::gpuistl::test::runSingleThreadKernel;
 
-    getReferenceDensityFromGasPvt<<<1, 1>>>(dynamicGpuFluidSystemView, gpuComputedValPtr.get());
-    Opm::gpuistl::detail::gpuMemcpyDeviceToHost(&GpuComputedVal, gpuComputedValPtr.get(), 1);
-    BOOST_CHECK_CLOSE(FluidSystem::gasPvt().gasReferenceDensity(0), GpuComputedVal, 1e-10);
+    BOOST_CHECK_CLOSE(FluidSystem::reservoirTemperature(),
+                      runSingleThreadKernel(getReservoirTemperature<IndexTraits>, dynamicGpuFluidSystemView),
+                      1e-10);
 
-    getReferenceDensity<<<1, 1>>>(dynamicGpuFluidSystemView, gpuComputedValPtr.get());
-    Opm::gpuistl::detail::gpuMemcpyDeviceToHost(&GpuComputedVal, gpuComputedValPtr.get(), 1);
-    BOOST_CHECK_CLOSE(FluidSystem::referenceDensity(0, 0), GpuComputedVal, 1e-10);
+    BOOST_CHECK_CLOSE(FluidSystem::gasPvt().gasReferenceDensity(0),
+                      runSingleThreadKernel(getReferenceDensityFromGasPvt<IndexTraits>, dynamicGpuFluidSystemView),
+                      1e-10);
+
+    BOOST_CHECK_CLOSE(FluidSystem::referenceDensity(0, 0),
+                      runSingleThreadKernel(getReferenceDensity<IndexTraits>, dynamicGpuFluidSystemView),
+                      1e-10);
 
 
 }
