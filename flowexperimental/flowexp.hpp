@@ -160,7 +160,6 @@ public:
         Parameters::Hide<Parameters::ToleranceCnv<Scalar>>();
         Parameters::Hide<Parameters::ToleranceCnvRelaxed<Scalar>>();
         Parameters::Hide<Parameters::ToleranceWells<Scalar>>();
-        Parameters::Hide<Parameters::ToleranceWellControl<Scalar>>();
         Parameters::Hide<Parameters::MaxWelleqIter>();
         Parameters::Hide<Parameters::UseMultisegmentWell>();
         Parameters::Hide<Parameters::TolerancePressureMsWells<Scalar>>();
