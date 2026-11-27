@@ -244,8 +244,12 @@ template<class Scalar> class WellContributions;
                 this->assignWellPerformanceEventTracker(wsrpt);
 
                 // Assigning (a subset of the) property values in shut
-                // connections should be the last step of wellData().
+                // connections should be the last step of wellData(), except
+                // for the injectivity multipliers which must also reach the
+                // connections of shut wells.
                 this->assignShutConnections(wsrpt, this->reportStepIndex());
+
+                this->assignInjMultipliers(wsrpt);
 
                 return wsrpt;
             }

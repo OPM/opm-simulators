@@ -249,6 +249,8 @@ initFromRestartFile(const RestartValue& restartValues,
                         this->wellState(),
                         this->groupState());
 
+    this->loadRestartInjMultipliers(restartValues.wells);
+
     // Reconstruct the retained network THP limit, which the restart file does
     // not carry. A well is attached to the network when its group is a network
     // node, and detached once it is not, for instance after WELSPECS moved it
@@ -2281,11 +2283,135 @@ updateFiltrationModelsPostStep(const double dt,
 
 template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelGeneric<Scalar, IndexTraits>::
+assignInjMultipliers(data::Wells& wsrpt) const
+{
+    for (const auto& well : this->wells_ecl_) {
+        if (well.getInjMultMode() == Well::InjMultMode::NONE) {
+            continue;
+        }
+
+        const auto& ws = this->wellState().well(well.name());
+        const auto& perf_data = ws.perf_data;
+
+        // Retained multipliers of the perforations on this rank.
+        auto local = std::vector<data::Connection>(perf_data.size());
+        for (auto perf = 0*perf_data.size(); perf < perf_data.size(); ++perf) {
+            local[perf].index = perf_data.global_index[perf];
+            local[perf].lgr_grid = perf_data.grid_id[perf];
+            local[perf].inj_mult = perf_data.inj_mult[perf];
+        }
+
+        // Distributed wells: Collect all multipliers on the owning rank.
+        auto retained = std::vector<data::Connection>{};
+        const auto& pwinfo = ws.parallel_info.get();
+        if (pwinfo.communication().size() == 1) {
+            retained = std::move(local);
+        }
+        else {
+            this->wellState().gatherVectorsOnRoot(local, retained, pwinfo.communication());
+        }
+
+        if (! pwinfo.isOwner()) {
+            continue;
+        }
+
+        const auto xw = wsrpt.find(well.name());
+        if (xw == wsrpt.end()) {
+            continue;
+        }
+
+        // Connection results of open wells normally carry the multiplier
+        // already (see WellState::reportConnections()), but shut wells
+        // have either connections without multipliers, see
+        // assignShutConnections(), or no connections at all.
+        auto& xcon = xw->second.connections;
+        for (const auto& rc : retained) {
+            const auto conn = std::ranges::find_if(xcon,
+                [&rc](const data::Connection& c)
+                { return (c.index == rc.index) && (c.lgr_grid == rc.lgr_grid); });
+
+            if (conn != xcon.end()) {
+                conn->inj_mult = rc.inj_mult;
+                continue;
+            }
+
+            if (rc.inj_mult == 1.0) {
+                continue;
+            }
+
+            const auto& conns = well.getConnections();
+            const auto ecl_conn = std::ranges::find_if(conns,
+                [&rc](const Connection& c)
+                {
+                    return (c.global_index() == rc.index)
+                        && (c.get_lgr_level() == rc.lgr_grid);
+                });
+
+            if (ecl_conn == conns.end()) {
+                continue;
+            }
+
+            // Mirrors assignShutConnections().
+            auto& xc = xcon.emplace_back();
+            xc.index = rc.index;
+            xc.lgr_grid = rc.lgr_grid;
+            xc.effective_Kh = ecl_conn->Kh();
+            xc.trans_factor = ecl_conn->CF();
+            xc.d_factor = ecl_conn->dFactor();
+            xc.inj_mult = rc.inj_mult;
+        }
+    }
+}
+
+template<typename Scalar, typename IndexTraits>
+void BlackoilWellModelGeneric<Scalar, IndexTraits>::
+loadRestartInjMultipliers(const data::Wells& rst_wells)
+{
+    for (auto w = 0*this->wells_ecl_.size(); w < this->wells_ecl_.size(); ++w) {
+        const auto& well = this->wells_ecl_[w];
+        if (well.getInjMultMode() == Well::InjMultMode::NONE) {
+            continue;
+        }
+
+        const auto xw = rst_wells.find(well.name());
+        if (xw == rst_wells.end()) {
+            continue;
+        }
+
+        const auto& perf_data = this->well_perf_data_[w];
+        auto values = std::vector<Scalar>(perf_data.size(), Scalar{1});
+        for (auto perf = 0*perf_data.size(); perf < perf_data.size(); ++perf) {
+            const auto& pd = perf_data[perf];
+            if (const auto* conn = xw->second.find_connection(pd.global_index, pd.grid_id);
+                conn != nullptr)
+            {
+                values[perf] = static_cast<Scalar>(conn->inj_mult);
+            }
+        }
+
+        auto& ws = this->wellState().well(well.name());
+        if (ws.perf_data.inj_mult.size() == values.size()) {
+            ws.perf_data.inj_mult = values;
+        }
+
+        this->prev_inj_multipliers_[well.name()] = std::move(values);
+    }
+}
+
+template<typename Scalar, typename IndexTraits>
+void BlackoilWellModelGeneric<Scalar, IndexTraits>::
 updateInjMult(DeferredLogger& deferred_logger)
 {
     for (const auto& well : this->well_container_generic_) {
         if (well->wellEcl().hasActiveInjMult()) {
-            well->updateInjMult(this->prev_inj_multipliers_[well->name()], deferred_logger);
+            auto& values = this->prev_inj_multipliers_[well->name()];
+            well->updateInjMult(values, deferred_logger);
+
+            // Keep in well state for (parallel) restart output.
+            auto& inj_mult = this->wellState().well(well->indexOfWell()).perf_data.inj_mult;
+            if (inj_mult.size() == values.size()) {
+                inj_mult = values;
+            }
         }
     }
 }
