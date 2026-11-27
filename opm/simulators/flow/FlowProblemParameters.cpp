@@ -50,6 +50,7 @@ void registerFlowProblemParameters()
         ("Tell the output writer to use double precision. Useful for 'perfect' restarts");
     Parameters::Register<Parameters::RestartWritingInterval>
         ("The frequencies of which time steps are serialized to disk");
+
     Parameters::Register<Parameters::EnableDriftCompensation>
         ("Enable partial compensation of systematic mass losses via "
          "the source term of the next time step");

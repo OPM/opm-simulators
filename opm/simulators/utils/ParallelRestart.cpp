@@ -80,5 +80,39 @@ data::Solution loadParallelRestartSolution(const EclipseIO* eclIO,
 #endif
 }
 
+void broadcastSolution([[maybe_unused]] data::Solution& sol,
+                       [[maybe_unused]] Parallel::Communication comm)
+{
+#if HAVE_MPI
+    if (comm.size() > 1) {
+        Parallel::MpiSerializer ser(comm);
+        ser.broadcast(Parallel::RootRank{0}, sol);
+    }
+#endif
+}
+
+std::vector<data::Solution>
+loadParallelRestartSolutionLevels(const EclipseIO* eclIO,
+                                  const std::vector<Opm::RestartKey>& solutionKeys,
+                                  [[maybe_unused]] Parallel::Communication comm,
+                                  const int step)
+{
+#if HAVE_MPI
+    std::vector<data::Solution> levels{};
+
+    if (eclIO != nullptr)
+    {
+        assert(comm.rank() == 0);
+        levels = eclIO->loadRestartSolutionLevels(solutionKeys, step);
+    }
+
+    Parallel::MpiSerializer ser(comm);
+    ser.broadcast(Parallel::RootRank{0}, levels);
+    return levels;
+#else
+    return eclIO->loadRestartSolutionLevels(solutionKeys, step);
+#endif
+}
+
 
 } // end namespace Opm

@@ -80,6 +80,11 @@ struct NumOverlap { static constexpr int value = 1; };
 struct EdgeConformal { static constexpr bool value = false; };
 struct MinpvMergeCells { static constexpr bool value = false; };
 
+/// Refine a CpGrid's LGRs with upstream's trilinear code or the corner-point conforming builder.
+struct LgrBackend { static constexpr auto value = "trilinear"; };
+/// Conforming backend only: refine before load balancing and distribute the refined leaf.
+struct RefineBeforeRedistribute { static constexpr bool value = false; };
+
 struct SchedRestart{ static constexpr bool value = false; };
 struct SerialPartitioning{ static constexpr bool value = false; };
 
@@ -156,8 +161,10 @@ public:
      * \brief Read a deck.
      * \param filename file to read
      * \param ignoredKeywords ':'-separated unknown keywords to ignore
+     * \param parsingStrictness "low", "normal" or "high", as --parsing-strictness
      */
-    static void readDeck(const std::string& filename, const std::string& ignoredKeywords);
+    static void readDeck(const std::string& filename, const std::string& ignoredKeywords,
+                         const std::string& parsingStrictness = "normal");
 
     /*!
      * \brief Set the simulation configuration objects.
@@ -263,6 +270,12 @@ public:
     /// the cells above and below connected across them.
     bool minpvMergeCells() const
     { return minpvMergeCells_; }
+
+    bool refineBeforeRedistribute() const
+    { return refineBeforeRedistribute_; }
+
+    const std::string& lgrBackend() const
+    { return lgrBackend_; }
 
 #if HAVE_MPI
     bool addCorners() const
@@ -379,6 +392,8 @@ protected:
     bool ownersFirst_;
     bool edgeConformal_;
     bool minpvMergeCells_;
+    bool refineBeforeRedistribute_;
+    std::string lgrBackend_;
 
 #if HAVE_MPI
     bool addCorners_;
