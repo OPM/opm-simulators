@@ -354,6 +354,7 @@ public:
         const unsigned eosRegionIdx = eosRegionIndex(globalDofIdx);
         const auto& initial_fs = initialFluidStates_[globalDofIdx];
         Opm::CompositionalFluidState<Scalar, FluidSystem> fs;
+        fs.setEosRegionIndex(eosRegionIdx);
         for (unsigned p = 0; p < numPhases; ++p) { // TODO: assuming the phaseidx continuous
             // pressure
             fs.setPressure(p, initial_fs.pressure(p));
@@ -408,7 +409,7 @@ public:
 
         // Set initial K and L
         for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-            const auto& Ktmp = fs.wilsonK_(compIdx, eosRegionIdx);
+            const auto& Ktmp = fs.wilsonK_(compIdx);
             fs.setKvalue(compIdx, Ktmp);
         }
 
@@ -846,16 +847,17 @@ protected:
             }
 
             InitialFluidState flash_fs;
+            flash_fs.setEosRegionIndex(eos_region);
             flash_fs.setTemperature(fs.temperature(0));
             flash_fs.setPressure(FluidSystem::oilPhaseIdx, fs.pressure(FluidSystem::oilPhaseIdx));
             flash_fs.setPressure(FluidSystem::gasPhaseIdx, fs.pressure(FluidSystem::gasPhaseIdx));
             for (unsigned c = 0; c < numComponents; ++c) {
                 flash_fs.setMoleFraction(c, z[c] / sum_z);
-                flash_fs.setKvalue(c, flash_fs.wilsonK_(c, eos_region));
+                flash_fs.setKvalue(c, flash_fs.wilsonK_(c));
             }
             flash_fs.setLvalue(-1.0);
             FlashSolver::flash_solve_scalar(
-                flash_fs, flash_method, flash_tolerance, eos_region, flash_verbosity);
+                flash_fs, flash_method, flash_tolerance, flash_verbosity);
 
             // A single-phase result has L = 0 or 1, so only one phase counts.
             const Scalar L = flash_fs.L();

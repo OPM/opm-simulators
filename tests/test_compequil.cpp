@@ -375,11 +375,10 @@ void reportFlashedCells(const BasicEquilFixture<FS>& fix,
         }
         for (int comp = 0; comp < 3; ++comp) {
             fs.setMoleFraction(comp, z[comp] / sum);
-            fs.setKvalue(comp, fs.wilsonK_(comp, /*eosRegionIdx=*/0));
+            fs.setKvalue(comp, fs.wilsonK_(comp));
         }
         fs.setLvalue(-1.0);
-        Opm::PTFlash<Scalar, FS>::flash_solve_scalar(fs, Opm::PTFlashMethod::SsiNewton,
-                                                     1.0e-8, /*eosRegionIdx=*/0);
+        Opm::PTFlash<Scalar, FS>::flash_solve_scalar(fs, Opm::PTFlashMethod::SsiNewton, 1.0e-8);
         return fs.L();
     };
     const std::vector<Scalar> depths(fix.depths.begin(), fix.depths.end());

@@ -538,7 +538,7 @@ private:
 
         // Set initial K and L
         for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-            const Evaluation Ktmp = fs.wilsonK_(compIdx, /*eosRegionIdx=*/0);
+            const Evaluation Ktmp = fs.wilsonK_(compIdx);
             fs.setKvalue(compIdx, Ktmp);
         }
 

@@ -137,6 +137,7 @@ public:
         const auto& problem = elemCtx.problem();
         const unsigned globalIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
         const unsigned eosRegionIdx = problem.eosRegionIndex(globalIdx);
+        fluidState_.setEosRegionIndex(eosRegionIdx);
 
         const Scalar flashTolerance = Parameters::Get<Parameters::FlashTolerance<Scalar>>();
         const int flashVerbosity = Parameters::Get<Parameters::FlashVerbosity>();
@@ -197,7 +198,7 @@ public:
         }
         else {
              for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                 const Evaluation Ktmp = fluidState_.wilsonK_(compIdx, eosRegionIdx);
+                 const Evaluation Ktmp = fluidState_.wilsonK_(compIdx);
                  fluidState_.setKvalue(compIdx, Ktmp);
              }
              const Evaluation& Ltmp = -1.0;
@@ -211,8 +212,7 @@ public:
             OpmLog::debug(fmt::format("Updating the intensive quantities for cell {}",
                                       elemCtx.globalSpaceIndex(dofIdx, timeIdx)));
         }
-        FlashSolver::solve(fluidState_, ptFlashMethod, flashTolerance, eosRegionIdx,
-                           flashVerbosity);
+        FlashSolver::solve(fluidState_, ptFlashMethod, flashTolerance, flashVerbosity);
 
         if (flashVerbosity >= 5) {
             std::string phaseCompositions;
