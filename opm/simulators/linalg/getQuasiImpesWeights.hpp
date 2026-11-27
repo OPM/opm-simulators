@@ -338,6 +338,7 @@ namespace Amg
                     }
                     bweights[activeCompIdx] = Toolbox::template decay<LhsEval>(oilWeight / denominator);
                 }
+
                 if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                     const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(
                         FluidSystem::solventComponentIndex(FluidSystem::gasPhaseIdx));
@@ -347,7 +348,21 @@ namespace Amg
                     }
                     bweights[activeCompIdx] = Toolbox::template decay<LhsEval>(gasWeight / denominator);
                 }
-
+                if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv
+                    || priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs) {
+                    // If either gas or oil is undersaturated, we set the corresponding
+                    // weight for that component to zero.
+                    if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
+                        const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(
+                            FluidSystem::solventComponentIndex(FluidSystem::oilPhaseIdx));
+                        bweights[activeCompIdx] = 0.0;
+                    }
+                    if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs) {
+                        const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(
+                            FluidSystem::solventComponentIndex(FluidSystem::gasPhaseIdx));
+                        bweights[activeCompIdx] = 0.0;
+                    }
+                }
                 weights[index] = bweights;
             }
         }
