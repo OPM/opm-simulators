@@ -244,6 +244,12 @@ void GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::advanceTimeLevel()
 }
 
 template <class CpuTypeTag>
+bool GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::hasBridge() const
+{
+    return static_cast<bool>(impl_->bridge);
+}
+
+template <class CpuTypeTag>
 bool GpuBlackoilIntensiveQuantitiesDispatcher<CpuTypeTag>::hasDeviceModelView() const
 {
     return impl_->bridge && impl_->bridge->hasModelView();

@@ -1552,13 +1552,15 @@ protected:
         const auto& vanguard = this->simulator().vanguard();
         std::size_t numGridDof = primaryVars.size();
         OPM_BEGIN_PARALLEL_TRY_CATCH();
+        model.withHostIntensiveQuantities(/*timeIdx=*/0, [&] {
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-        for (unsigned dofIdx = 0; dofIdx < numGridDof; ++dofIdx) {
+            for (unsigned dofIdx = 0; dofIdx < numGridDof; ++dofIdx) {
                 const auto& iq = model.intensiveQuantities(dofIdx, /*timeIdx=*/ 0);
                 func(dofIdx, iq);
-        }
+            }
+        });
         OPM_END_PARALLEL_TRY_CATCH(failureMsg, vanguard.grid().comm());
     }
 

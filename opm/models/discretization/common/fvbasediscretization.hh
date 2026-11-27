@@ -1096,37 +1096,39 @@ private:
     template<class Callback>
     void forEachStorageTerm(const unsigned timeIdx, Callback&& callback) const
     {
-        ThreadedEntityIterator<GridView, /*codim=*/0> threadedElemIt(gridView_);
+        asImp_().withHostIntensiveQuantities(timeIdx, [&] {
+            ThreadedEntityIterator<GridView, /*codim=*/0> threadedElemIt(gridView_);
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
-        {
-            const unsigned threadId = ThreadManager::threadId();
-            ElementContext elemCtx(simulator_);
-            LocalEvalBlockVector elemStorage;
-            elemCtx.setEnableStorageCache(false);
-            auto elemIt = threadedElemIt.beginParallel();
-            for (; !threadedElemIt.isFinished(elemIt); elemIt = threadedElemIt.increment()) {
-                const auto& elem = *elemIt;
-                if (elem.partitionType() != Dune::InteriorEntity) {
-                    continue;
-                }
-
-                elemCtx.updateStencil(elem);
-                elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
-                const std::size_t numPrimaryDof = elemCtx.numPrimaryDof(timeIdx);
-                elemStorage.resize(numPrimaryDof);
-                localResidual(threadId).evalStorage(elemStorage, elemCtx, timeIdx);
-
-                for (std::size_t dofIdx = 0; dofIdx < numPrimaryDof; ++dofIdx) {
-                    EqVector storage(0.0);
-                    for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
-                        storage[eqIdx] = Toolbox::value(elemStorage[dofIdx][eqIdx]);
+            {
+                const unsigned threadId = ThreadManager::threadId();
+                ElementContext elemCtx(simulator_);
+                LocalEvalBlockVector elemStorage;
+                elemCtx.setEnableStorageCache(false);
+                auto elemIt = threadedElemIt.beginParallel();
+                for (; !threadedElemIt.isFinished(elemIt); elemIt = threadedElemIt.increment()) {
+                    const auto& elem = *elemIt;
+                    if (elem.partitionType() != Dune::InteriorEntity) {
+                        continue;
                     }
-                    callback(elemCtx.globalSpaceIndex(dofIdx, timeIdx), storage);
+
+                    elemCtx.updateStencil(elem);
+                    elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
+                    const std::size_t numPrimaryDof = elemCtx.numPrimaryDof(timeIdx);
+                    elemStorage.resize(numPrimaryDof);
+                    localResidual(threadId).evalStorage(elemStorage, elemCtx, timeIdx);
+
+                    for (std::size_t dofIdx = 0; dofIdx < numPrimaryDof; ++dofIdx) {
+                        EqVector storage(0.0);
+                        for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
+                            storage[eqIdx] = Toolbox::value(elemStorage[dofIdx][eqIdx]);
+                        }
+                        callback(elemCtx.globalSpaceIndex(dofIdx, timeIdx), storage);
+                    }
                 }
             }
-        }
+        });
     }
 
 public:
@@ -1280,6 +1282,12 @@ public:
      */
     Scalar gridTotalVolume() const
     { return gridTotalVolume_; }
+
+    template <class Func>
+    void withHostIntensiveQuantities(unsigned, Func&& func) const
+    {
+        std::forward<Func>(func)();
+    }
 
     /*!
      * \brief Reference to the solution at a given history index as a block vector.

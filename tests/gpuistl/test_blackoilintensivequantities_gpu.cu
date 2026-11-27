@@ -26,6 +26,8 @@
 #endif
 #define HAVE_DUNE_FEM 0
 
+#include <flow/flow_gpu.hpp>
+
 #include <opm/common/utility/gpuDecorators.hpp>
 #include <opm/material/common/ResetLocale.hpp>
 #include <opm/material/fluidmatrixinteractions/EclDefaultMaterial.hpp>
@@ -403,6 +405,9 @@ static void initSimulatorOnce()
     using ProductionTypeTag = Opm::Properties::TTag::FlowGasWaterEnergyProblem;
     AdaptiveTimeStepping<ProductionTypeTag>::registerParameters();
     registerAllParameters_<ProductionTypeTag>(/*finalizeRegistration=*/false);
+    using GpuAssemblyTypeTag = Opm::Properties::TTag::FlowGasWaterEnergyProblemGPU;
+    AdaptiveTimeStepping<GpuAssemblyTypeTag>::registerParameters();
+    registerAllParameters_<GpuAssemblyTypeTag>(/*finalizeRegistration=*/false);
     Parameters::endRegistration();
     done = true;
 }
@@ -656,11 +661,10 @@ struct TemporaryFile {
 };
 
 using ProductionTypeTag = Opm::Properties::TTag::FlowGasWaterEnergyProblem;
-using ProductionSimulator = Opm::GetPropType<ProductionTypeTag, Opm::Properties::Simulator>;
 
-/// Read \p deckPath and set up a simulator for the production TypeTag, with
-/// its initial solution and CPU intensive quantities.
-static std::unique_ptr<ProductionSimulator> makeProductionSimulator(const std::string& deckPath)
+template <class SimulatorTypeTag = ProductionTypeTag>
+static auto makeProductionSimulator(const std::string& deckPath, bool gpuProperties = false,
+                                    bool thermodynamicHints = false)
 {
     Opm::resetLocale();
     initSimulatorOnce();
@@ -669,9 +673,12 @@ static std::unique_ptr<ProductionSimulator> makeProductionSimulator(const std::s
     const char* argv[] = {
         "test_gpu_blackoil_dispatcher",
         filenameArg.c_str(),
-        "--experimental-compute-properties-on-gpu=false",
+        gpuProperties ? "--experimental-compute-properties-on-gpu=true"
+                      : "--experimental-compute-properties-on-gpu=false",
+        thermodynamicHints ? "--enable-thermodynamic-hints=true" : "--enable-thermodynamic-hints=false",
+        "--enable-storage-cache=false",
     };
-    Opm::setupParameters_<ProductionTypeTag>(sizeof(argv) / sizeof(argv[0]),
+    Opm::setupParameters_<SimulatorTypeTag>(sizeof(argv) / sizeof(argv[0]),
                                               argv,
                                               /*registerParams=*/false,
                                               /*allowUnused=*/true,
@@ -679,7 +686,8 @@ static std::unique_ptr<ProductionSimulator> makeProductionSimulator(const std::s
                                               /*myRank=*/0);
 
     Opm::FlowGenericVanguard::readDeck(deckPath, /*ignoredKeywords=*/"");
-    auto sim = std::make_unique<ProductionSimulator>();
+    using Simulator = Opm::GetPropType<SimulatorTypeTag, Opm::Properties::Simulator>;
+    auto sim = std::make_unique<Simulator>();
     sim->model().applyInitialSolution();
     sim->model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
     return sim;
@@ -779,6 +787,19 @@ static void runProductionDispatcherTest(const std::string& deckPath)
                               FluidSystem::waterPhaseIdx)),
                           1e-6);
     }
+    // The rejected current slot must not supply IQs to host reads or history.
+    dispatcher.bridge().invalidateIntensiveQuantities(0);
+    BOOST_CHECK(!dispatcher.bridge().hasIntensiveQuantities(0));
+    BOOST_CHECK(dispatcher.bridge().hasIntensiveQuantities(1));
+
+    dispatcher.advanceTimeLevel();
+    BOOST_CHECK(!dispatcher.bridge().hasIntensiveQuantities(1));
+
+    dispatcher.update(problem, solution, 0);
+    BOOST_CHECK(dispatcher.bridge().hasIntensiveQuantities(0));
+    BOOST_CHECK(!dispatcher.hasDeviceModelView());
+    dispatcher.advanceTimeLevel();
+    BOOST_CHECK(dispatcher.hasDeviceModelView());
 }
 
 /// Check that the production dispatcher refuses \p deckPath before it does
@@ -1108,6 +1129,87 @@ BOOST_AUTO_TEST_CASE(TestProductionGpuDispatcherContract)
         f << deckString1;
     }
     runProductionDispatcherTest(tempFile.path.string());
+}
+
+BOOST_AUTO_TEST_CASE(TestModelOwnedGpuIntensiveQuantities)
+{
+    using GpuAssemblyTypeTag = Opm::Properties::TTag::FlowGasWaterEnergyProblemGPU;
+    using Indices = Opm::GetPropType<GpuAssemblyTypeTag, Opm::Properties::Indices>;
+    const TemporaryFile deck("test_model_owned_gpu_intensive_quantities.DATA");
+    {
+        std::ofstream file(deck.path);
+        file << deckString1;
+    }
+
+    const auto changePressure = [](auto& model, double factor) {
+        for (auto& pv : model.solution(0)) {
+            pv[Indices::pressureSwitchIdx] *= factor;
+        }
+        model.invalidateAndUpdateIntensiveQuantities(0);
+    };
+    const auto waterProperties = [](const auto& iq) {
+        return std::array{asDouble(iq.fluidState().density(FluidSystem::waterPhaseIdx)),
+                          asDouble(iq.mobility(FluidSystem::waterPhaseIdx))};
+    };
+    const auto checkProperties = [](const auto& actual, const auto& expected) {
+        BOOST_CHECK_CLOSE(actual[0], expected[0], 1e-6);
+        BOOST_CHECK_CLOSE(actual[1], expected[1], 1e-6);
+    };
+
+    BOOST_CHECK_EXCEPTION(makeProductionSimulator<GpuAssemblyTypeTag>(deck.path.string(),
+                                                                      /*gpuProperties=*/true,
+                                                                      /*thermodynamicHints=*/true),
+                          std::logic_error, [](const std::logic_error& error) {
+                              const std::string_view message{error.what()};
+                              return message.find("--enable-thermodynamic-hints=true") != std::string_view::npos
+                                  && message.find("--experimental-compute-properties-on-gpu=true") != std::string_view::npos;
+                          });
+
+    // Use the same production TypeTag and deck for the CPU reference.
+    const auto [initial, changed] = [&] {
+        const auto sim = makeProductionSimulator<GpuAssemblyTypeTag>(deck.path.string(),
+                                                                     /*gpuProperties=*/false,
+                                                                     /*thermodynamicHints=*/true);
+        auto& model = sim->model();
+        const auto initial = waterProperties(model.intensiveQuantities(0, 0));
+        changePressure(model, 1.1);
+        return std::pair{initial, waterProperties(model.intensiveQuantities(0, 0))};
+    }();
+    BOOST_REQUIRE_GT(std::abs(changed[0] - initial[0]), 1e-6 * std::abs(initial[0]));
+
+    const auto sim = makeProductionSimulator<GpuAssemblyTypeTag>(deck.path.string(), true);
+    auto& model = sim->model();
+    // The base accessor checks the host cache without triggering a download.
+    const auto& hostCache = static_cast<const Opm::FvBaseDiscretization<GpuAssemblyTypeTag>&>(model);
+    model.advanceTimeLevel();
+    BOOST_REQUIRE(model.hasGpuPropertyAssemblyBridge());
+    changePressure(model, 1.1);
+    BOOST_REQUIRE(hostCache.cachedIntensiveQuantities(0, 0) == nullptr);
+    checkProperties(waterProperties(model.intensiveQuantities(0, 0)), changed);
+    BOOST_CHECK(hostCache.cachedIntensiveQuantities(0, 0) != nullptr);
+    checkProperties(waterProperties(model.intensiveQuantities(0, 1)), initial);
+
+    model.updateFailed();
+    checkProperties(waterProperties(model.intensiveQuantities(0, 0)), initial);
+    checkProperties(waterProperties(model.intensiveQuantities(0, 1)), initial);
+
+    changePressure(model, 1.1);
+    BOOST_REQUIRE(hostCache.cachedIntensiveQuantities(0, 0) == nullptr);
+    model.withHostIntensiveQuantities(0, [&] {
+        BOOST_REQUIRE(hostCache.cachedIntensiveQuantities(0, 0) != nullptr);
+        BOOST_CHECK_THROW(model.withHostIntensiveQuantities(0, [] {}), std::logic_error);
+        checkProperties(waterProperties(model.intensiveQuantities(0, 0)), changed);
+    });
+
+    // Advance with a cold host slot to verify that device history can still
+    // be read after a different solution replaces the current slot.
+    model.invalidateAndUpdateIntensiveQuantities(0);
+    BOOST_REQUIRE(hostCache.cachedIntensiveQuantities(0, 0) == nullptr);
+    model.advanceTimeLevel();
+    changePressure(model, 1.0 / 1.1);
+    BOOST_REQUIRE(hostCache.cachedIntensiveQuantities(0, 1) == nullptr);
+    checkProperties(waterProperties(model.intensiveQuantities(0, 0)), initial);
+    checkProperties(waterProperties(model.intensiveQuantities(0, 1)), changed);
 }
 
 BOOST_AUTO_TEST_CASE(TestProductionGpuDispatcherRejectsEndscale)

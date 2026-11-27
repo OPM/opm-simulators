@@ -87,8 +87,11 @@ NonlinearSystemBlackOilReservoir(Simulator& simulator,
     this->convergence_reports_.reserve(300); // Often insufficient, but avoids frequent moves.
     // TODO: remember to fix!
     if (this->param_.nonlinear_solver_ == "nldd") {
-        if constexpr (getPropValue<TypeTag, Properties::RunAssemblyOnGpu>()) {
-            OPM_THROW(std::invalid_argument, "GPU assembly does not support NLDD.");
+        OPM_ERROR_IF((getPropValue<TypeTag, Properties::RunAssemblyOnGpu>()),
+                     "GPU assembly does not support NLDD.");
+        if constexpr (requires { simulator.model().gpuIntensiveQuantitiesEnabled(); }) {
+            OPM_ERROR_IF(simulator.model().gpuIntensiveQuantitiesEnabled(),
+                         "GPU intensive quantities do not support NLDD.");
         }
         if (terminal_output) {
             OpmLog::info("Using Non-Linear Domain Decomposition solver (nldd).");
@@ -644,26 +647,27 @@ localConvergenceData(std::vector<Scalar>& R_sum,
     const auto& gridView = this->simulator().gridView();
     IsNumericalAquiferCell isNumericalAquiferCell(gridView.grid());
     OPM_BEGIN_PARALLEL_TRY_CATCH();
-    for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
-        elemCtx.updatePrimaryStencil(elem);
-        elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+    model.withHostIntensiveQuantities(/*timeIdx=*/0, [&] {
+        for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
+            elemCtx.updatePrimaryStencil(elem);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
-        const unsigned cell_idx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-        const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-        const auto& fs = intQuants.fluidState();
+            const unsigned cell_idx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto& fs = intQuants.fluidState();
 
-        const auto pvValue = problem.referencePorosity(cell_idx, /*timeIdx=*/0) *
-                             model.dofTotalVolume(cell_idx);
-        pvSumLocal += pvValue;
+            const auto pvValue = problem.referencePorosity(cell_idx, /*timeIdx=*/0) *
+                                 model.dofTotalVolume(cell_idx);
+            pvSumLocal += pvValue;
 
-        if (isNumericalAquiferCell(elem)) {
-            numAquiferPvSumLocal += pvValue;
+            if (isNumericalAquiferCell(elem)) {
+                numAquiferPvSumLocal += pvValue;
+            }
+
+            this->getMaxCoeff(cell_idx, intQuants, fs, residual, pvValue,
+                              B_avg, R_sum, maxCoeff, maxCoeffCell);
         }
-
-        this->getMaxCoeff(cell_idx, intQuants, fs, residual, pvValue,
-                          B_avg, R_sum, maxCoeff, maxCoeffCell);
-    }
-
+    });
     OPM_END_PARALLEL_TRY_CATCH("NonlinearSystemBlackOilReservoir::localConvergenceData() failed: ", this->grid_.comm());
 
     // compute local average in terms of global number of elements

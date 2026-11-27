@@ -377,35 +377,38 @@ private:
         indices.reserve(reservedSize);
         residualContributions.reserve(reservedSize);
         jacobianContributions.reserve(reservedSize);
-        for (unsigned ii = 0; ii < numCells; ++ii) {
-            const unsigned cell = domain.cells[ii];
-            ADVectorBlockCPU source(0.0);
-            const auto& intQuantsIn = linearizer.model_().intensiveQuantities(cell, 0);
-            const double volume = linearizer.model_().dofTotalVolume(cell);
-            if (linearizer.separateSparseSourceTerms_) {
-                LocalResidual::computeSourceDense(
-                    source, linearizer.problem_(), intQuantsIn, cell, 0);
-            } else {
-                LocalResidual::computeSource(source, linearizer.problem_(), intQuantsIn, cell, 0);
-            }
-            source *= -volume;
-            VectorBlockCPU residualContribution(0.0);
-            MatrixBlockCPU jacobianContribution(0.0);
-            TpfaLinearizer<TypeTag>::setResAndJacobi(
-                residualContribution, jacobianContribution, source);
-            bool nonzero = false;
-            for (unsigned eq = 0; eq < numEq; ++eq) {
-                nonzero = nonzero || residualContribution[eq] != 0.0;
-                for (unsigned pv = 0; pv < numEq; ++pv) {
-                    nonzero = nonzero || jacobianContribution[eq][pv] != 0.0;
+        linearizer.model_().withHostIntensiveQuantities(/*timeIdx=*/0, [&] {
+            for (unsigned ii = 0; ii < numCells; ++ii) {
+                const unsigned cell = domain.cells[ii];
+                ADVectorBlockCPU source(0.0);
+                const auto& intQuantsIn = linearizer.model_().intensiveQuantities(cell, 0);
+                const double volume = linearizer.model_().dofTotalVolume(cell);
+                if (linearizer.separateSparseSourceTerms_) {
+                    LocalResidual::computeSourceDense(
+                        source, linearizer.problem_(), intQuantsIn, cell, 0);
+                } else {
+                    LocalResidual::computeSource(source, linearizer.problem_(), intQuantsIn, cell, 0);
+                }
+                source *= -volume;
+                VectorBlockCPU residualContribution(0.0);
+                MatrixBlockCPU jacobianContribution(0.0);
+                TpfaLinearizer<TypeTag>::setResAndJacobi(
+                    residualContribution, jacobianContribution, source);
+                bool nonzero = false;
+                for (unsigned eq = 0; eq < numEq; ++eq) {
+                    nonzero = nonzero || residualContribution[eq] != 0.0;
+                    for (unsigned pv = 0; pv < numEq; ++pv) {
+                        nonzero = nonzero || jacobianContribution[eq][pv] != 0.0;
+                    }
+                }
+                if (nonzero) {
+                    indices.push_back(cell);
+                    residualContributions.push_back(residualContribution);
+                    jacobianContributions.push_back(jacobianContribution);
                 }
             }
-            if (nonzero) {
-                indices.push_back(cell);
-                residualContributions.push_back(residualContribution);
-                jacobianContributions.push_back(jacobianContribution);
-            }
-        }
+        });
+
         gpuParams_->applySourceContributions(indices, residualContributions, jacobianContributions);
     }
 #endif
