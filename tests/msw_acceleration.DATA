@@ -1,0 +1,216 @@
+-- Acceleration-dominated multi-segment wells: one injector, one producer with
+-- identical horizontal pipes, in a 1D water-filled reservoir. Incompressible water.
+-- Reservoir gradient is made negligible and drawdown large, so both connections take
+-- about the same rate. Segment 1 top, 2 blank, 3 and 4 perforated, 4 is the closed end.
+-- Producer: SPR(4) - SPR(3) = rho v4^2, SPR(3) - SPR(2) = rho (v3^2 - v4^2),
+-- SPR(2) - SPR(1) = 0, plus friction. Injector: half of these acceleration terms.
+-- INJB and PRODB have the same main pipe but split at segment 3 into branches 4 and 5.
+-- PRODX has crossflow: its cells are isolated, segment 3 loses fluid to the low-pressure
+-- cell, so that segment takes half the acceleration term.
+
+RUNSPEC
+TITLE
+ MSW acceleration sign
+
+DIMENS
+ 23 1 1 /
+OIL
+WATER
+GAS
+METRIC
+START
+ 1 'JAN' 2020 /
+TABDIMS
+ /
+WELLDIMS
+ 5 2 1 5 /
+WSEGDIMS
+ 5 6 3 /
+UNIFOUT
+
+GRID
+DX
+ 23*100 /
+DY
+ 23*100 /
+DZ
+ 23*10 /
+TOPS
+ 23*2000 /
+PORO
+ 23*0.3 /
+PERMX
+ 23*5000000 /
+PERMY
+ 23*5000000 /
+PERMZ
+ 23*5000000 /
+MULTX
+ 20*1 2*0 1 /
+MULTPV
+ 21*1 2*1000000 /
+
+PROPS
+DENSITY
+ 800 1000 1 /
+PVTW
+ 200 1.0 0.0 0.5 0.0 /
+PVDO
+ 50 1.01 2.0
+ 400 0.99 2.0 /
+PVDG
+ 50 0.02 0.02
+ 400 0.005 0.02 /
+ROCK
+ 200 1e-5 /
+SWOF
+ 0.0 0.0 1.0 0
+ 1.0 1.0 0.0 0 /
+SGOF
+ 0.0 0.0 1.0 0
+ 1.0 1.0 0.0 0 /
+
+SOLUTION
+PRESSURE
+ 21*200 190 230 /
+SWAT
+ 23*1.0 /
+SGAS
+ 23*0.0 /
+
+SUMMARY
+SPR
+ 'INJ' /
+ 'PROD' /
+ 'INJB' /
+ 'PRODB' /
+ 'PRODX' /
+/
+SPRDH
+ 'INJ' /
+ 'PROD' /
+ 'INJB' /
+ 'PRODB' /
+ 'PRODX' /
+/
+SPRDF
+ 'INJ' /
+ 'PROD' /
+ 'INJB' /
+ 'PRODB' /
+ 'PRODX' /
+/
+SPRDA
+ 'INJ' /
+ 'PROD' /
+ 'INJB' /
+ 'PRODB' /
+ 'PRODX' /
+/
+SWFR
+ 'INJ' /
+ 'PROD' /
+ 'INJB' /
+ 'PRODB' /
+ 'PRODX' /
+/
+WBHP
+ /
+CWIR
+ 'INJ' 2 1 1 /
+ 'INJ' 3 1 1 /
+/
+CWPR
+ 'PROD' 19 1 1 /
+ 'PROD' 20 1 1 /
+/
+
+SCHEDULE
+WELSPECS
+ 'INJ'  'G' 2  1 2005 'WATER' /
+ 'PROD' 'G' 19 1 2005 'WATER' /
+ 'INJB' 'G' 8 1 2005 'WATER' /
+ 'PRODB' 'G' 13 1 2005 'WATER' /
+ 'PRODX' 'G' 22 1 2005 'WATER' /
+/
+COMPDAT
+ 'INJ'  2  1 1 1 'OPEN' 1* 25 0.2 1* 0 1* 'Y' /
+ 'INJ'  3  1 1 1 'OPEN' 1* 25 0.2 1* 0 1* 'Y' /
+ 'PROD' 19 1 1 1 'OPEN' 1* 25 0.2 1* 0 1* 'Y' /
+ 'PROD' 20 1 1 1 'OPEN' 1* 25 0.2 1* 0 1* 'Y' /
+ 'INJB' 8  1 1 1 'OPEN' 1* 25 0.2 1* 0 1* 'Y' /
+ 'INJB' 9  1 1 1 'OPEN' 1* 25 0.2 1* 0 1* 'Y' /
+ 'PRODB' 12 1 1 1 'OPEN' 1* 25 0.2 1* 0 1* 'Y' /
+ 'PRODB' 13 1 1 1 'OPEN' 1* 25 0.2 1* 0 1* 'Y' /
+ 'PRODX' 22 1 1 1 'OPEN' 1* 250 0.2 1* 0 1* 'Y' /
+ 'PRODX' 23 1 1 1 'OPEN' 1* 250 0.2 1* 0 1* 'Y' /
+/
+WELSEGS
+ 'INJ' 2005 0 1* 'ABS' 'HFA' 'HO' /
+ 2 2 1 1 0.5 2005 0.1 1e-7 /
+ 3 3 1 2 1.0 2005 0.1 1e-7 /
+ 4 4 1 3 1.5 2005 0.1 1e-7 /
+/
+WELSEGS
+ 'PROD' 2005 0 1* 'ABS' 'HFA' 'HO' /
+ 2 2 1 1 0.5 2005 0.1 1e-7 /
+ 3 3 1 2 1.0 2005 0.1 1e-7 /
+ 4 4 1 3 1.5 2005 0.1 1e-7 /
+/
+WELSEGS
+ 'INJB' 2005 0 1* 'ABS' 'HFA' 'HO' /
+ 2 2 1 1 0.5 2005 0.1 1e-7 /
+ 3 3 1 2 1.0 2005 0.1 1e-7 /
+ 4 4 2 3 1.5 2005 0.1 1e-7 /
+ 5 5 3 3 1.5 2005 0.1 1e-7 /
+/
+WELSEGS
+ 'PRODB' 2005 0 1* 'ABS' 'HFA' 'HO' /
+ 2 2 1 1 0.5 2005 0.1 1e-7 /
+ 3 3 1 2 1.0 2005 0.1 1e-7 /
+ 4 4 2 3 1.5 2005 0.1 1e-7 /
+ 5 5 3 3 1.5 2005 0.1 1e-7 /
+/
+WELSEGS
+ 'PRODX' 2005 0 1* 'ABS' 'HFA' 'HO' /
+ 2 2 1 1 0.5 2005 0.1 1e-7 /
+ 3 3 1 2 1.0 2005 0.1 1e-7 /
+ 4 4 1 3 1.5 2005 0.1 1e-7 /
+/
+COMPSEGS
+ 'INJ' /
+ 2  1 1 1 0.9 1.1 /
+ 3  1 1 1 1.3 1.5 /
+/
+COMPSEGS
+ 'PROD' /
+ 19 1 1 1 0.9 1.1 /
+ 20 1 1 1 1.3 1.5 /
+/
+COMPSEGS
+ 'INJB' /
+ 8 1 1 2 1.3 1.5 /
+ 9 1 1 3 1.3 1.5 /
+/
+COMPSEGS
+ 'PRODB' /
+ 12 1 1 2 1.3 1.5 /
+ 13 1 1 3 1.3 1.5 /
+/
+COMPSEGS
+ 'PRODX' /
+ 22 1 1 1 0.9 1.1 /
+ 23 1 1 1 1.3 1.5 /
+/
+WCONINJE
+ 'INJ' 'WATER' 'OPEN' 'RATE' 10000 1* 400 /
+ 'INJB' 'WATER' 'OPEN' 'RATE' 10000 1* 400 /
+/
+WCONPROD
+ 'PROD' 'OPEN' 'LRAT' 3* 10000 1* 50 /
+ 'PRODB' 'OPEN' 'LRAT' 3* 10000 1* 50 /
+ 'PRODX' 'OPEN' 'LRAT' 3* 10000 1* 50 /
+/
+TSTEP
+ 2*1 /
+END

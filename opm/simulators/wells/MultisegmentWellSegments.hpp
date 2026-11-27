@@ -113,6 +113,20 @@ public:
                                const bool extra_reverse_flow_derivatives = false) const;
 
     // pressure loss contribution due to acceleration
+    //! \brief Coefficient on the velocity head difference at a segment node.
+    //! \details Fluid leaving through the wall keeps its axial momentum (p + rho v^2 / 2 is
+    //! conserved), while fluid entering has none (p + rho v^2 is conserved).
+    Scalar accelerationCoefficient(const int seg) const;
+
+    //! \brief Flow weights of the inlets where the flow divides into several of them.
+    //! \details Empty unless the segment's flow divides over several inlets.
+    std::vector<Scalar> dividingInletWeights(const int seg) const;
+
+    const EvalWell& massRate(const int seg) const
+    {
+        return mass_rates_[seg];
+    }
+
     EvalWell accelerationPressureLossContribution(const int seg,
                                                   const Scalar area,
                                                   const bool extra_reverse_flow_derivatives = false) const;
