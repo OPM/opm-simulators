@@ -172,13 +172,11 @@ struct StandardPreconditioners
             return wrapBlockPreconditioner<RebuildOnUpdatePreconditioner<Dune::SeqILU<M, V, V>>>(
                 comm, std::cref(op.getmat()), n, w, resort);
         });
-        F::addCreator("dilu", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
-            DUNE_UNUSED_PARAMETER(prm);
+        F::addCreator("dilu", [](const O& op, const P& /*prm*/, const std::function<V()>&, std::size_t, const C& comm) {
             return wrapBlockPreconditioner<MultithreadDILU<M, V, V>>(comm, op.getmat());
         });
 #if HAVE_AVX2_EXTENSION
-        F::addCreator("mixed-ilu0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
-            DUNE_UNUSED_PARAMETER(prm);
+        F::addCreator("mixed-ilu0", [](const O& op, const P& /*prm*/, const std::function<V()>&, std::size_t, const C& comm) {
             if  constexpr (std::is_same_v<typename V::field_type, float>) {
                 OPM_THROW(std::logic_error, "mixed-ilu0 is not available for floats");
                 return nullptr;
@@ -186,8 +184,7 @@ struct StandardPreconditioners
                 return wrapBlockPreconditioner<MixedPreconditioner<M,V,V>>(comm, op.getmat());
             }
         });
-        F::addCreator("mixed-dilu", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
-            DUNE_UNUSED_PARAMETER(prm);
+        F::addCreator("mixed-dilu", [](const O& op, const P& /*prm*/, const std::function<V()>&, std::size_t, const C& comm) {
             if  constexpr (std::is_same_v<typename V::field_type, float>) {
                 OPM_THROW(std::logic_error, "mixed-dilu is not available for floats");
                 return nullptr;

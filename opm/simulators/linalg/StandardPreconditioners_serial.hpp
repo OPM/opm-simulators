@@ -90,13 +90,11 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation, typen
             return std::make_shared<ParallelOverlappingILU0<M, V, V, C>>(
                 op.getmat(), n, w, MILU_VARIANT::ILU);
         });
-        F::addCreator("dilu", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
-            DUNE_UNUSED_PARAMETER(prm);
+        F::addCreator("dilu", [](const O& op, const P& /*prm*/, const std::function<V()>&, std::size_t) {
             return std::make_shared<MultithreadDILU<M, V, V>>(op.getmat());
         });
 #if HAVE_AVX2_EXTENSION
-        F::addCreator("mixed-ilu0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
-            DUNE_UNUSED_PARAMETER(prm);
+        F::addCreator("mixed-ilu0", [](const O& op, const P& /*prm*/, const std::function<V()>&, std::size_t) {
             if  constexpr (std::is_same_v<typename V::field_type, float>) {
                 OPM_THROW(std::logic_error, "mixed-ilu0 is not available for floats");
                 return nullptr;
@@ -104,8 +102,7 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation, typen
                 return std::make_shared<MixedPreconditioner<M,V,V>>(op.getmat());
             }
         });
-        F::addCreator("mixed-dilu", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
-            DUNE_UNUSED_PARAMETER(prm);
+        F::addCreator("mixed-dilu", [](const O& op, const P& /*prm*/, const std::function<V()>&, std::size_t) {
             if  constexpr (std::is_same_v<typename V::field_type, float>) {
                 OPM_THROW(std::logic_error, "mixed-dilu is not available for floats");
                 return nullptr;
@@ -114,14 +111,10 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation, typen
             }
         });
 #endif
-        F::addCreator("legacy-mixed-ilu0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
-            DUNE_UNUSED_PARAMETER(prm);
-            DUNE_UNUSED_PARAMETER(op);
+        F::addCreator("legacy-mixed-ilu0", [](const O& /*op*/, const P& /*prm*/, const std::function<V()>&, std::size_t) {
             return std::make_shared<TrivialPreconditioner<V,V>>();
         });
-        F::addCreator("legacy-mixed-dilu", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
-            DUNE_UNUSED_PARAMETER(prm);
-            DUNE_UNUSED_PARAMETER(op);
+        F::addCreator("legacy-mixed-dilu", [](const O& /*op*/, const P& /*prm*/, const std::function<V()>&, std::size_t) {
             return std::make_shared<TrivialPreconditioner<V,V>>();
         });
         F::addCreator("jac", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {

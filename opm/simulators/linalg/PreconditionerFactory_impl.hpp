@@ -42,7 +42,6 @@
 #include <opm/simulators/linalg/ilufirstelement.hh>
 #include <opm/simulators/linalg/matrixblock.hh>
 
-#include <dune/common/unused.hh>
 #include <dune/istl/owneroverlapcopy.hh>
 #include <dune/istl/paamg/amg.hh>
 #include <dune/istl/paamg/fastamg.hh>

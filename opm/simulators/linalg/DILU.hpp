@@ -22,7 +22,6 @@
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 
 #include <dune/common/fmatrix.hh>
-#include <dune/common/unused.hh>
 #include <dune/common/version.hh>
 
 #include <opm/simulators/linalg/GraphColoring.hpp>
@@ -120,10 +119,8 @@ public:
        \brief Prepare the preconditioner.
        \copydoc Preconditioner::pre(X&,Y&)
     */
-    void pre(X& v, Y& d) override
+    void pre(X& /*v*/, Y& /*d*/) override
     {
-        DUNE_UNUSED_PARAMETER(v);
-        DUNE_UNUSED_PARAMETER(d);
     }
 
 
@@ -145,9 +142,8 @@ public:
        \brief Clean up.
        \copydoc Preconditioner::post(X&)
     */
-    void post(X& x) override
+    void post(X& /*x*/) override
     {
-        DUNE_UNUSED_PARAMETER(x);
     }
 
     std::vector<typename M::block_type> getDiagonal()

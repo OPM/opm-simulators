@@ -33,7 +33,6 @@
 
 #include <dune/common/parallel/mpihelper.hh>
 #include <dune/common/fmatrix.hh>
-#include <dune/common/unused.hh>
 #include <dune/common/parallel/indexset.hh>
 #include <dune/common/parallel/plocalindex.hh>
 #include <dune/common/parallel/communication.hh>
