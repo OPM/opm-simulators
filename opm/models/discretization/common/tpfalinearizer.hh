@@ -566,6 +566,12 @@ private:
                                            - stencil.subControlVolume(dofIdx).globalPos())
                                               .two_norm();
                         }
+                        if constexpr (requires { nbinfo.gdTwinPair;
+                                                 problem_().dualPorosityGravityDrainagePair(myIdx, neighborIdx); }) {
+                            const auto pair = problem_().dualPorosityGravityDrainagePair(myIdx, neighborIdx);
+                            nbinfo.gdTwinPair = pair.isTwinPair;
+                            nbinfo.gdInIsMatrix = pair.firstIsMatrix;
+                        }
                         loc_nbinfo[dofIdx - 1] = NeighborInfoCPU{neighborIdx, nbinfo, nullptr};
                     }
                 }

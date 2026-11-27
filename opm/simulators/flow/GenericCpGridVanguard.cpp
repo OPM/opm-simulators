@@ -29,6 +29,8 @@
 #include <dune/grid/common/partitionset.hh>
 #include <dune/common/version.hh>
 
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/TimingMacros.hpp>
 #include <opm/common/utility/ActiveGridCells.hpp>
 
@@ -470,6 +472,7 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::
 doCreateGrids_(const bool edge_conformal, EclipseState& eclState)
 {
     const auto isRoot = this->mpiRank == 0;
+
 
     // At this stage the ParallelEclipseState instance is still in global
     // view; on rank 0 we have undistributed data for the entire grid, on

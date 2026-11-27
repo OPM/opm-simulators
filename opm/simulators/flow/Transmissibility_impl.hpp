@@ -38,6 +38,7 @@
 #include <opm/grid/utility/ElementChunks.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/TransMult.hpp>
@@ -233,6 +234,18 @@ transmissibility(unsigned elemIdx1, unsigned elemIdx2) const
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
+typename Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::GravityDrainagePairInfo
+Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+dualPorosityGravityDrainagePair(unsigned elemIdx1, unsigned elemIdx2) const
+{
+    const auto it = gravityDrainageTwinMatrix_.find(details::isId(elemIdx1, elemIdx2));
+    if (it == gravityDrainageTwinMatrix_.end()) {
+        return {};
+    }
+    return { true, it->second == elemIdx1 };
+}
+
+template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 Scalar Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 transmissibilityBoundary(unsigned elemIdx, unsigned boundaryFaceIdx) const
 {
@@ -306,6 +319,17 @@ update(bool global, const TransUpdateQuantities update_quantities,
     // whether only update the permeability related transmissibility
     const bool onlyTrans = (update_quantities == TransUpdateQuantities::Trans);
     const auto& cartDims = cartMapper_.cartesianDimensions();
+    const auto& porosityModel = eclState_.runspec().porosityModel();
+    const bool dualPorosity = porosityModel.dualContinuum();
+    const bool dualPermeability = porosityModel.dualPermeability();
+    // Twin classification is arithmetic on the global Cartesian index: the fracture half is
+    // the upper half of the index range.  Deriving it from the Cartesian dimensions keeps this
+    // rank-local -- EclipseState::getInputGrid() is available on the I/O rank only.
+    const std::size_t matrixCellCount = EclipseGrid::matrixCellCount(cartDims);
+    const auto isFractureCell = [matrixCellCount](const std::size_t cartIdx)
+    {
+        return cartIdx >= matrixCellCount;
+    };
     const auto& transMult = eclState_.getTransMult();
     const auto& comm = gridView_.comm();
     ElementMapper elemMapper(gridView_, Dune::mcmgElementLayout());
@@ -656,6 +680,14 @@ update(bool global, const TransUpdateQuantities update_quantities,
                                                            faceIdToDir(inside.faceIdx));
                 }
 
+                // Dual-continuum runs: the continua are separate grids, so no face connects
+                // a matrix cell to a fracture cell; their coupling comes exclusively through
+                // the input NNCs. Matrix-matrix faces carry flow only in dual-permeability
+                // runs; in single-permeability dual porosity the matrix has no internal flow.
+                if (dualPorosity && !dualPermeability && !isFractureCell(inside.cartElemIdx)) {
+                    trans = 0.0;
+                }
+
                 transMap.insert_or_assign(details::isId(inside.elemIdx, outside.elemIdx), trans);
 
                 // update the "thermal half transmissibility" for the intersection
@@ -731,6 +763,23 @@ update(bool global, const TransUpdateQuantities update_quantities,
         globalToLocal[cartElemIdx] = elemIdx;
     }
 
+    // The twin pairs for the dual-porosity gravity drainage.  A matrix cell and
+    // its fracture twin are on the same process.
+    gravityDrainageTwinMatrix_.clear();
+    if (porosityModel.gravityDrainage() != PorosityModel::GravityDrainage::None) {
+        for (const auto& [cartIdx, elemIdx] : globalToLocal) {
+            if (!isFractureCell(cartIdx)) {
+                continue;
+            }
+            const auto matrix = globalToLocal.find(cartIdx - matrixCellCount);
+            if (matrix != globalToLocal.end()) {
+                gravityDrainageTwinMatrix_.emplace(details::isId(static_cast<std::uint32_t>(matrix->second),
+                                                                 static_cast<std::uint32_t>(elemIdx)),
+                                                   static_cast<unsigned>(matrix->second));
+            }
+        }
+    }
+
     if (!disableNNC) {
         // For EDITNNC and EDITNNCR we warn only once
         // If transmissibility is used for load balancing this will be done
@@ -745,6 +794,23 @@ update(bool global, const TransUpdateQuantities update_quantities,
             this->applyNncMultreg_(globalToLocal);
         }
         warnEditNNC_ = false;
+    }
+
+    // The TRANX, TRANY and TRANZ arrays, and the NNC, EDITNNCR and pinch-out connections, assign the
+    // transmissibility of the connections they name, so they would give the matrix of a dual-porosity
+    // run the flow that it does not have, after the faces between its cells were set to zero above.
+    // Matrix-matrix flow comes with dual permeability only, so this comes after all of them.
+    if (dualPorosity && !dualPermeability) {
+        for (auto& [id, value] : trans_) {
+            if (value != 0.0) {
+                const auto elements = details::isIdReverse(id);
+                if (!isFractureCell(cartMapper_.cartesianIndex(elements.first)) &&
+                    !isFractureCell(cartMapper_.cartesianIndex(elements.second)))
+                {
+                    value = 0.0;
+                }
+            }
+        }
     }
 
     // If disableNNC == true, remove all non-neighbouring transmissibilities.
@@ -788,10 +854,46 @@ extractPermeability_()
 
         // for now we don't care about non-diagonal entries
 
+        this->applyDualPorosityPermScaling_([](const unsigned int i) { return i; });
     }
     else
         throw std::logic_error("Can't read the intrinsic permeability from the ecl state. "
                                "(The PERM{X,Y,Z} keywords are missing)");
+}
+
+template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
+void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+applyDualPorosityPermScaling_(const std::function<unsigned int(unsigned int)>& map)
+{
+    // Dual porosity: the effective fracture permeability is scaled by the
+    // fracture porosity unless the run disables that scaling. Matrix cells
+    // are untouched, and so is the matrix-fracture coupling transmissibility
+    // (it is computed from the matrix permeability upstream and arrives here
+    // as an input NNC). The rule itself is Runspec's -- the well connection
+    // factors apply the same one, and spelling it out separately here is how
+    // the two last diverged.
+    if (!eclState_.runspec().porosityModel().fracturePermeabilityScalingActive())
+        return;
+
+    const auto& fp = eclState_.fieldProps();
+    const std::vector<double>& poroData = this->lookUpData_.assignFieldPropsDoubleOnLeaf(fp, "PORO");
+
+    // Classify twins from the Cartesian dimensions rather than from the input grid:
+    // the same arithmetic EclipseGrid uses, but available on every process. This file
+    // asked the question two different ways -- the face policy already derives it
+    // locally -- and the input-grid form is the pattern that broke every parallel run.
+    const std::size_t matrixCellCount =
+        EclipseGrid::matrixCellCount(cartMapper_.cartesianDimensions());
+
+    // The porosity must be read through the same element-to-input mapping
+    // the permeability extraction used, so reordered grids scale the right
+    // cells.
+    for (std::size_t elemIdx = 0; elemIdx < permeability_.size(); ++elemIdx) {
+        const auto inputDofIdx = map(static_cast<unsigned int>(elemIdx));
+        if (static_cast<std::size_t>(cartMapper_.cartesianIndex(elemIdx)) >= matrixCellCount) {
+            permeability_[elemIdx] *= poroData[inputDofIdx];
+        }
+    }
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
@@ -835,6 +937,8 @@ extractPermeability_(const std::function<unsigned int(unsigned int)>& map)
         }
 
         // for now we don't care about non-diagonal entries
+
+        this->applyDualPorosityPermScaling_(map);
     }
     else {
         throw std::logic_error("Can't read the intrinsic permeability from the ecl state. "
@@ -891,6 +995,16 @@ void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 removeNonCartesianTransmissibilities_(bool removeAll)
 {
     const auto& cartDims = cartMapper_.cartesianDimensions();
+
+    // A dual-continuum coupling is a connection between a cell and its twin, exactly
+    // half the Cartesian index range apart. It is the physics of the run, not a sparse
+    // non-neighbour connection the deck happened to add, so it must survive both the
+    // threshold prune and a blanket removal: a tight matrix with a small shape factor
+    // produces a legitimately small transmissibility, and zeroing it would strand the
+    // matrix continuum silently while the run completed and the material balance closed.
+    const bool dualPorosity = eclState_.runspec().porosityModel().dualContinuum();
+    const std::size_t twinGap = EclipseGrid::matrixCellCount(cartDims);
+
     for (auto&& trans: trans_) {
         //either remove all NNC transmissibilities or those less than the threshold (by default 1e-6 in the deck's unit system)
         if (removeAll || trans.second < transmissibilityThreshold_) {
@@ -903,6 +1017,11 @@ removeNonCartesianTransmissibilities_(bool removeAll)
             // When LGRs, all neighbors in the LGR are cartesian neighbours on the level grid representing the LGR.
             // When elements on the leaf grid view have the same parent cell, gc1 and gc2 coincide.
             if (gc2 - gc1 == 1 || gc2 - gc1 == cartDims[0] || gc2 - gc1 == cartDims[0]*cartDims[1] || gc2 - gc1 == 0) {
+                continue;
+            }
+
+            // the matrix-fracture coupling, kept for the reason above
+            if (dualPorosity && (static_cast<std::size_t>(gc2 - gc1) == twinGap)) {
                 continue;
             }
 
@@ -1078,6 +1197,8 @@ resetTransmissibilityFromArrays_(const std::array<bool,3>& is_tran,
 {
     const auto& cartDims = cartMapper_.cartesianDimensions();
     ElementMapper elemMapper(gridView_, Dune::mcmgElementLayout());
+    const bool dualContinuum = eclState_.runspec().porosityModel().dualContinuum();
+    const std::size_t matrixCellCount = EclipseGrid::matrixCellCount(cartDims);
 
     // compute the transmissibilities for all intersections
     for (const auto& elem : elements(gridView_)) {
@@ -1106,6 +1227,15 @@ resetTransmissibilityFromArrays_(const std::array<bool,3>& is_tran,
                 // We do this when gc1 is smaller than the other to find the
                 // correct place to read in parallel when ghost/overlap elements
                 // are ordered last
+                continue;
+            }
+
+            // A matrix cell and its twin are no neighbours in the sense of the arrays, although with
+            // one layer per continuum their Cartesian indices differ like those of a Z neighbour. The
+            // matrix-fracture coupling comes from SIGMA only.
+            if (dualContinuum && static_cast<std::size_t>(gc1) < matrixCellCount &&
+                static_cast<std::size_t>(gc2) >= matrixCellCount)
+            {
                 continue;
             }
 
@@ -1252,9 +1382,19 @@ applyPinchNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianTo
     const auto& pinchNnc = eclState_.getPinchNNC();
     const auto& transMult = this->eclState_.getTransMult();
 
+    // Dual porosity (not dual permeability): the matrix has no internal flow, so a
+    // pinch-out connection between two matrix cells keeps the zero that update() gave
+    // its face instead of the pinch transmissibility.
+    const auto& porosityModel = eclState_.runspec().porosityModel();
+    const bool matrixHasNoFlow = porosityModel.dualContinuum() && !porosityModel.dualPermeability();
+    const std::size_t matrixCellCount = EclipseGrid::matrixCellCount(cartMapper_.cartesianDimensions());
+
     for (const auto& nncEntry : pinchNnc) {
         auto c1 = nncEntry.cell1;
         auto c2 = nncEntry.cell2;
+        if (matrixHasNoFlow && c1 < matrixCellCount && c2 < matrixCellCount) {
+            continue;
+        }
         auto lowIt = cartesianToCompressed.find(c1);
         auto highIt = cartesianToCompressed.find(c2);
         int low = (lowIt == cartesianToCompressed.end())? -1 : lowIt->second;
@@ -1300,6 +1440,10 @@ applyNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompr
     // First scale NNCs with EDITNNC.
     const auto& nnc_input = eclState_.getInputNNC().input();
 
+    // Couplings of a dual-continuum run to a cell that was removed after the coupling was
+    // made, e.g. by MINPV.
+    std::size_t numInactiveTwinCouplings = 0;
+
     for (const auto& nncEntry : nnc_input) {
         auto c1 = nncEntry.cell1;
         auto c2 = nncEntry.cell2;
@@ -1318,6 +1462,22 @@ applyNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompr
         }
 
         if (low == -1 || high == -1) {
+            // A dual-continuum coupling to a cell that is not here is not an error. The load
+            // balancing keeps the two cells of a twin pair on the same process, so the cell is
+            // inactive.
+            if (eclState_.runspec().porosityModel().dualContinuum()) {
+                const auto& cd = cartMapper_.cartesianDimensions();
+                const std::size_t half =
+                    (static_cast<std::size_t>(cd[0]) * cd[1] * cd[2]) / 2;
+                if ((c2 > c1 ? c2 - c1 : c1 - c2) == half) {
+                    // The grid keeps a matrix cell and its fracture twin on the same process,
+                    // so a twin missing here is inactive. The coupling is made when both
+                    // twins are active in the deck, and a twin removed afterwards, by MINPV,
+                    // takes its coupling with it.
+                    ++numInactiveTwinCouplings;
+                    continue;
+                }
+            }
             // Discard the NNC if it is between active cell and inactive cell
             std::ostringstream sstr;
             sstr << "NNC between active and inactive cells ("
@@ -1357,6 +1517,11 @@ applyNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompr
         //         candidate->second += nncEntry.transDiffusion;
         //     }
         // }
+    }
+
+    if (numInactiveTwinCouplings > 0) {
+        OpmLog::info(std::to_string(numInactiveTwinCouplings) +
+                     " matrix-fracture coupling(s) dropped because a cell is inactive.");
     }
 }
 

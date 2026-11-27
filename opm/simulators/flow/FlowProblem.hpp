@@ -174,7 +174,8 @@ protected:
     using TemperatureModel = GetPropType<TypeTag, Properties::TemperatureModel>;
     using TracerModel = GetPropType<TypeTag, Properties::TracerModel>;
     using DirectionalMobilityPtr = Utility::CopyablePtr<DirectionalMobility<TypeTag>>;
-    using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar>>;
+    using ModuleParams = BlackoilModuleParams<ConvectiveMixingModuleParam<Scalar>,
+                                              DualPorosityGravityDrainageParam<Scalar>>;
 
 public:
 
@@ -594,6 +595,15 @@ public:
     Scalar transmissibility(unsigned globalCenterElemIdx, unsigned globalElemIdx) const
     {
         return transmissibilities_.transmissibility(globalCenterElemIdx, globalElemIdx);
+    }
+
+    /*!
+     * \brief Whether two elements are a matrix cell and its fracture twin, for
+     *        the dual-porosity gravity drainage.
+     */
+    auto dualPorosityGravityDrainagePair(unsigned elemIdx1, unsigned elemIdx2) const
+    {
+        return transmissibilities_.dualPorosityGravityDrainagePair(elemIdx1, elemIdx2);
     }
 
     /*!

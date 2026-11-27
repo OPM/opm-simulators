@@ -31,3 +31,45 @@ add_test_compareSeparateECLFiles(
   MPI_PROCS
     1
 )
+
+# Dual-continuum runs: a corner-point (COORD/ZCORN) deck must give the same
+# results as the block-centred (DX/DY/DZ/TOPS) deck describing the same grid.
+foreach(model dp dk)
+  string(TOUPPER ${model} MODEL)
+  add_test_compareSeparateECLFiles(
+    CASENAME
+      dualporo_${model}_cornerpoint_vs_blockcentred
+    DIR1
+      dualporo
+    FILENAME1
+      ${MODEL}_BASIC
+    DIR2
+      dualporo
+    FILENAME2
+      ${MODEL}_CP1
+    SIMULATOR
+      flow_oilwater
+    ABS_TOL
+      ${abs_tol}
+    REL_TOL
+      ${rel_tol}
+    MPI_PROCS
+      1
+  )
+endforeach()
+
+# The matrix-fracture coupling together with inactive cells, MINPV and PINCH: a twin
+# removed by MINPV takes its coupling with it.
+opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-test.sh "")
+foreach(case M1_DP_SIG M1_DK_ALL_SIG)
+  add_test_runSimulator(
+    CASENAME
+      dualporo_model1_coupled_${case}
+    DIR
+      dualporo_model1
+    FILENAME
+      ${case}
+    SIMULATOR
+      flow_blackoil
+  )
+endforeach()
