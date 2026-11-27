@@ -422,6 +422,12 @@ partiallySupported()
             },
          },
          {
+            "GLIFTLIM",
+            {
+               {3,{true, allow_values<int> {0}, "GLIFTLIM(MAX_NUM_WELL): a limit on the number of wells on artificial lift is not supported and should be defaulted (1*) or 0"}}, // MAX_NUM_WELL
+            },
+         },
+         {
             "GRIDFILE",
             {
                {1,{false, allow_values<int> {0}, "GRIDFILE(NGRID): output of GRID file is not supported."}}, // GRID

@@ -105,8 +105,8 @@ public:
     MasterGroupConstraints calculateMasterGroupConstraints();
 
 private:
-    /// @brief Compute the gas lift limits (GLIFTOPT) for one slave's master groups.
-    /// @details A GLIFTOPT record on the master group itself is passed on as is.  A
+    /// @brief Compute the gas lift limits (GLIFTOPT, GLIFTLIM) for one slave's master groups.
+    /// @details A GLIFTOPT or GLIFTLIM record on the master group itself is passed on as is.  A
     ///   record on an ancestor A is shared among the master groups below A: each gets
     ///   what its slave group uses now plus a share of the slack (limit minus what is
     ///   used below A, master wells included), in proportion to how much more lift
@@ -223,7 +223,7 @@ private:
         std::size_t group_idx,
         const typename GroupConstraintCalculator<Scalar, IndexTraits>::ProductionConstraintResult& constraints);
 
-    /// @brief Limit for one master group from a GLIFTOPT limit on group @p limit_group.
+    /// @brief Limit for one master group from a GLIFTOPT or GLIFTLIM limit on group @p limit_group.
     /// @details Called by calculateGasLiftGroupLimits_() for each pair of a master group and
     ///   a group @p limit_group, the master group itself or an ancestor of it, that has a
     ///   limit.  @p limit and @p total_use belong to @p limit_group, not to the master group;

@@ -206,7 +206,7 @@ public:
     /// @param num_limits Number of gas lift limit records to receive
     void receiveGasLiftGroupLimitsFromMaster(std::size_t num_limits);
 
-    /// @brief Gas lift limits (GLIFTOPT) the master imposes on a slave group, if any
+    /// @brief Gas lift limits (GLIFTOPT, GLIFTLIM) the master imposes on a slave group, if any
     /// @param gname Slave group name
     /// @return Pointer to the limits (-1 means no limit), or nullptr if none were received
     const ReservoirCoupling::GasLiftGroupLimits<Scalar>* masterGasLiftLimits(const std::string& gname) const;
@@ -349,7 +349,7 @@ private:
     // Per-rate-type production limits from master hierarchy. Key: slave group name.
     // A limit of -1 means no limit defined in the hierarchy for that rate type.
     std::map<std::string, MasterProductionLimits> master_production_limits_;
-    // Gas lift limits (GLIFTOPT) from the master. Key: slave group name.
+    // Gas lift limits (GLIFTOPT, GLIFTLIM) from the master. Key: slave group name.
     std::map<std::string, ReservoirCoupling::GasLiftGroupLimits<Scalar>> master_gas_lift_limits_;
     // Master-computed network-leaf node pressures keyed by slave group name. Only
     // populated for master groups that are leaf nodes in the master's extended
