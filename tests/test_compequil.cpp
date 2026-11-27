@@ -74,7 +74,8 @@ constexpr Scalar gravity = 9.80665;
 // A 1x1x20 vertical column from 2000 m to 2100 m in 5 m cells, filled with a
 // CO2/methane/decane mixture that grades from methane-rich at the top to
 // decane-rich at the bottom. This is the geometry used by the numeric
-// expectations below.
+// expectations below. FACTLI keeps the unscaled Li labelling, which a contact
+// among the cells would otherwise refit; see withoutFactli().
 std::string deckString(const std::string& equil,
                        const std::string& runspecExtra = "EQLDIMS\n/\n",
                        const std::string& regions = "",
@@ -119,6 +120,7 @@ std::string deckString(const std::string& equil,
         "MW\n44.00\n16.04\n142.28\n/\n"
         "VCRIT\n0.09412\n0.09863\n0.60980\n/\n"
         "STCOND\n15.0 1.0 /\n"
+        "FACTLI\n1.0 /\n"
         + propsExtra
         + regions +
         "SOLUTION\n"
@@ -233,6 +235,31 @@ std::string withTwoPvtRegions(std::string deck)
         deck.replace(pos, from.size(), to);
     }
     return deck;
+}
+
+// A deck from deckString() without FACTLI, so a type-1 contact among the cells
+// fits it.
+std::string withoutFactli(std::string deck)
+{
+    const std::string factli{"FACTLI\n1.0 /\n"};
+    const auto pos = deck.find(factli);
+    BOOST_REQUIRE(pos != std::string::npos);
+    return deck.erase(pos, factli.size());
+}
+
+// The Li critical temperature of a mixture of the deck's components,
+// sum(z Vc Tc) / sum(z Vc).
+Scalar liCriticalTemperature(const CompVec& z)
+{
+    constexpr CompVec vcrit{0.09412, 0.09863, 0.60980};
+    constexpr CompVec tcrit{304.128, 190.564, 617.7};
+    Scalar weighted = 0.0;
+    Scalar volume = 0.0;
+    for (int c = 0; c < 3; ++c) {
+        weighted += z[c] * vcrit[c] * tcrit[c];
+        volume += z[c] * vcrit[c];
+    }
+    return weighted / volume;
 }
 
 // A water zone at the base of each block of ten cells.
@@ -1877,6 +1904,110 @@ BOOST_AUTO_TEST_CASE(SaturatedType1GasCapIsNotReportedAsTwoPhase)
     BOOST_REQUIRE_EQUAL(split.size(), std::size_t{10});
     BOOST_CHECK_EQUAL(split.back(), 2047.5);
     BOOST_CHECK(warnings.messages.str().find("split into gas and liquid") == std::string::npos);
+}
+
+BOOST_AUTO_TEST_CASE(FactliFitsTheContactComposition)
+{
+    // Without FACTLI, a type-1 contact among the cells scales the Li critical
+    // temperature so that the composition there is just gas.
+    const EquilFixture fix(withoutFactli(deckString(
+        "EQUIL\n 2010 150 2300 0 2050 0 /\n", "EQLDIMS\n/\n", "",
+        "ZMFVD\n"
+        " 2000   0 0.7 0.3\n"
+        " 2100   0 0.3 0.7  /\n",
+        "RTEMP\n250\n/\n")));
+    const auto factors = fix.compute(std::vector<int>(20, 0)).liCorrelationFactors();
+    BOOST_REQUIRE_EQUAL(factors.size(), std::size_t{1});
+    BOOST_CHECK_CLOSE(factors[0], 0.999 * 523.15 / liCriticalTemperature(tableComposition(2050.0)),
+                      1e-10);
+}
+
+BOOST_AUTO_TEST_CASE(FactliFarFromOneStopsTheRun)
+{
+    // At 100 C the contact composition needs the Li critical temperature
+    // scaled by about 0.67, so the composition or the temperature is suspect.
+    const EquilFixture fix(withoutFactli(deckString("EQUIL\n 2010 150 2300 0 2050 0 /\n")));
+    BOOST_CHECK_EXCEPTION(fix.compute(std::vector<int>(20, 0)), std::runtime_error,
+                          [](const std::runtime_error& e) {
+                              const std::string what = e.what();
+                              return (what.find("FACTLI") != std::string::npos)
+                                  && (what.find("2050") != std::string::npos);
+                          });
+}
+
+BOOST_AUTO_TEST_CASE(GivenFactliIsNotFitted)
+{
+    const EquilFixture fix(withoutFactli(deckString("EQUIL\n 2010 150 2300 0 2050 0 /\n",
+                                                    "EQLDIMS\n/\n", "",
+                                                    "ZMFVD\n"
+                                                    " 2000   0 0.7 0.3\n"
+                                                    " 2100   0 0.3 0.7  /\n",
+                                                    "RTEMP\n100\n/\n", "OIL\nGAS\n",
+                                                    "FACTLI\n0.8 /\n")));
+    const auto factors = fix.compute(std::vector<int>(20, 0)).liCorrelationFactors();
+    BOOST_REQUIRE_EQUAL(factors.size(), std::size_t{1});
+    BOOST_CHECK_EQUAL(factors[0], 0.8);
+}
+
+BOOST_AUTO_TEST_CASE(FactliIsNotFittedWithoutAContactInTheHydrocarbon)
+{
+    // A contact above the cells, or one on the water-oil contact, separates no
+    // gas from liquid, so nothing is fitted. Above the cells no gas starts,
+    // and the factor stays one.
+    const EquilFixture above(withoutFactli(deckString("EQUIL\n 2010 150 2300 0 2000 0 /\n")));
+    BOOST_CHECK_EQUAL(above.compute(std::vector<int>(20, 0)).liCorrelationFactors()[0], 1.0);
+
+    // On the water-oil contact all the hydrocarbon starts as gas, which the
+    // default would label liquid, so the factor is lowered below the deepest,
+    // heaviest gas.
+    const WaterEquilFixture onWater(withoutFactli(
+        waterDeckString("EQUIL\n 2060 10 2050 0 2050 0 /\n")));
+    const auto factors = onWater.compute(std::vector<int>(20, 0),
+                                         std::vector<Scalar>(20, connateSw),
+                                         std::vector<Scalar>(20, 1.0)).liCorrelationFactors();
+    BOOST_CHECK_CLOSE(factors[0],
+                      0.99 * 373.15 / liCriticalTemperature(tableComposition(2047.5)), 1e-10);
+}
+
+BOOST_AUTO_TEST_CASE(DefaultedFactliIsLoweredBelowTheInitialGas)
+{
+    // Each half of the column holds a gas zone over a liquid one, its gas the
+    // heavier the deeper it lies. FACTLI gives region 1 its value and leaves
+    // region 2 to the default, under which the gas of either region would be
+    // labelled liquid. Region 2 is lowered below its heaviest gas, in cell 14,
+    // while region 1 keeps the value given.
+    const EquilFixture fix(deckString(
+        "EQUIL\n"
+        " 2035 200 2300 0 2025 0 /\n"
+        " 2085 200 2300 0 2075 0 /\n",
+        "EQLDIMS\n2 /\n"
+        "REGDIMS\n2 1 0 0 /\n",
+        "REGIONS\n"
+        "EQLNUM\n10*1 10*2 /\n",
+        "COMPVD\n"
+        " 2000   0 0.85 0.15  0  150.0\n"
+        " 2024   0 0.75 0.25  0  150.0\n"
+        " 2026   0 0.60 0.40  1  150.0\n"
+        " 2100   0 0.40 0.60  1  150.0 /\n"
+        " 2000   0 0.85 0.15  0  150.0\n"
+        " 2074   0 0.75 0.25  0  150.0\n"
+        " 2076   0 0.60 0.40  1  150.0\n"
+        " 2100   0 0.40 0.60  1  150.0 /\n"));
+    std::vector<int> eqlnum(20, 0);
+    std::fill(eqlnum.begin() + 10, eqlnum.end(), 1);
+    const auto factors = fix.compute(eqlnum).liCorrelationFactors();
+    BOOST_REQUIRE_EQUAL(factors.size(), std::size_t{2});
+
+    // Temperature over Li critical temperature of the gas at a depth of the
+    // gas zone ending at the last vapour row.
+    const auto gasRatio = [](const Scalar depth, const Scalar lastVaporDepth) {
+        const Scalar t = (depth - 2000.0) / (lastVaporDepth - 2000.0);
+        return 373.15 / liCriticalTemperature(CompVec{0.0, 0.85 - 0.10 * t, 0.15 + 0.10 * t});
+    };
+    BOOST_REQUIRE_LT(gasRatio(2022.5, 2024.0), 1.0);
+    BOOST_CHECK_EQUAL(factors[0], 1.0);
+    BOOST_REQUIRE_LT(gasRatio(2072.5, 2074.0), 1.0);
+    BOOST_CHECK_CLOSE(factors[1], 0.99 * gasRatio(2072.5, 2074.0), 1e-10);
 }
 
 namespace {

@@ -35,6 +35,7 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/material/common/Tabulated1DFunction.hpp>
+#include <opm/material/constraintsolvers/PTFlash.hpp>
 #include <opm/material/constraintsolvers/SaturationPressure.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 
@@ -180,6 +181,50 @@ private:
 };
 
 } // namespace Details
+
+/// Lower each FACTLI that the input leaves to its default where the gas an
+/// equilibration region starts with would otherwise be labelled liquid, to
+/// just below the smallest temperature over Li critical temperature of that
+/// gas. \p startingGas gives the composition of a cell's initial gas, or none
+/// for a cell without gas; \p states give the cell temperatures. Returns
+/// whether any factor was lowered.
+template <class Scalar, class FluidSystem, class FluidState, class StartingGas>
+bool lowerDefaultedLiFactors(std::vector<Scalar>& factors,
+                             const CompositionalConfig& compConfig,
+                             const std::vector<FluidState>& states,
+                             const std::vector<int>& regionOfCell,
+                             const StartingGas& startingGas,
+                             const Parallel::Communication& comm)
+{
+    if (!FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+        return false;
+    }
+    // The lowered factor labels that gas as gas with a 1% margin.
+    constexpr Scalar margin{0.99};
+
+    std::vector<Scalar> smallestRatio(factors.size(), std::numeric_limits<Scalar>::max());
+    for (std::size_t cell = 0; cell < states.size(); ++cell) {
+        if (const auto gas = startingGas(cell); gas.has_value()) {
+            auto& smallest = smallestRatio[regionOfCell[cell]];
+            smallest = std::min(smallest, states[cell].temperature(0)
+                                / PTFlash<Scalar, FluidSystem>::li_critical_temperature(*gas));
+        }
+    }
+    comm.min(smallestRatio.data(), static_cast<int>(smallestRatio.size()));
+
+    bool lowered = false;
+    for (std::size_t r = 0; r < factors.size(); ++r) {
+        if (compConfig.liCorrelationFactorGiven(r) || !(smallestRatio[r] < factors[r])) {
+            continue;
+        }
+        factors[r] = margin * smallestRatio[r];
+        lowered = true;
+        OpmLog::info(fmt::format("Equilibration region {}: FACTLI lowered to {:.7f} so that "
+                                 "the gas the region starts with is labelled gas.",
+                                 r + 1, factors[r]));
+    }
+    return lowered;
+}
 
 /*!
  * \brief Computes the initial state of a compositional model from hydrostatic
@@ -333,6 +378,7 @@ public:
                                            cellCenterDepth, eqlnum, pvtnum, comm, gravity,
                                            numSamplePoints, r));
         }
+        setLiCorrelationFactors(inputState.compositionalConfig(), records, regions_);
 
         const bool waterActive = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
         fluidStates_.resize(cellCenterDepth.size());
@@ -350,6 +396,20 @@ public:
                 twoPhaseCheckRegions_[cell] = eqlnum[cell];
             }
         }
+
+        lowerDefaultedLiFactors<Scalar, FluidSystem>(
+            liCorrelationFactors_, inputState.compositionalConfig(), fluidStates_, eqlnum,
+            [this, &eqlnum, &cellCenterDepth](const std::size_t cell) -> std::optional<CompVec> {
+                if (!startsAsGas(regions_[eqlnum[cell]], cellCenterDepth[cell])) {
+                    return std::nullopt;
+                }
+                CompVec z{};
+                for (int c = 0; c < numComponents; ++c) {
+                    z[c] = fluidStates_[cell].moleFraction(c);
+                }
+                return z;
+            },
+            comm);
     }
 
     std::vector<FluidState>& fluidStates()
@@ -434,6 +494,13 @@ public:
         return rows;
     }
 
+    /// FACTLI of each equilibration region: as given, or else fitted to the
+    /// composition at a type-1 gas-oil contact among the region's hydrocarbon
+    /// cells, or 1, and then lowered where the gas the region starts with would
+    /// be labelled liquid.
+    const std::vector<Scalar>& liCorrelationFactors() const
+    { return liCorrelationFactors_; }
+
 private:
     using CompVec = std::array<Scalar, FluidSystem::numComponents>;
     using TabulatedFunction = Tabulated1DFunction<Scalar>;
@@ -452,6 +519,14 @@ private:
     /// Regions thinner than this are padded by the same amount on either side,
     /// so the pressure integration never runs on a degenerate interval.
     static constexpr Scalar minimumSpanExtent{1.0};
+
+    /// A fitted FACTLI scales the Li critical temperature of the contact
+    /// composition to this fraction of the temperature there, so it is gas.
+    static constexpr Scalar contactLiMargin{0.999};
+
+    /// A fitted FACTLI outside this range means the composition and temperature
+    /// at the contact disagree with the correlation; the run stops.
+    static constexpr std::array<Scalar, 2> fittedLiFactorRange{0.9, 1.1};
 
     /// The equilibrated vertical distributions within one region.
     struct Region {
@@ -497,6 +572,10 @@ private:
         bool anchoredAtWaterContact{false};
         /// The water column of each PVT region in pvtRegions.
         std::map<unsigned, WaterPressFunc> waterPressure;
+
+        /// FACTLI that labels the type-1 composition at the gas-oil contact as
+        /// gas, when that contact lies among the region's hydrocarbon cells.
+        std::optional<Scalar> contactLiFactor;
     };
 
     /// Each pressure column must reach the water-oil contact before another
@@ -572,6 +651,40 @@ private:
         TabulatedFunction table;
         table.setXYContainers(depths, psat);
         return table;
+    }
+
+    /// FACTLI from the input, or else the fitted one, for every region.
+    void setLiCorrelationFactors(const CompositionalConfig& compConfig,
+                                 const Equil& records,
+                                 const std::vector<Region>& regions)
+    {
+        liCorrelationFactors_.assign(regions.size(), Scalar{1});
+        for (std::size_t r = 0; r < regions.size(); ++r) {
+            if (compConfig.liCorrelationFactorsSpecified()) {
+                liCorrelationFactors_[r] = compConfig.liCorrelationFactor(r);
+                continue;
+            }
+            if (!regions[r].contactLiFactor.has_value()) {
+                continue;
+            }
+
+            const Scalar factor = *regions[r].contactLiFactor;
+            if ((factor < fittedLiFactorRange[0]) || (factor > fittedLiFactorRange[1])) {
+                OPM_THROW(std::runtime_error,
+                          fmt::format("Equilibration region {}: the composition at the gas-oil "
+                                      "contact at {} m is labelled gas only with the Li critical "
+                                      "temperature scaled by {:.7f}, outside {} to {}. Check "
+                                      "the composition and temperature at the contact, or set "
+                                      "the factor with FACTLI.",
+                                      r + 1, records.getRecord(r).gasOilContactDepth(), factor,
+                                      fittedLiFactorRange[0], fittedLiFactorRange[1]));
+            }
+            liCorrelationFactors_[r] = factor;
+            OpmLog::info(fmt::format("Equilibration region {}: FACTLI set to {:.7f} so that "
+                                     "the composition at the gas-oil contact at {} m is "
+                                     "labelled gas.",
+                                     r + 1, factor, records.getRecord(r).gasOilContactDepth()));
+        }
     }
 
     /// Build per-component composition interpolants from the selected \p rows.
@@ -941,6 +1054,19 @@ private:
             return reg;
         }
         const Scalar deepestCellDepth = span[1];
+
+        // A type-1 contact among the hydrocarbon cells fixes the FACTLI at
+        // which the composition there is just labelled gas.
+        const Scalar contact = record.gasOilContactDepth();
+        const Scalar hydrocarbonBottom = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)
+            ? std::min(span[1], record.waterOilContactDepth()) : span[1];
+        if ((reg.initType == 1) && (contact > span[0]) && (contact < hydrocarbonBottom)) {
+            const CompVec z = composition(reg, contact);
+            const Scalar temp = Details::evalDepthTable(reg.tempVdTable, contact);
+            reg.contactLiFactor = contactLiMargin * temp
+                / PTFlash<Scalar, FluidSystem>::li_critical_temperature(z);
+        }
+
         if (span[1] - span[0] < minimumSpanExtent) {
             span = {span[0] - minimumSpanExtent, span[1] + minimumSpanExtent};
         }
@@ -1353,6 +1479,17 @@ private:
         return ((reg.initType == 3) || reg.twoZone) && (depth < reg.zgoc);
     }
 
+    /// Whether a cell at \p depth starts as gas: in the gas zone or above the
+    /// gas-oil contact, and in the hydrocarbon above the water-oil contact. The
+    /// nominal phase of a single-zone region does not decide this.
+    static bool startsAsGas(const Region& reg, const Scalar depth)
+    {
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && (depth > reg.zwoc)) {
+            return false;
+        }
+        return isInGasZone(reg, depth) || (depth < reg.zgoc);
+    }
+
     Scalar assignCell(FluidState& fs, const Region& reg, const unsigned pvtRegion,
                       const Scalar depth, const std::size_t cell) const
     {
@@ -1590,6 +1727,7 @@ private:
     std::vector<FluidState> fluidStates_;
     std::vector<Scalar> referencePressures_;
     std::vector<int> twoPhaseCheckRegions_;
+    std::vector<Scalar> liCorrelationFactors_;
 };
 
 /// Warn about the type-1 EQUIL cells that the initial flash splits into gas

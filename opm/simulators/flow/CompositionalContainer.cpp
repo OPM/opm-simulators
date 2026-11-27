@@ -96,6 +96,12 @@ allocate(const unsigned bufferSize,
         vmf = 0;
         vaporFraction_.resize(bufferSize, 0.0);
     }
+
+    liCorrelationFactor_.clear();
+    if (restartOutput == RestartOutput::Enabled) {
+        this->allocated_ = true;
+        liCorrelationFactor_.resize(bufferSize, 1.0);
+    }
 }
 
 template<class FluidSystem>
@@ -178,6 +184,16 @@ assignVaporFraction(const unsigned globalDofIdx,
 
 template<class FluidSystem>
 void CompositionalContainer<FluidSystem>::
+assignLiCorrelationFactor(const unsigned globalDofIdx,
+                          const Scalar factor)
+{
+    if (!liCorrelationFactor_.empty()) {
+        liCorrelationFactor_[globalDofIdx] = factor;
+    }
+}
+
+template<class FluidSystem>
+void CompositionalContainer<FluidSystem>::
 outputRestart(data::Solution& sol,
               ScalarBuffer& oil_saturation)
 {
@@ -233,6 +249,7 @@ outputRestart(data::Solution& sol,
     entries.emplace_back("PGAS", UnitSystem::measure::pressure, gasPressure_);
     entries.emplace_back("PSAT", UnitSystem::measure::pressure, saturationPressure_);
     entries.emplace_back("VMF", UnitSystem::measure::identity, vaporFraction_);
+    entries.emplace_back("LIFACT", UnitSystem::measure::identity, liCorrelationFactor_);
 
     std::ranges::for_each(entries,
                           [&doInsert](auto& array)

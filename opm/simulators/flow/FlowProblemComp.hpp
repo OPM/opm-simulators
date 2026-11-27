@@ -165,6 +165,13 @@ public:
         return eclState.compositionalConfig().eosType(0);
     }
 
+    /// FACTLI of the cell's equilibration region: the multiplier on the Li
+    /// critical temperature that labels a single-phase mixture.
+    Scalar liCorrelationFactor(const unsigned globalDofIdx) const
+    {
+        return liCorrelationFactors_.empty() ? Scalar{1} : liCorrelationFactors_[globalDofIdx];
+    }
+
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
@@ -467,16 +474,14 @@ protected:
         // we do nothing here for now
     }
 
-    void readEquilInitialCondition_() override
+    /// Zero-based equilibration region of every cell (EQLNUM, or region 0).
+    /// EQLNUM is given on the unrefined input grid while the equilibration
+    /// works on the leaf grid, so a refined cell takes its parent's region;
+    /// without local refinement the mapping is the identity.
+    std::vector<int> equilRegions_() const
     {
-        const auto& simulator = this->simulator();
-        const auto& vanguard = simulator.vanguard();
+        const auto& vanguard = this->simulator().vanguard();
         const auto& eclState = vanguard.eclState();
-
-        // Zero-based equilibration region of every cell (EQLNUM, or region 0).
-        // EQLNUM is given on the unrefined input grid while the equilibration
-        // works on the leaf grid, so a refined cell takes its parent's region;
-        // without local refinement the mapping is the identity.
         std::vector<int> eqlnum(this->model().numGridDof(), 0);
         if (eclState.fieldProps().has_int("EQLNUM")) {
             const LookUpData<typename GridView::Grid, GridView>
@@ -484,6 +489,27 @@ protected:
             eqlnum = lookUpData.template assignFieldPropsIntOnLeaf<int>(
                 eclState.fieldProps(), "EQLNUM", /*needsTranslation=*/true);
         }
+        return eqlnum;
+    }
+
+    /// Give every cell the FACTLI of its equilibration region.
+    template <class RegionFactors>
+    void setLiCorrelationFactors_(const std::vector<int>& eqlnum,
+                                  const RegionFactors& regionFactors)
+    {
+        liCorrelationFactors_.resize(eqlnum.size());
+        std::ranges::transform(eqlnum, liCorrelationFactors_.begin(),
+                               [&regionFactors](const int region)
+                               { return static_cast<Scalar>(regionFactors[region]); });
+    }
+
+    void readEquilInitialCondition_() override
+    {
+        const auto& simulator = this->simulator();
+        const auto& vanguard = simulator.vanguard();
+        const auto& eclState = vanguard.eclState();
+
+        const std::vector<int> eqlnum = equilRegions_();
 
         // The water saturation endpoints are selected by SATNUM and scaled per
         // cell, so they are read here rather than from the equilibration region.
@@ -519,6 +545,7 @@ protected:
 
         initialFluidStates_ = std::move(initialState.fluidStates());
         twoPhaseCheckRegions_ = std::move(initialState.twoPhaseCheckRegions());
+        setLiCorrelationFactors_(eqlnum, initialState.liCorrelationFactors());
         // The current flash has one pressure for all phases. Adapt the
         // independent equilibrium columns here, using the water column below
         // the contact. Once phase-pressure differences are supported by the
@@ -776,6 +803,30 @@ protected:
                             globalMaxDeviation));
         }
 
+        // FACTLI of each equilibration region, lowered where the region's initial
+        // gas (SGAS, of composition YMF or ZMF) would be labelled liquid.
+        const auto& compConfig = eclState.compositionalConfig();
+        std::vector<Scalar> liFactors(compConfig.liCorrelationFactors().begin(),
+                                      compConfig.liCorrelationFactors().end());
+        const std::vector<int> eqlnum = equilRegions_();
+        const bool lowered = EQUIL::Comp::lowerDefaultedLiFactors<Scalar, FluidSystem>(
+            liFactors, compConfig, initialFluidStates_, eqlnum,
+            [this](const std::size_t cell) -> std::optional<std::array<Scalar, numComponents>> {
+                const auto& fs = initialFluidStates_[cell];
+                if (!(fs.saturation(FluidSystem::gasPhaseIdx) > 0.0)) {
+                    return std::nullopt;
+                }
+                std::array<Scalar, numComponents> y{};
+                for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
+                    y[compIdx] = fs.moleFraction(FluidSystem::gasPhaseIdx, compIdx);
+                }
+                return y;
+            },
+            comm);
+        if (lowered || compConfig.liCorrelationFactorsSpecified()) {
+            setLiCorrelationFactors_(eqlnum, liFactors);
+        }
+
         if (water_active && Parameters::Get<Parameters::NormalizeExplicitSwat>()) {
             normalizeExplicitSwat_();
         }
@@ -802,7 +853,8 @@ protected:
         // A failing flash on one rank must not leave the others in the reduction below.
         const auto& comm = this->simulator().vanguard().grid().comm();
         OPM_BEGIN_PARALLEL_TRY_CATCH();
-        for (auto& fs : initialFluidStates_) {
+        for (std::size_t cell = 0; cell < initialFluidStates_.size(); ++cell) {
+            auto& fs = initialFluidStates_[cell];
             const Scalar sw_in = fs.saturation(FluidSystem::waterPhaseIdx);
             if (sw_in <= 0.0 || sw_in >= 1.0) {
                 continue;
@@ -857,7 +909,8 @@ protected:
             }
             flash_fs.setLvalue(-1.0);
             FlashSolver::flash_solve_scalar(
-                flash_fs, flash_method, flash_tolerance, eos_type, flash_verbosity);
+                flash_fs, flash_method, flash_tolerance, eos_type, flash_verbosity,
+                liCorrelationFactor(static_cast<unsigned>(cell)));
 
             // A single-phase result has L = 0 or 1, so only one phase counts.
             const Scalar L = flash_fs.L();
@@ -1067,6 +1120,8 @@ private:
     /// Set by EQUIL until the initial flash has been checked, see
     /// EQUIL::Comp::InitialStateComputer::twoPhaseCheckRegions().
     std::optional<std::vector<int>> twoPhaseCheckRegions_;
+    /// FACTLI of each cell, empty for the default of one everywhere.
+    std::vector<Scalar> liCorrelationFactors_;
 
     bool zmf_initialization_ {false};
 
