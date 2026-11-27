@@ -49,10 +49,12 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -280,6 +282,17 @@ public:
     std::vector<int> getCellsForConnections(const Well& well) const;
 
     bool reportStepStarts() const { return report_step_starts_; }
+
+    /// Whether the well has one of the events in \p eventMask at the start
+    /// of report step \p reportStepIdx.  Always false after the first time
+    /// step of the report step.
+    ///
+    /// A well whose state was loaded from the restart file does not count as
+    /// new (ScheduleEvents::NEW_WELL), although the Schedule built from the
+    /// restart file marks every well as new at the restart step.
+    bool hasWellEventAtReportStepStart(const std::string& wellName,
+                                       std::uint64_t eventMask,
+                                       int reportStepIdx) const;
 
     void updateClosedWellsThisStep(const std::string& well_name) const
     {
@@ -635,6 +648,9 @@ protected:
     bool initial_step_{};
     bool report_step_starts_{};
     bool deserialized_state_pending_{false};
+    // Wells whose state was loaded from the restart file.  Cleared at the end
+    // of the first report step.  See hasWellEventAtReportStepStart().
+    std::set<std::string> wells_loaded_from_restart_{};
 
     std::optional<int> last_run_wellpi_{};
 

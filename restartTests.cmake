@@ -61,6 +61,61 @@ add_test_compare_restarted_simulation(
     --tolerance-mb=1e-7
 )
 
+# Same model, restarted at a later step. The wells loaded from the restart
+# file must keep their restored state; a restart that treats them as new
+# wells gives different well results here.
+add_test_compare_restarted_simulation(
+  CASENAME
+    spe9_step17
+  FILENAME
+    SPE9_CP_SHORT
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  TEST_NAME
+    compareRestartedSim_${RESTART_SIM}+SPE9_CP_SHORT_STEP17
+  ABS_TOL
+    ${abs_tol_restart}
+  REL_TOL
+    ${rel_tol_restart}
+  RESTART_STEP
+    17
+  DIR
+    spe9
+  TEST_ARGS
+    --sched-restart=false
+    --tolerance-mb=1e-7
+)
+
+# The same restart with every well turned into a multisegment well.  The
+# restart file has no segment data for these wells, so their segment state
+# must be built when the run is restarted.
+add_test_compare_restarted_simulation(
+  CASENAME
+    spe9_step17_msw
+  FILENAME
+    SPE9_CP_SHORT
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  TEST_NAME
+    compareRestartedSim_${RESTART_SIM}+SPE9_CP_SHORT_STEP17_MSW
+  ABS_TOL
+    ${abs_tol_restart}
+  REL_TOL
+    ${rel_tol_restart}
+  RESTART_STEP
+    17
+  DIR
+    spe9
+  TEST_ARGS
+    --sched-restart=false
+    --tolerance-mb=1e-7
+    --convert-to-multisegment-well=per-connection
+)
+
 add_test_compare_restarted_simulation(
   CASENAME
     ctaquifer_2d_oilwater

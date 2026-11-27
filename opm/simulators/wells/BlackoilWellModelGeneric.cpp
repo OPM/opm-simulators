@@ -213,6 +213,23 @@ getWellEcl(const std::string& well_name) const
 }
 
 template<typename Scalar, typename IndexTraits>
+bool BlackoilWellModelGeneric<Scalar, IndexTraits>::
+hasWellEventAtReportStepStart(const std::string& wellName,
+                              const std::uint64_t eventMask,
+                              const int reportStepIdx) const
+{
+    if (!this->report_step_starts_) {
+        return false;
+    }
+
+    const auto mask = this->wells_loaded_from_restart_.contains(wellName)
+        ? (eventMask & ~ScheduleEvents::NEW_WELL)
+        : eventMask;
+
+    return this->schedule()[reportStepIdx].wellgroup_events().hasEvent(wellName, mask);
+}
+
+template<typename Scalar, typename IndexTraits>
 void BlackoilWellModelGeneric<Scalar, IndexTraits>::
 initFromRestartFile(const RestartValue& restartValues,
                     std::unique_ptr<WellTestState> wtestState,
@@ -248,6 +265,23 @@ initFromRestartFile(const RestartValue& restartValues,
                         handle_ms_well,
                         this->wellState(),
                         this->groupState());
+
+    // A multisegment well whose restart record has no segment data, for
+    // instance a well that is a multisegment well in this run only, has
+    // not had its complete state restored.  It keeps its NEW_WELL event,
+    // so that its initial well solve builds the segment state.
+    for (const auto& [wname, rst_well] : restartValues.wells) {
+        const auto well = std::ranges::find_if(this->wells_ecl_,
+                                               [&wname](const auto& w)
+                                               { return w.name() == wname; });
+        const bool segments_missing = handle_ms_well
+            && (well != this->wells_ecl_.end())
+            && well->isMultiSegment()
+            && rst_well.segments.empty();
+        if (!segments_missing) {
+            this->wells_loaded_from_restart_.insert(wname);
+        }
+    }
 
     // Reconstruct the retained network THP limit, which the restart file does
     // not carry. A well is attached to the network when its group is a network

@@ -187,11 +187,11 @@ namespace Opm {
     {
         const uint64_t effective_events_mask = ScheduleEvents::WELL_STATUS_CHANGE
                         + ScheduleEvents::NEW_WELL;
-        const auto& events = this->schedule()[reportStepIdx].wellgroup_events();
         for (auto& wellPtr : this->well_container_) {
-            const bool well_opened_this_step = this->report_step_starts_ &&
-                                               events.hasEvent(wellPtr->name(),
-                                                               effective_events_mask);
+            const bool well_opened_this_step =
+                this->hasWellEventAtReportStepStart(wellPtr->name(),
+                                                    effective_events_mask,
+                                                    reportStepIdx);
             wellPtr->init(this->depth_, this->gravity_,
                           this->B_avg_, well_opened_this_step);
         }
@@ -549,8 +549,9 @@ namespace Opm {
                         + ScheduleEvents::WELL_SWITCHED_INJECTOR_PRODUCER
                         + ScheduleEvents::NEW_WELL;
 
-                const auto& events = this->schedule()[reportStepIdx].wellgroup_events();
-                const bool event = this->report_step_starts_ && events.hasEvent(well->name(), effective_events_mask);
+                const bool event = this->hasWellEventAtReportStepStart(well->name(),
+                                                                       effective_events_mask,
+                                                                       reportStepIdx);
                 const bool dyn_status_change = this->wellState().well(well->name()).status
                         != this->prevWellState().well(well->name()).status;
 
@@ -686,6 +687,11 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     endReportStep()
     {
+        // Only the restart step treats the wells loaded from the restart file
+        // differently.  From the next report step on, NEW_WELL comes from the
+        // deck alone.
+        this->wells_loaded_from_restart_.clear();
+
         // Clear the communication data structures for above values.
         for (auto&& pinfo : this->local_parallel_well_info_)
         {

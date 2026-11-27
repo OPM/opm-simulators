@@ -370,6 +370,11 @@ public:
     using BlackoilWellModelGeneric<double, IndexTraits>::honorOpenRequest;
 
     void setRollbackEnabled(bool value) { enable_state_rollback_ = value; }
+    void setReportStepStarts(bool value) { report_step_starts_ = value; }
+    void setWellsLoadedFromRestart(std::set<std::string> wells)
+    {
+        wells_loaded_from_restart_ = std::move(wells);
+    }
 
     void setSerializationTestData()
     {
@@ -516,6 +521,82 @@ COMPDAT
     state.open_completions("W1");
     well.updateCrossFlow(false);
     BOOST_CHECK(model.closedWellStatus(well) == Opm::WellStatus::SHUT);
+}
+
+BOOST_AUTO_TEST_CASE(WellEventAtReportStepStart)
+{
+    // W1 stands for a well loaded from a restart file, W2 for a well that
+    // is new at the restart step.  Both are defined at report step 0; W1 is
+    // shut at report step 1.
+    const auto deck = Opm::Parser{}.parseString(R"(
+RUNSPEC
+DIMENS
+ 1 1 2 /
+OIL
+GRID
+DX
+ 2*100 /
+DY
+ 2*100 /
+DZ
+ 2*10 /
+TOPS
+ 2*1000 /
+PORO
+ 2*0.3 /
+PERMX
+ 2*100 /
+PERMY
+ 2*100 /
+PERMZ
+ 2*10 /
+SCHEDULE
+WELSPECS
+ 'W1' 'G1' 1 1 1* 'OIL' /
+ 'W2' 'G1' 1 1 1* 'OIL' /
+/
+COMPDAT
+ 'W1' 1 1 1 1 'OPEN' 1* 1.0 0.2 /
+ 'W2' 1 1 2 2 'OPEN' 1* 1.0 0.2 /
+/
+WCONPROD
+ 'W1' 'OPEN' 'ORAT' 100 4* 100 /
+ 'W2' 'OPEN' 'ORAT' 100 4* 100 /
+/
+DATES
+ 1 JAN 2000 /
+/
+WELOPEN
+ 'W1' 'SHUT' /
+/
+)");
+    Opm::EclipseState es{deck};
+    Opm::Schedule schedule{deck, es, std::make_shared<Opm::Python>()};
+    Opm::SummaryState summary;
+    Opm::PhaseUsage phaseUsage;
+    Opm::Parallel::Communication comm;
+    Opm::BlackoilWellModelGasLiftGenericTest gaslift;
+    Opm::BlackoilWellModelGenericTest model{schedule, gaslift, summary, es, phaseUsage, comm, false};
+
+    constexpr auto new_well = Opm::ScheduleEvents::NEW_WELL;
+    constexpr auto status_or_new = Opm::ScheduleEvents::WELL_STATUS_CHANGE
+        + Opm::ScheduleEvents::NEW_WELL;
+
+    model.setWellsLoadedFromRestart({"W1"});
+    model.setReportStepStarts(true);
+
+    // NEW_WELL is masked for a loaded well, and kept for a well that is not.
+    BOOST_CHECK(!model.hasWellEventAtReportStepStart("W1", new_well, 0));
+    BOOST_CHECK(model.hasWellEventAtReportStepStart("W2", new_well, 0));
+
+    // Another event of a loaded well stays visible.
+    BOOST_CHECK(model.hasWellEventAtReportStepStart("W1", status_or_new, 1));
+    BOOST_CHECK(!model.hasWellEventAtReportStepStart("W2", status_or_new, 1));
+
+    // After the first time step of the report step, there are no events.
+    model.setReportStepStarts(false);
+    BOOST_CHECK(!model.hasWellEventAtReportStepStart("W2", new_well, 0));
+    BOOST_CHECK(!model.hasWellEventAtReportStepStart("W1", status_or_new, 1));
 }
 
 template<class Grid, class GridView, class DofMapper, class Stencil, class FluidSystem, class Scalar>
