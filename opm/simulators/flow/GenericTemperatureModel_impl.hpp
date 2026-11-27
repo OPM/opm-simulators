@@ -81,11 +81,13 @@ createParallelFlexibleSolver(const Grid&, const Matrix&, const PropertyTree&)
     return {nullptr, nullptr};
 }
 
-template<class Vector, class Matrix>
+// For the grids that provide the owner-overlap-copy communication of their cells (CpGrid and PolyhedralGrid).
+template<class Vector, class Grid, class Matrix>
+    requires requires(const Grid& g) { g.cellCommunication(); }
 std::tuple<std::unique_ptr<Dune::OverlappingSchwarzOperator<Matrix,Vector,Vector,
                                                             Dune::OwnerOverlapCopyCommunication<int,int>>>,
            std::unique_ptr<typename EnergySolverSelector<Matrix,Vector>::type>>
-createParallelFlexibleSolver(const Dune::CpGrid& grid, const Matrix& M, const PropertyTree& prm)
+createParallelFlexibleSolver(const Grid& grid, const Matrix& M, const PropertyTree& prm)
 {
         using EnergyOperator = Dune::OverlappingSchwarzOperator<Matrix,Vector,Vector,
                                                                 Dune::OwnerOverlapCopyCommunication<int,int>>;
