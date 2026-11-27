@@ -48,6 +48,11 @@ public:
     /// number of segments for this well
     int numberOfSegments() const;
 
+    const typename WellInterfaceGeneric<Scalar, IndexTraits>::ModelParameters& modelParameters() const
+    {
+      return baseif_.modelParameters();
+    }
+
 protected:
     explicit MultisegmentWellGeneric(WellInterfaceGeneric<Scalar, IndexTraits>& baseif);
 
