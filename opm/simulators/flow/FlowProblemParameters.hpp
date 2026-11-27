@@ -50,6 +50,10 @@ struct CheckSatfuncConsistency { static constexpr bool value = true; };
 // regions that are not in hydrostatic equilibrium with each other.
 struct AllowInconsistentAquiferEquilibration { static constexpr bool value = false; };
 
+// Whether SWATINIT may scale the maximum capillary pressure up in cells
+// where SWATINIT is at or below the connate water saturation.
+struct SwatinitPcScaleUpAtConnate { static constexpr bool value = false; };
+
 // Maximum number of reported failures for each saturation function
 // consistency check.
 struct NumSatfuncConsistencySamplePoints { static constexpr int value = 5; };

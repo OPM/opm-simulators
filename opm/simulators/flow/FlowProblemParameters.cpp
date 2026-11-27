@@ -75,6 +75,12 @@ void registerFlowProblemParameters()
          "equilibrium with each other, giving an initial transient. "
          "Otherwise the simulation stops and the deck changes resolving this are reported.");
 
+    Parameters::Register<Parameters::SwatinitPcScaleUpAtConnate>
+        ("Allow SWATINIT to scale the maximum capillary pressure up in cells where the "
+         "SWATINIT value is at or below the connate water saturation. If false (default), "
+         "the capillary pressure curve of such a cell is only scaled down, and is left "
+         "unscaled if honouring SWATINIT would require a larger maximum capillary pressure.");
+
     Parameters::Register<Parameters::NumSatfuncConsistencySamplePoints>
         ("Maximum number of reported failures for each individual saturation function consistency check");
 
