@@ -605,7 +605,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"TIGHTEN", {true, std::nullopt}},
         {"TIGHTENP", {true, std::nullopt}},
         {"TIME", {true, std::nullopt}},
-        {"TNUM", {true, std::nullopt}},
         {"TPAMEPS", {true, std::nullopt}},
         {"TPAMEPSS", {true, std::nullopt}},
         {"TRACERKM", {true, std::nullopt}},
