@@ -937,25 +937,100 @@ CollectDataOnIORank(const Grid& grid, const EquilGrid* equilGrid,
             fipRegionsInterregFlow.end()
         }))
 {
-    // Build index maps only when reordering is needed; skip in parallel runs for CpGrid with LGRs
-    if ((!needsReordering && !isParallel()) || (isParallel() && (grid.maxLevel()>0)))
+    // Nothing to do in serial runs that don't need reordering.
+    if (!needsReordering && !isParallel())
         return;
 
     const CollectiveCommunication& comm = grid.comm();
+
+    // Unique global cell id used to gather distributed cell data onto the I/O
+    // rank.  For an unrefined grid this is the level-zero Cartesian index.  For
+    // a CpGrid with LGRs the Cartesian index is no longer unique (refined
+    // children share their parent's Cartesian index), so use a composite id
+    // levelOffset[level] + level-local-Cartesian-index that is unique across
+    // all leaf cells and consistent between the distributed grid and the
+    // (refined) I/O-rank reference grid.  getLevelCartesianIdx() reduces to the
+    // ordinary level-zero Cartesian index for an unrefined grid.
+    auto makeLevelOffsets = [](const auto& cpGrid) {
+        std::vector<std::size_t> off(cpGrid.maxLevel() + 2, std::size_t{0});
+        // currentData() (per-level grids) is CpGrid-only. For other backends
+        // (ALUGrid, polyhedral) there is no LGR, so the offsets stay trivial and
+        // are unused (refined/refinedFlat are false below).
+        if constexpr (requires { cpGrid.currentData(); }) {
+            for (int l = 0; l <= cpGrid.maxLevel(); ++l) {
+                const auto& d = cpGrid.currentData()[l]->logicalCartesianSize();
+                off[l + 1] = off[l] + static_cast<std::size_t>(d[0]) * d[1] * d[2];
+            }
+        }
+        return off;
+    };
 
     {
         std::set<int> send, recv;
         using EquilGridView = typename EquilGrid::LeafGridView;
         typename std::is_same<Grid, EquilGrid>::type isSameGrid;
 
+        const bool refined = grid.maxLevel() > 0;
+        const auto localLevelOffsets = makeLevelOffsets(grid);
+
+        // refine-before-redistribute: the distributed grid is the flat refined
+        // leaf (refined cells but maxLevel() == 0), so the level-offset id above
+        // is unavailable. Instead build a composite id from the parent Cartesian
+        // index (global_cell_, shared by refined siblings) and the cell's
+        // index-in-parent: coarse cell -> its Cartesian index; refined cell ->
+        // a disjoint range cartDimsProduct + parentCartesian*childStride +
+        // indexInParent. childStride is the global max index-in-parent + 1, so
+        // the mapping is injective and identical on the distributed leaf and the
+        // refined I/O-rank reference grid (both carry the same parent Cartesian
+        // and index-in-parent per cell).
+        // leafHasParentCellIndices()/getIdxInParentCell() are CpGrid-only; for
+        // other grid backends there is no flat refined leaf, so this is disabled.
+        bool refinedFlat = false;
+        std::int64_t cartProduct = 0;
+        int childStride = 1;
+        if constexpr (requires { grid.leafHasParentCellIndices(); }) {
+            refinedFlat = !refined && grid.leafHasParentCellIndices();
+            if (refinedFlat) {
+                const auto& d = grid.logicalCartesianSize();
+                cartProduct = static_cast<std::int64_t>(d[0]) * d[1] * d[2];
+                int localMaxChild = 0;
+                for (const auto& elem : elements(localGridView, Dune::Partitions::interior)) {
+                    localMaxChild = std::max(localMaxChild, elem.getIdxInParentCell());
+                }
+                childStride = comm.max(localMaxChild) + 1;
+            }
+        }
+        auto compositeRefinedId = [cartProduct, childStride](int parentCartesian, int idxInParent) -> int {
+            if (idxInParent < 0) {
+                return parentCartesian; // coarse leaf cell
+            }
+            return static_cast<int>(cartProduct
+                + static_cast<std::int64_t>(parentCartesian) * childStride + idxInParent);
+        };
+
         typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView> ElementMapper;
         ElementMapper elemMapper(localGridView, Dune::mcmgElementLayout());
         sortedCartesianIdx_.reserve(localGridView.size(0));
 
+        auto localGlobalId = [&](const auto& elem) -> int {
+            // The level-offset / composite-id logic uses CpGrid-only entity
+            // methods; other backends fall through to the level-zero Cartesian id.
+            if constexpr (requires { elem.getLevelCartesianIdx(); elem.getIdxInParentCell(); }) {
+                if (refined) {
+                    return static_cast<int>(localLevelOffsets[elem.level()])
+                        + elem.getLevelCartesianIdx();
+                }
+                if (refinedFlat) {
+                    return compositeRefinedId(cartMapper.cartesianIndex(elemMapper.index(elem)),
+                                              elem.getIdxInParentCell());
+                }
+            }
+            return cartMapper.cartesianIndex(elemMapper.index(elem));
+        };
+
         for (const auto& elem : elements(localGridView, Dune::Partitions::interior))
         {
-            auto idx = elemMapper.index(elem);
-            sortedCartesianIdx_.push_back(cartMapper.cartesianIndex(idx));
+            sortedCartesianIdx_.push_back(localGlobalId(elem));
         }
 
         std::ranges::sort(sortedCartesianIdx_);
@@ -979,11 +1054,25 @@ CollectDataOnIORank(const Grid& grid, const EquilGrid* equilGrid,
              grid.scatterData(handle);
            }
 
-            // loop over all elements (global grid) and store Cartesian index
+            // loop over all elements (global grid) and store the global cell id
+            const auto equilLevelOffsets = makeLevelOffsets(*equilGrid);
             for (const auto& elem : elements(equilGrid->leafGridView())) {
                 int elemIdx = equilElemMapper.index(elem);
-                int cartElemIdx = equilCartMapper->cartesianIndex(elemIdx);
-                globalCartesianIndex_[elemIdx] = cartElemIdx;
+                int globalId = equilCartMapper->cartesianIndex(elemIdx);
+                // CpGrid-only LGR id logic; other backends keep the Cartesian id.
+                if constexpr (requires { elem.getLevelCartesianIdx(); elem.getIdxInParentCell(); }) {
+                    if (refined) {
+                        globalId = static_cast<int>(equilLevelOffsets[elem.level()]) + elem.getLevelCartesianIdx();
+                    }
+                    else if (refinedFlat) {
+                        // The I/O-rank reference grid is the full refined leaf and
+                        // carries the same parent Cartesian + index-in-parent per
+                        // cell, so the composite id matches the distributed leaf's.
+                        globalId = compositeRefinedId(equilCartMapper->cartesianIndex(elemIdx),
+                                                      elem.getIdxInParentCell());
+                    }
+                }
+                globalCartesianIndex_[elemIdx] = globalId;
             }
 
             for (int i = 0; i < comm.size(); ++i) {
@@ -1023,7 +1112,7 @@ CollectDataOnIORank(const Grid& grid, const EquilGrid* equilGrid,
         // A mapping for the whole grid (including the ghosts) is needed for restarts
         for (const auto& elem : elements(localGridView, Dune::Partitions::interior)) {
             int elemIdx = elemMapper.index(elem);
-            distributedCartesianIndex[elemIdx] = cartMapper.cartesianIndex(elemIdx);
+            distributedCartesianIndex[elemIdx] = localGlobalId(elem);
 
             // only store interior element for collection
             assert(elem.partitionType() == Dune::InteriorEntity);
@@ -1081,6 +1170,41 @@ collect(const data::Solution&                                localCellData,
     // index maps only have to be build when reordering is needed
     if(!needsReordering && !isParallel())
         return;
+
+    // For parallel runs on refined (LGR) grids the constructor does not build
+    // the cell-index reordering maps (gather-to-I/O-rank of cell data is not
+    // implemented there).  The name-keyed data (wells, groups, well-block
+    // pressures, aquifers, well-test state, inter-region flows) does not need
+    // those maps, so still gather it via the I/O-rank linkage and skip only the
+    // cell/block reordering.
+    if (isParallel() && indexMaps_.empty()) {
+        PackUnPackWellData packUnpackWellData {
+            localWellData, this->globalWellData_, this->isIORank()
+        };
+        PackUnPackGroupAndNetworkValues packUnpackGroupAndNetworkData {
+            localGroupAndNetworkData, this->globalGroupAndNetworkData_, this->isIORank()
+        };
+        PackUnPackWBPData packUnpackWBPData {
+            localWBPData, this->globalWBPData_, this->isIORank()
+        };
+        PackUnPackAquiferData packUnpackAquiferData {
+            localAquiferData, this->globalAquiferData_, this->isIORank()
+        };
+        PackUnPackWellTestState packUnpackWellTestState {
+            localWellTestState, this->globalWellTestState_, this->isIORank()
+        };
+        PackUnpackInterRegFlows packUnpackInterRegFlows {
+            localInterRegFlows, this->globalInterRegFlows_, this->isIORank()
+        };
+
+        toIORankComm_.exchange(packUnpackWellData);
+        toIORankComm_.exchange(packUnpackGroupAndNetworkData);
+        toIORankComm_.exchange(packUnpackWBPData);
+        toIORankComm_.exchange(packUnpackAquiferData);
+        toIORankComm_.exchange(packUnpackWellTestState);
+        toIORankComm_.exchange(packUnpackInterRegFlows);
+        return;
+    }
 
     // this also linearises the local buffers on ioRank
     PackUnPackCellData packUnpackCellData {
