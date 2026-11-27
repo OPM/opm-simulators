@@ -130,9 +130,9 @@ public:
 
     // Output debug flags for which tolerances used
     enum class DebugFlags {
-        STRICT = 0,
-        RELAXED = 1,
-        TUNINGDP = 2
+        Strict = 0,
+        Relaxed = 1,
+        TuningDP = 2
     };
 
     // ---------  Public methods  ---------
