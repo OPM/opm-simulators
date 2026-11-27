@@ -32,6 +32,8 @@
 
 #include <array>
 #include <cstdlib>
+#include <exception>
+#include <iostream>
 #include <tuple>
 
 #include "flow_comp.hpp"
@@ -90,20 +92,27 @@ main(int argc, char** argv)
     // and for this we need to first read the CLI arguments.
     Opm::setupParameters_<TypeTag>(argc, const_cast<const char**>(argv), true, false, true, 0);
 
-    auto inputFilename
-        = Opm::FlowGenericVanguard::canonicalDeckPath(Opm::Parameters::Get<Opm::Parameters::EclDeckFileName>());
+    int numComps = 0;
+    bool wat = false;
+    try {
+        auto inputFilename = Opm::FlowGenericVanguard::canonicalDeckPath(
+            Opm::Parameters::Get<Opm::Parameters::EclDeckFileName>());
 
-    // Use the selected simulator mode and ignored keywords during this early RUNSPEC
-    // parse as well.
-    Opm::ParseContext parseContext;
-    parseContext.setInputSkipMode(Opm::Parameters::Get<Opm::Parameters::InputSkipMode>());
-    Opm::ignoreKeywords(parseContext, Opm::Parameters::Get<Opm::Parameters::IgnoreKeywords>());
-    const auto deck = Opm::Parser {}.parseFile(inputFilename, parseContext,
-                                               std::vector {Opm::Ecl::SectionType::RUNSPEC});
-    const auto runspec = Opm::Runspec(deck);
-    const auto numComps = static_cast<int>(runspec.numComps());
-    const auto& phases = runspec.phases();
-    const auto wat = phases.active(Opm::Phase::WATER);
+        // Use the selected simulator mode and ignored keywords during this early RUNSPEC
+        // parse as well.
+        Opm::ParseContext parseContext;
+        parseContext.setInputSkipMode(Opm::Parameters::Get<Opm::Parameters::InputSkipMode>());
+        Opm::ignoreKeywords(parseContext, Opm::Parameters::Get<Opm::Parameters::IgnoreKeywords>());
+        const auto deck = Opm::Parser {}.parseFile(
+            inputFilename, parseContext, std::vector {Opm::Ecl::SectionType::RUNSPEC});
+        const auto runspec = Opm::Runspec(deck);
+        numComps = static_cast<int>(runspec.numComps());
+        wat = runspec.phases().active(Opm::Phase::WATER);
+    } catch (const std::exception& e) {
+        // MPI is not initialized yet, so every rank reports this.
+        std::cerr << "Failed to read the RUNSPEC section.\n" << e.what() << '\n';
+        return EXIT_FAILURE;
+    }
 
     Opm::Parameters::reset();
 
