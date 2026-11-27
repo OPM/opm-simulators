@@ -517,6 +517,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_flashcompositionstep.cpp
   tests/test_flashphasepresence.cpp
   tests/test_flexiblesolver.cpp
+  tests/test_flow_thresholdpressure.cpp
   tests/test_GasSatfuncConsistencyChecks.cpp
   tests/test_gconsump.cpp
   tests/test_glift1.cpp
@@ -726,6 +727,7 @@ list (APPEND TEST_DATA_FILES
   tests/numaquifer_equil_immobile.DATA
   tests/numaquifer_equil_mismatch.DATA
   tests/numaquifer_equil_tolerance.DATA
+  tests/thpres_default_phases.DATA
   tests/equil_capillary.DATA
   tests/equil_capillary_overlap.DATA
   tests/equil_capillary_swatinit.DATA
