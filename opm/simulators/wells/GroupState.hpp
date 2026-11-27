@@ -98,6 +98,7 @@ public:
     void update_grat_sales_target(const std::string& gname, Scalar target);
     Scalar grat_sales_target(const std::string& gname) const;
     bool has_grat_sales_target(const std::string& gname) const;
+    void clear_grat_sales_target(const std::string& gname);
 
     void update_gpmaint_target(const std::string& gname, Scalar target);
     Scalar gpmaint_target(const std::string& gname) const;

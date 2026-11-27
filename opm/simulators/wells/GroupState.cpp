@@ -415,6 +415,13 @@ has_grat_sales_target(const std::string& gname) const
     return (this->m_grat_sales_target.count(gname) > 0);
 }
 
+template<class Scalar>
+void GroupState<Scalar>::
+clear_grat_sales_target(const std::string& gname)
+{
+    this->m_grat_sales_target.erase(gname);
+}
+
 //-------------------------------------------------------------------------
 
 // For injector groups. We can have a control for each phase.
