@@ -1,16 +1,14 @@
-set(PYTHON_OPM_SIMULATORS_PACKAGE_PATH ${PROJECT_BINARY_DIR}/python/opm/simulators)
+set(PYTHON_OPM_SIMULATORS_PACKAGE_PATH ${OPM_SIMULATORS_PYTHON_BUILD_DIR}/opm/simulators)
 
 # Set the path to the input docstrings.json file and the output .hpp files
 set(PYTHON_DOCSTRINGS_FILE "${PROJECT_SOURCE_DIR}/python/docstrings_simulators.json")
-set(PYTHON_DOCSTRINGS_GENERATED_HPP "${PROJECT_BINARY_DIR}/python/PyBlackOilSimulatorDoc.hpp")
-set(PYTHON_GW_DOCSTRINGS_GENERATED_HPP "${PROJECT_BINARY_DIR}/python/PyGasWaterSimulatorDoc.hpp")
-set(PYTHON_OP_DOCSTRINGS_GENERATED_HPP "${PROJECT_BINARY_DIR}/python/PyOnePhaseSimulatorDoc.hpp")
+set(PYTHON_DOCSTRINGS_GENERATED_HPP "${PROJECT_BINARY_DIR}/generated/include/python/PyBlackOilSimulatorDoc.hpp")
+set(PYTHON_GW_DOCSTRINGS_GENERATED_HPP "${PROJECT_BINARY_DIR}/generated/include/python/PyGasWaterSimulatorDoc.hpp")
+set(PYTHON_OP_DOCSTRINGS_GENERATED_HPP "${PROJECT_BINARY_DIR}/generated/include/python/PyOnePhaseSimulatorDoc.hpp")
 
 # Command to run the Python script
 
-find_file(PYTHON_GENERATE_DOCSTRINGS_PY generate_docstring_hpp.py
-  PATHS ${opm-common_DIR} ${opm-common_PYTHON_COMMON_DIR}
-  PATH_SUFFIXES python NO_DEFAULT_PATH REQUIRED)
+set(PYTHON_GENERATE_DOCSTRINGS_PY ${opm-common_PYTHON_COMMON_DIR}/generate_docstring_hpp.py)
 
 add_custom_command(
     OUTPUT
@@ -103,9 +101,7 @@ add_custom_target(python_tests
   COMMENT "Building Python test dependencies (modules and test files)"
 )
 
-find_file(PYTHON_INSTALL_PY install.py
-  PATHS ${opm-common_DIR} ${opm-common_PYTHON_COMMON_DIR}
-  PATH_SUFFIXES python NO_DEFAULT_PATH REQUIRED)
+set(PYTHON_INSTALL_PY ${opm-common_PYTHON_COMMON_DIR}/install.py)
 
 # NOTE: instead of using file( COPY ...) which copies the files at configure time (not at build time)
 #  we should add copying of the files at build time such that running "make" or "make all" will
@@ -116,20 +112,31 @@ add_custom_target(copy_python ALL
       $<TARGET_FILE:Python3::Interpreter>
       "${PYTHON_INSTALL_PY}"
       ${PROJECT_SOURCE_DIR}/python/opm
-      ${PROJECT_BINARY_DIR}/python
+      ${OPM_SIMULATORS_PYTHON_BUILD_DIR}
       0
     COMMAND
       $<TARGET_FILE:Python3::Interpreter>
       "${PYTHON_INSTALL_PY}"
       ${PROJECT_SOURCE_DIR}/python/test
-      ${PROJECT_BINARY_DIR}/python
+      ${OPM_SIMULATORS_PYTHON_BUILD_DIR}
       0
+    # Tests find test_data via ../test_data relative to their own file, and
+    # write simulator output into it, so it must sit next to test/.
     COMMAND
       $<TARGET_FILE:Python3::Interpreter>
       "${PYTHON_INSTALL_PY}"
       ${PROJECT_SOURCE_DIR}/python/test_data
-      ${PROJECT_BINARY_DIR}/python
+      ${OPM_SIMULATORS_PYTHON_BUILD_DIR}
       0
+    # Packaging files read by the generated setup.py, next to the package.
+    COMMAND
+      ${CMAKE_COMMAND} -E copy_if_different
+      ${PROJECT_SOURCE_DIR}/python/opm/CMakeLists.txt
+      ${PROJECT_SOURCE_DIR}/python/requirements.txt
+      ${PROJECT_SOURCE_DIR}/python/README.md
+      ${PROJECT_SOURCE_DIR}/python/MANIFEST.in
+      ${PROJECT_SOURCE_DIR}/python/pyproject.toml
+      ${OPM_SIMULATORS_PYTHON_BUILD_DIR}
 )
 
 foreach(target_name IN ITEMS BlackOil GasWater OnePhase)
@@ -139,9 +146,9 @@ foreach(target_name IN ITEMS BlackOil GasWater OnePhase)
   target_link_libraries( ${target_name} PRIVATE opmsimulators )
   # Add the binary (build) directory to the include directories for the target
 
-    # Add the build directory where the generated hpp file will be
+  # Add the build directory where the generated hpp file will be
   #  to the include directories for the target
-  target_include_directories(${target_name} PRIVATE ${PROJECT_BINARY_DIR}/python)
+  target_include_directories(${target_name} PRIVATE ${PROJECT_BINARY_DIR}/generated/include/python)
   add_dependencies(${target_name} copy_python)
 
   # Since the installation of Python code is nonstandard it is protected by an
@@ -154,20 +161,24 @@ foreach(target_name IN ITEMS BlackOil GasWater OnePhase)
       TARGETS
         ${target_name}
       DESTINATION
-        ${DEST_PREFIX}${CMAKE_INSTALL_PREFIX}/${PYTHON_INSTALL_PREFIX}/opm
-    )
-    install(
-      CODE "execute_process(
-            COMMAND
-              $<TARGET_FILE:Python3::Interpreter>
-              ${PYTHON_INSTALL_PY}
-              ${PROJECT_BINARY_DIR}/python/opm
-              ${DEST_PREFIX}${CMAKE_INSTALL_PREFIX}/${PYTHON_INSTALL_PREFIX}
-              1
-            )"
+        $<INSTALL_INTERFACE:$<INSTALL_PREFIX>>${PYTHON_INSTALL_PREFIX}/opm
     )
   endif()
 endforeach()
+
+if(OPM_INSTALL_PYTHON)
+  install(
+    CODE "execute_process(
+          COMMAND
+            \"$<TARGET_FILE:Python3::Interpreter>\"
+            \"${PYTHON_INSTALL_PY}\"
+            \"${OPM_SIMULATORS_PYTHON_BUILD_DIR}/opm\"
+            \"${DEST_PREFIX}$<INSTALL_PREFIX>/${PYTHON_INSTALL_PREFIX}\"
+            1
+          COMMAND_ERROR_IS_FATAL ANY
+          )"
+  )
+endif()
 
 include(PyInstallPrefix)
 if(OPM_ENABLE_PYTHON_TESTS)
@@ -183,6 +194,7 @@ if(OPM_ENABLE_PYTHON_TESTS)
     COMMAND
       ${CMAKE_COMMAND}
       --build ${CMAKE_BINARY_DIR}
+      --config $<CONFIG>
       --target python_tests
   )
   set_tests_properties(python_modules_build
@@ -200,16 +212,16 @@ if(OPM_ENABLE_PYTHON_TESTS)
       NAME
         python_${case_name}
       WORKING_DIRECTORY
-        ${PROJECT_BINARY_DIR}/python
+        ${OPM_SIMULATORS_PYTHON_BUILD_DIR}
       COMMAND
         $<TARGET_FILE:Python3::Interpreter>
         -m unittest
         test/test_${case_name}.py
     )
-    set(env_mod
-      PYTHONPATH=path_list_prepend:${PROJECT_BINARY_DIR}/python
-      PYTHONPATH=path_list_prepend:${opm-common_DIR}/python
-    )
+    set(env_mod PYTHONPATH=path_list_prepend:${OPM_SIMULATORS_PYTHON_BUILD_DIR})
+    if(opm-common_PYTHON_COMMON_DIR)
+      list(APPEND env_mod PYTHONPATH=path_list_prepend:${opm-common_PYTHON_COMMON_DIR})
+    endif()
     set_tests_properties(python_${case_name}
       PROPERTIES
       ENVIRONMENT_MODIFICATION
@@ -220,25 +232,15 @@ if(OPM_ENABLE_PYTHON_TESTS)
   endforeach()
 endif()
 
-file(
-  COPY
-    ${PROJECT_SOURCE_DIR}/python/opm/CMakeLists.txt
-    ${PROJECT_SOURCE_DIR}/python/requirements.txt
-    ${PROJECT_SOURCE_DIR}/python/README.md
-    ${PROJECT_SOURCE_DIR}/python/MANIFEST.in
-    ${PROJECT_SOURCE_DIR}/python/pyproject.toml
-  DESTINATION
-    ${PROJECT_BINARY_DIR}/python
-)
-
 set(opm-simulators_PYTHON_PACKAGE_VERSION ${OPM_PYTHON_PACKAGE_VERSION_TAG})
 
-# Generate versioned setup.py
+# Generate a versioned setup.py per configuration, next to the package it
+# describes. The other packaging files are copied by copy_python.
 configure_file(${PROJECT_SOURCE_DIR}/python/setup.py.in
-                ${PROJECT_BINARY_DIR}/python/setup.py.tmp @ONLY)
+                ${PROJECT_BINARY_DIR}/tmp_gen/setup.py @ONLY)
 file(GENERATE
   OUTPUT
-    ${PROJECT_BINARY_DIR}/python/setup.py
+    ${OPM_SIMULATORS_PYTHON_BUILD_DIR}/setup.py
   INPUT
-    ${PROJECT_BINARY_DIR}/python/setup.py.tmp
+    ${PROJECT_BINARY_DIR}/tmp_gen/setup.py
 )
