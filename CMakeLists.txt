@@ -378,6 +378,7 @@ macro(opm-simulators_sources_hook)
       tests/gpuistl/test_gpuDryGasPvt.cu
       tests/gpuistl/test_gpuLiveOilPvt.cu
       tests/gpuistl/test_gpuTabulatedFunctions.cu
+      tests/gpuistl/test_gpuWetGasPvt.cu
       tests/gpuistl/test_gpuBlackOilFluidSystem.cu
       tests/gpuistl/test_GpuAssemblyBridge.cu
       tests/gpuistl/test_GpuPropertyAssemblyBridge.cu
@@ -532,6 +533,7 @@ macro(opm-simulators_tests_hook)
                  GpuJac
                  gpuDryGasPvt
                  gpuLiveOilPvt
+                 gpuWetGasPvt
                  GpuOwnerOverlapCopy
                  GpuPressureTransferPolicy
                  GpuPropertyAssemblyBridge
