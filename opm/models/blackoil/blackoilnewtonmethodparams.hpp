@@ -41,6 +41,8 @@ struct PriVarOscilationThreshold { static constexpr Scalar value = 1e-5; };
 
 struct ProjectSaturations { static constexpr bool value = false; };
 
+struct ChopGasSaturationAtTrappedGas { static constexpr bool value = true; };
+
 template<class Scalar>
 struct MaxTemperatureChange { static constexpr Scalar value = 5.0; }; // Kelvin
 
@@ -85,6 +87,7 @@ struct BlackoilNewtonParams
     Scalar dpMaxRel_;
     Scalar dsMax_;
     bool projectSaturations_;
+    bool chopGasSaturationAtTrappedGas_;
     Scalar maxTempChange_;
     Scalar tempMax_;
     Scalar tempMin_;

@@ -231,13 +231,33 @@ protected:
         Valgrind::CheckDefined(currentResidual);
         wasSwitched_[globalDofIdx] = BlackOilNewtonUpdate<TypeTag>::update(
             this->problem(), FluidSystem{}, globalDofIdx, nextValue, currentValue,
-            update, bparams_, wasSwitched_[globalDofIdx]);
+            update, bparams_, wasSwitched_[globalDofIdx],
+            trappedGasSaturation_(globalDofIdx, currentValue));
         if (wasSwitched_[globalDofIdx]) {
             ++numPriVarsSwitched_;
         }
     }
 
 private:
+    //! \brief Trapped gas saturation of the WAG imbibition curve at which gas
+    //!        saturation updates are stopped, or a negative value if none.
+    Scalar trappedGasSaturation_(unsigned globalDofIdx,
+                                 const PrimaryVariables& currentValue) const
+    {
+        using Problem = GetPropType<TypeTag, Properties::Problem>;
+        if constexpr (requires(const Problem& problem, unsigned idx) {
+                          problem.trappedGasSaturationWAG(idx);
+                      })
+        {
+            if (bparams_.chopGasSaturationAtTrappedGas_ &&
+                currentValue.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg)
+            {
+                return this->problem().trappedGasSaturationWAG(globalDofIdx);
+            }
+        }
+        return Scalar{-1.0};
+    }
+
     int numPriVarsSwitched_{};
 
     BlackoilNewtonParams<Scalar> bparams_{};

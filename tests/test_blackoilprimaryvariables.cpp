@@ -4,6 +4,7 @@
 
 #include <opm/models/blackoil/blackoilprimaryvariables.hh>
 #include <opm/models/blackoil/blackoilnewtonupdate.hpp>
+#include <opm/models/blackoil/blackoilsolventmodules.hh>
 
 #define BOOST_TEST_MODULE BlackoilPrimaryVariables
 #include <boost/test/unit_test.hpp>
@@ -105,7 +106,17 @@ struct CapillaryBlackoilPrimaryVariablesTestTypeTag {
     using InheritsFrom = std::tuple<ClassicalBlackoilPrimaryVariablesTestTypeTag>;
 };
 
+struct SolventBlackoilPrimaryVariablesTestTypeTag {
+    using InheritsFrom = std::tuple<ClassicalBlackoilPrimaryVariablesTestTypeTag>;
+};
+
 } // namespace TTag
+
+template<class TypeTag>
+struct EnableSolvent<TypeTag, TTag::SolventBlackoilPrimaryVariablesTestTypeTag>
+{
+    static constexpr bool value = true;
+};
 
 template<class TypeTag>
 struct Problem<TypeTag, TTag::ClassicalBlackoilPrimaryVariablesTestTypeTag>
@@ -787,6 +798,150 @@ BOOST_AUTO_TEST_CASE(NewtonUpdateLimitsPressureAndCombinedSaturationChange)
     BOOST_CHECK_CLOSE(next[Indices::waterSwitchIdx], 0.2, 1.e-12);
     BOOST_CHECK_CLOSE(next[Indices::compositionSwitchIdx], 0.2, 1.e-12);
     BOOST_CHECK_CLOSE(current[Indices::waterSwitchIdx], 0.3, 1.e-12);
+}
+
+// Gas saturation updates crossing the trapped gas saturation of a WAG
+// imbibition curve stop just on its mobile side.
+BOOST_AUTO_TEST_CASE(NewtonUpdateStopsGasSaturationAtTrappedGas)
+{
+    FluidSystemGuard guard;
+    FluidSystem::setEnableDissolvedGasInWater(false);
+    FluidSystem::setReservoirTemperature(300.0);
+    Problem problem;
+    Opm::BlackoilNewtonParams<double> params{};
+    params.dpMaxRel_ = 0.3;
+    params.dsMax_ = 0.2;
+    params.pressMin_ = 0.0;
+    params.pressMax_ = 1.e9;
+    params.waterSaturationMax_ = 1.0;
+    params.waterOnlyThreshold_ = 1.0;
+
+    using Update = Opm::BlackOilNewtonUpdate<TypeTag>;
+    const double offset = Update::trappedGasSaturationOffset;
+    const double sgt = 0.01;
+    const auto newSg = [&](double sg, double deltaSg, double sgTrapped) {
+        const auto current = makePrimaryVariables(PrimaryVariables::GasMeaning::Sg,
+                                                  0.2, sg,
+                                                  PrimaryVariables::WaterMeaning::Sw,
+                                                  PrimaryVariables::PressureMeaning::Po,
+                                                  1.e7);
+        auto next = current;
+        Opm::GetPropType<TypeTag, Opm::Properties::EqVector> correction(0.0);
+        correction[Indices::compositionSwitchIdx] = -deltaSg;
+        BOOST_CHECK(!Update::update(problem, FluidSystem{}, 0, next, current,
+                                    correction, params, false, sgTrapped));
+        BOOST_CHECK(next.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg);
+        BOOST_CHECK_CLOSE(next[Indices::waterSwitchIdx], 0.2, 1.e-12);
+        return double(next[Indices::compositionSwitchIdx]);
+    };
+
+    // Crossing downwards and upwards (after the DS chop) stops at the threshold.
+    BOOST_CHECK_CLOSE(newSg(0.05, -0.045, sgt), sgt + offset, 1.e-10);
+    BOOST_CHECK_CLOSE(newSg(0.005, 0.3, sgt), sgt + offset, 1.e-10);
+    // Updates not crossing the threshold are unchanged.
+    BOOST_CHECK_CLOSE(newSg(0.05, -0.03, sgt), 0.02, 1.e-10);
+    BOOST_CHECK_CLOSE(newSg(0.008, -0.004, sgt), 0.004, 1.e-10);
+    BOOST_CHECK_CLOSE(newSg(0.005, 0.3, -1.0), 0.205, 1.e-10);
+    BOOST_CHECK_CLOSE(newSg(0.05, -0.045, -1.0), 0.005, 1.e-10);
+    // A cell stopped at the threshold may cross it in the next iteration.
+    BOOST_CHECK_CLOSE(newSg(sgt + offset, -0.006, sgt), 0.004 + offset, 1.e-8);
+}
+
+// With saturation projection, the normalization must not move a gas saturation
+// stopped at the trapped gas saturation back onto the immobile side.
+BOOST_AUTO_TEST_CASE(NewtonUpdateKeepsStoppedGasSaturationWithProjection)
+{
+    FluidSystemGuard guard;
+    FluidSystem::setEnableDissolvedGas(false);
+    FluidSystem::setEnableDissolvedGasInWater(false);
+    FluidSystem::setEnableVaporizedOil(false);
+    FluidSystem::setEnableVaporizedWater(false);
+    FluidSystem::setReservoirTemperature(300.0);
+    Problem problem;
+    Opm::BlackoilNewtonParams<double> params{};
+    params.dpMaxRel_ = 0.3;
+    params.dsMax_ = 0.2;
+    params.pressMin_ = 0.0;
+    params.pressMax_ = 1.e9;
+    params.waterSaturationMax_ = 1.0;
+    params.waterOnlyThreshold_ = 1.0;
+    params.projectSaturations_ = true;
+
+    using Update = Opm::BlackOilNewtonUpdate<TypeTag>;
+    const double sgStop = 0.01 + Update::trappedGasSaturationOffset;
+    const auto current = makePrimaryVariables(PrimaryVariables::GasMeaning::Sg,
+                                              0.97, 0.02,
+                                              PrimaryVariables::WaterMeaning::Sw,
+                                              PrimaryVariables::PressureMeaning::Po,
+                                              1.e7);
+    Opm::GetPropType<TypeTag, Opm::Properties::EqVector> correction(0.0);
+    correction[Indices::waterSwitchIdx] = -0.025;
+    correction[Indices::compositionSwitchIdx] = 0.015;
+
+    auto next = current;
+    Update::update(problem, FluidSystem{}, 0, next, current, correction, params, false, 0.01);
+    BOOST_REQUIRE(next.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg);
+    BOOST_REQUIRE(next.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw);
+    BOOST_CHECK_CLOSE(next[Indices::compositionSwitchIdx], sgStop, 1.e-10);
+    BOOST_CHECK_CLOSE(next[Indices::waterSwitchIdx], 1.0 - sgStop, 1.e-10);
+
+    // Without a stop, the projection is unchanged.
+    next = current;
+    Update::update(problem, FluidSystem{}, 0, next, current, correction, params, false, -1.0);
+    BOOST_CHECK_CLOSE(next[Indices::compositionSwitchIdx], 0.005 / 1.0, 1.e-10);
+    BOOST_CHECK_CLOSE(next[Indices::waterSwitchIdx], 0.995, 1.e-10);
+}
+
+// With solvent, krg depends on Sg + Ss, and the gas saturation update is not
+// stopped at the trapped gas saturation.
+BOOST_AUTO_TEST_CASE(NewtonUpdateDoesNotStopGasSaturationWithSolvent)
+{
+    using SolventTypeTag = Opm::Properties::TTag::SolventBlackoilPrimaryVariablesTestTypeTag;
+    using SolventPrimaryVariables = Opm::BlackOilPrimaryVariables<SolventTypeTag>;
+    using SolventIndices = Opm::GetPropType<SolventTypeTag, Opm::Properties::Indices>;
+    using SolventFluidSystem = Opm::GetPropType<SolventTypeTag, Opm::Properties::FluidSystem>;
+    using SolventProblem = Opm::GetPropType<SolventTypeTag, Opm::Properties::Problem>;
+    static_assert(SolventIndices::solventSaturationIdx != std::numeric_limits<unsigned>::max());
+
+    FluidSystemGuard guard;
+    FluidSystem::setEnableDissolvedGasInWater(false);
+    FluidSystem::setReservoirTemperature(300.0);
+    SolventProblem problem;
+    Opm::BlackoilNewtonParams<double> params{};
+    params.dpMaxRel_ = 0.3;
+    params.dsMax_ = 0.2;
+    params.pressMin_ = 0.0;
+    params.pressMax_ = 1.e9;
+    params.waterSaturationMax_ = 1.0;
+    params.waterOnlyThreshold_ = 1.0;
+
+    SolventPrimaryVariables current;
+    for (std::size_t i = 0; i < current.size(); ++i) {
+        current[i] = 0.0;
+    }
+    current.setPrimaryVarsMeaningWater(SolventPrimaryVariables::WaterMeaning::Sw);
+    current.setPrimaryVarsMeaningGas(SolventPrimaryVariables::GasMeaning::Sg);
+    current.setPrimaryVarsMeaningPressure(SolventPrimaryVariables::PressureMeaning::Po);
+    current.setPrimaryVarsMeaningBrine(SolventPrimaryVariables::BrineMeaning::Disabled);
+    current.setPrimaryVarsMeaningSolvent(SolventPrimaryVariables::SolventMeaning::Ss);
+    current[SolventIndices::pressureSwitchIdx] = 1.e7;
+    current[SolventIndices::waterSwitchIdx] = 0.2;
+    current[SolventIndices::compositionSwitchIdx] = 0.25;
+    current[SolventIndices::solventSaturationIdx] = 0.1;
+
+    Opm::GetPropType<SolventTypeTag, Opm::Properties::EqVector> correction(0.0);
+    // Changes (dSw, dSg, dSs) = (0.2, -0.2, 0.2), where Sg crosses 0.24.
+    correction[SolventIndices::waterSwitchIdx] = -0.2;
+    correction[SolventIndices::compositionSwitchIdx] = 0.2;
+    correction[SolventIndices::solventSaturationIdx] = -0.2;
+
+    auto next = current;
+    Opm::BlackOilNewtonUpdate<SolventTypeTag>::update(
+        problem, SolventFluidSystem{}, 0, next, current, correction, params, false, 0.24);
+    // The update is applied unchanged, which keeps the oil saturation change at dsMax.
+    BOOST_CHECK_CLOSE(next[SolventIndices::waterSwitchIdx], 0.4, 1.e-10);
+    BOOST_CHECK_CLOSE(next[SolventIndices::compositionSwitchIdx], 0.05, 1.e-10);
+    BOOST_CHECK_CLOSE(next[SolventIndices::solventSaturationIdx], 0.3, 1.e-10);
 }
 
 BOOST_AUTO_TEST_CASE(NewtonUpdateUsesSwitchHistoryToSuppressOscillation)
