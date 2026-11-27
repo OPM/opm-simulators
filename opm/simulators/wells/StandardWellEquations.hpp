@@ -30,8 +30,6 @@
 #include <opm/common/TimingMacros.hpp>
 #include <dune/common/dynmatrix.hh>
 #include <dune/common/dynvector.hh>
-#include <dune/istl/bcrsmatrix.hh>
-#include <dune/istl/bvector.hh>
 
 namespace Opm
 {
