@@ -344,7 +344,7 @@ public:
 
         const auto pvtRegions =
             pvtRegionsOfEachRegion(eqlnum, pvtnum, records.size(), numPvtRegions, comm);
-        const auto eosRegions = eosRegionOfEachRegion(eqlnum, eosnum, records.size(), comm);
+        const auto eosRegions = eosRegionOfEachEqlRegion(eqlnum, eosnum, records.size(), comm);
         regions_.reserve(records.size());
         for (std::size_t r = 0; r < records.size(); ++r) {
             regions_.push_back(setupRegion(records.getRecord(r), tables, pvtRegions[r],
@@ -791,10 +791,10 @@ private:
     /// The zero-based EOS region of each equilibration region, from the cells
     /// on all processes. A region without cells takes the first EOS region.
     static std::vector<unsigned>
-    eosRegionOfEachRegion(const std::vector<int>& eqlnum,
-                          const std::vector<int>& eosnum,
-                          const std::size_t numRegions,
-                          const Parallel::Communication& comm)
+    eosRegionOfEachEqlRegion(const std::vector<int>& eqlnum,
+                             const std::vector<int>& eosnum,
+                             const std::size_t numRegions,
+                             const Parallel::Communication& comm)
     {
         std::vector<int> lowest(numRegions, std::numeric_limits<int>::max());
         std::vector<int> highest(numRegions, std::numeric_limits<int>::min());
