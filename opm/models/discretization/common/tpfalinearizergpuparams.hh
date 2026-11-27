@@ -124,7 +124,11 @@ class TpfaLinearizerGpuParams
     // Fluid system buffer/view/ptr types derived without spelling out the fluid-system
     // template parameters explicitly.
     using NonStaticFluidSystem = std::decay_t<decltype(FluidSystem::getNonStaticInstance())>;
-    using GpuFluidSystemBuffer = std::decay_t<decltype(::Opm::gpuistl::copy_to_gpu(
+    // The PVT classes on the GPU are chosen by the fluid system of the GPU type tag.
+    using GpuPvtApproaches = typename GetPropType<
+        ::Opm::Properties::TTag::to_gpu_type_t<TypeTag, gpuistl::GpuView>,
+        Properties::FluidSystem>::PvtApproachesType;
+    using GpuFluidSystemBuffer = std::decay_t<decltype(::Opm::gpuistl::copy_to_gpu<GpuPvtApproaches>(
         std::declval<NonStaticFluidSystem&>()))>;
     using GpuFluidSystemView
         = std::decay_t<decltype(::Opm::gpuistl::make_view(std::declval<GpuFluidSystemBuffer&>()))>;
@@ -279,7 +283,7 @@ public:
         }
 
         dynamicGpuFluidSystemBuffer_.emplace(
-            ::Opm::gpuistl::copy_to_gpu(FluidSystem::getNonStaticInstance()));
+            ::Opm::gpuistl::copy_to_gpu<GpuPvtApproaches>(FluidSystem::getNonStaticInstance()));
         dynamicGpuFluidSystemPtr_ =
             gpuistl::make_gpu_shared_ptr(::Opm::gpuistl::make_view(*dynamicGpuFluidSystemBuffer_));
         gpuModelBuffer_.emplace([&]() -> GpuModelBufferType {
@@ -314,7 +318,7 @@ public:
             // persistent assembly parameters were first constructed.
             if (!dynamicGpuFluidSystemBuffer_) {
                 dynamicGpuFluidSystemBuffer_.emplace(
-                    ::Opm::gpuistl::copy_to_gpu(FluidSystem::getNonStaticInstance()));
+                    ::Opm::gpuistl::copy_to_gpu<GpuPvtApproaches>(FluidSystem::getNonStaticInstance()));
                 dynamicGpuFluidSystemPtr_ = gpuistl::make_gpu_shared_ptr(
                     ::Opm::gpuistl::make_view(*dynamicGpuFluidSystemBuffer_));
                 std::vector<Scalar> volumes(numCells);

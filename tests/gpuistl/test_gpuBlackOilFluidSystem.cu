@@ -123,21 +123,21 @@ using Scalar = typename Opm::MathToolbox<Evaluation>::Scalar;
 
 // checks that we can access value stored as scalar
 template <class IndexTraits>
-__global__ void getReservoirTemperature(Opm::BlackOilFluidSystemNonStatic<double, IndexTraits, Opm::gpuistl::GpuView> fs, double* res)
+__global__ void getReservoirTemperature(Opm::BlackOilFluidSystemNonStatic<double, IndexTraits, Opm::gpuistl::GpuView, Opm::Co2StorePvtApproaches> fs, double* res)
 {
   *res = fs.reservoirTemperature();
 }
 
 // checks that we can access value stored in vectors/buffer/views
 template <class IndexTraits>
-__global__ void getReferenceDensity(Opm::BlackOilFluidSystemNonStatic<double, IndexTraits, Opm::gpuistl::GpuView> fs, double* res)
+__global__ void getReferenceDensity(Opm::BlackOilFluidSystemNonStatic<double, IndexTraits, Opm::gpuistl::GpuView, Opm::Co2StorePvtApproaches> fs, double* res)
 {
   *res = fs.referenceDensity(0, 0);
 }
 
 // check that we can correctly compute values that require using pvt multiplexers
 template <class IndexTraits>
-__global__ void getReferenceDensityFromGasPvt(Opm::BlackOilFluidSystemNonStatic<double, IndexTraits, Opm::gpuistl::GpuView> fs, double* res)
+__global__ void getReferenceDensityFromGasPvt(Opm::BlackOilFluidSystemNonStatic<double, IndexTraits, Opm::gpuistl::GpuView, Opm::Co2StorePvtApproaches> fs, double* res)
 {
   *res = fs.gasPvt().gasReferenceDensity(0);
 }
@@ -155,7 +155,7 @@ BOOST_AUTO_TEST_CASE(BlackOilFluidSystemOnGpu)
 
     auto& dynamicFluidSystem = FluidSystem::getNonStaticInstance();
 
-    auto dynamicGpuFluidSystemBuffer = ::Opm::gpuistl::copy_to_gpu(dynamicFluidSystem);
+    auto dynamicGpuFluidSystemBuffer = ::Opm::gpuistl::copy_to_gpu<Opm::Co2StorePvtApproaches>(dynamicFluidSystem);
     auto dynamicGpuFluidSystemView = ::Opm::gpuistl::make_view(dynamicGpuFluidSystemBuffer);
 
     // create a parameter cache
