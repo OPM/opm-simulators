@@ -53,15 +53,23 @@ public:
     {}
 
     //! \brief Loads guide rates from restart structures.
+    //! \param last_update Time of the last general guide rate update, in
+    //!                    seconds since the start of the simulation.  Given
+    //!                    to all restored guide rate values.
     void loadRestartGuideRates(const int                    report_step,
                                const GuideRateModel::Target target,
                                const data::Wells&           rst_wells,
+                               const double                 last_update,
                                GuideRate&                   guide_rate) const;
 
     //! \brief Loads guide rates from restart structures.
+    //! \param last_update Time of the last general guide rate update, in
+    //!                    seconds since the start of the simulation.  Given
+    //!                    to all restored guide rate values.
     void loadRestartGuideRates(const int                                     report_step,
                                const GuideRateConfig&                        config,
                                const std::map<std::string, data::GroupData>& rst_groups,
+                               const double                                  last_update,
                                GuideRate&                                    guide_rate) const;
 
     //! \brief Loads well data from restart structures.

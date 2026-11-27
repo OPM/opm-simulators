@@ -25,6 +25,7 @@
 
 #include <opm/input/eclipse/Schedule/Group/GuideRateConfig.hpp>
 #include <opm/input/eclipse/Schedule/MSW/WellSegments.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 
 #include <opm/output/data/Groups.hpp>
@@ -55,7 +56,8 @@ namespace {
 
     Opm::GuideRate::GuideRateValue
     makeGuideRateValue(const Opm::data::GuideRateValue&  restart,
-                       const Opm::GuideRateModel::Target target)
+                       const Opm::GuideRateModel::Target target,
+                       const double                      sim_time)
     {
         const auto item = guideRateRestartItem(target);
 
@@ -63,7 +65,7 @@ namespace {
             return {};
         }
 
-        return { 0.0, restart.get(item), target };
+        return { sim_time, restart.get(item), target };
     }
 } // Anonymous
 
@@ -191,17 +193,24 @@ void BlackoilWellModelRestart<Scalar, IndexTraits>::
 loadRestartGuideRates(const int                    report_step,
                       const GuideRateModel::Target target,
                       const data::Wells&           rst_wells,
+                      const double                 last_update,
                       GuideRate&                   guide_rate) const
 {
+    // Every process holds the guide rates of all wells, including the wells
+    // of other processes, since the group targets are distributed using the
+    // guide rates of all wells in a group.  The restart values hold all
+    // wells on every process.
+    const auto& sched = wellModel_.schedule();
+
     for (const auto& [well_name, rst_well] : rst_wells) {
-        if (!wellModel_.hasLocalWell(well_name) ||
-            wellModel_.getWellEcl(well_name).isInjector())
+        if (!sched.hasWell(well_name, report_step) ||
+            sched.getWell(well_name, report_step).isInjector())
         {
             continue;
         }
 
         guide_rate.init_grvalue_SI(report_step, well_name,
-                                   makeGuideRateValue(rst_well.guide_rates, target));
+                                   makeGuideRateValue(rst_well.guide_rates, target, last_update));
     }
 }
 
@@ -210,6 +219,7 @@ void BlackoilWellModelRestart<Scalar, IndexTraits>::
 loadRestartGuideRates(const int                                     report_step,
                       const GuideRateConfig&                        config,
                       const std::map<std::string, data::GroupData>& rst_groups,
+                      const double                                  last_update,
                       GuideRate&                                    guide_rate) const
 {
     const auto target = config.model().target();
@@ -225,7 +235,7 @@ loadRestartGuideRates(const int                                     report_step,
         }
 
         guide_rate.init_grvalue_SI(report_step, group_name,
-                                   makeGuideRateValue(rst_group.guideRates.production, target));
+                                   makeGuideRateValue(rst_group.guideRates.production, target, last_update));
     }
 }
 

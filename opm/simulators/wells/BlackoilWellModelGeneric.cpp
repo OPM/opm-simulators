@@ -285,16 +285,23 @@ initFromRestartFile(const RestartValue& restartValues,
     }
 
     if (config.has_model()) {
+        // Restart files that do not hold the time of the last guide rate
+        // update give zero, the start of the simulation.
+        const auto last_update =
+            restartValues.grp_nwrk.guideRateLastUpdate.value_or(0.0);
+
         BlackoilWellModelRestart(*this).
             loadRestartGuideRates(report_step,
                                   config.model().target(),
                                   restartValues.wells,
+                                  last_update,
                                   this->guideRate_);
 
         BlackoilWellModelRestart(*this).
             loadRestartGuideRates(report_step,
                                   config,
                                   restartValues.grp_nwrk.groupData,
+                                  last_update,
                                   this->guideRate_);
 
         this->guideRate_.updateGuideRateExpiration(this->schedule().seconds(report_step), report_step);
@@ -1499,6 +1506,8 @@ groupAndNetworkData(const int reportStepIdx) const
 
     this->assignGroupValues(reportStepIdx, grp_nwrk_values.groupData);
     this->genNetwork_.assignNodeAndBranchValues(grp_nwrk_values.nodeData, grp_nwrk_values.branchData, grp_nwrk_values.convergedBranchData, reportStepIdx - 1); // Schedule state info at previous step
+
+    grp_nwrk_values.guideRateLastUpdate = this->guideRate_.lastUpdateTime();
 
     return grp_nwrk_values;
 }
