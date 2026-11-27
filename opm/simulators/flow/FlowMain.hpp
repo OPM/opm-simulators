@@ -167,7 +167,7 @@ namespace Opm {
                         std::string msg = "Aborting simulation due to unknown "
                             "parameters. Please query \"flow --help\" for "
                             "supported command line parameters.";
-                        if (OpmLog::hasBackend("STREAMLOG"))
+                        if (OpmLog::hasBackend("STDOUT_LOGGER"))
                         {
                             OpmLog::error(msg);
                         }
@@ -258,11 +258,12 @@ namespace Opm {
                 if (this->output_cout_) {
                     // in some cases exceptions are thrown before the logging system is set
                     // up.
-                    if (OpmLog::hasBackend("STREAMLOG")) {
+                    if (OpmLog::hasBackend("STDOUT_LOGGER")) {
                         OpmLog::error(message.str());
                     }
                     else {
-                        std::cout << message.str() << "\n";
+                        // Blank line to separate the abort message from preceding output.
+                        std::cout << "\n" << message.str() << std::endl;
                     }
                 }
                 detail::checkAllMPIProcesses();
