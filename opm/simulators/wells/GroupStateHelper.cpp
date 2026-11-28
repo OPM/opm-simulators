@@ -3015,9 +3015,9 @@ GroupStateHelper<Scalar, IndexTraits>::isAutoChokeGroupUnderperforming_(const Gr
     // formula. This is an approximation that ignores intermediate reductions.
     // A more accurate calculation would use getAutoChokeGroupProductionTargetRate(),
     // but that requires reduction rates not yet available during
-    // updateGroupControlledWells() (circular dependency). The efficiency factor is however accounted for
-    // below meaning that the current target rate will be correct for the special case where the control
-    // group has no reductions and the auto choke group is a direct child of the control group.
+    // updateGroupControlledWells() (circular dependency). The guide rate fractions and efficiency
+    // factors are however accounted for at each level below the control group, meaning that the
+    // current target rate will be correct when there are no reductions on the way down.
     // TODO: The issue with missing handling of reductions should be fixed by refactoring the auto choke
     // target calculation below to use the more accurate
     // getAutoChokeGroupProductionTargetRate() function.
@@ -3028,43 +3028,54 @@ GroupStateHelper<Scalar, IndexTraits>::isAutoChokeGroupUnderperforming_(const Gr
                                                                    control_group};
     const Scalar control_group_target = this->getProductionGroupTarget(control_group);
 
-    // Sum guide rates of the control group's FLD children. The control group's
-    // own guide rate (from GCONPROD) is NOT used here — it governs the control
-    // group's share of its parent's target, not how its own target is distributed.
-    Scalar control_group_guide_rate = 0.0;
-    for (const std::string& child : control_group.groups()) {
-        const auto child_ctrl = this->groupState().production_control(child);
-        if (child_ctrl == Group::ProductionCMode::FLD
-            || child_ctrl == Group::ProductionCMode::NONE) {
+    // The control group's own guide rate (from GCONPROD) is NOT used here — it
+    // governs the control group's share of its parent's target, not how its own
+    // target is distributed. A group without a guide rate of its own counts
+    // with the sum of its FLD children's, as in FractionCalculator::guideRate().
+    const auto target_mode = this->getProductionGuideTargetMode(control_group);
+    const auto follows_parent = [this](const std::string& name) {
+        const auto cmode = this->groupState().production_control(name);
+        return cmode == Group::ProductionCMode::FLD || cmode == Group::ProductionCMode::NONE;
+    };
+    const auto guide_rate = [&](const auto& self, const std::string& name) -> Scalar {
+        if (this->guide_rate_.has(name)) {
             // A group has no rates before its first group data update, e.g.
             // after a chopped first time step.
-            if (this->guide_rate_.has(child) && this->groupState().has_production_rates(child)) {
-                control_group_guide_rate += this->guide_rate_.get(
-                    child, this->getProductionGuideTargetMode(control_group),
-                    this->getProductionGroupRateVector(child));
+            return this->groupState().has_production_rates(name)
+                ? this->guide_rate_.get(name, target_mode, this->getProductionGroupRateVector(name))
+                : Scalar(0.0);
+        }
+        const auto& g = this->schedule_.getGroup(name, this->report_step_);
+        Scalar sum = 0.0;
+        for (const std::string& child : g.groups()) {
+            if (follows_parent(child)) {
+                sum += self(self, child);
             }
         }
-    }
+        return g.getGroupEfficiencyFactor() * sum;
+    };
 
-    if (control_group_guide_rate <= 0) {
-        return false;
-    }
-
-    // Accumulate group efficiency factors from the autochoke group up to (but not
-    // including) the control group. This matches what
+    // Take the share level by level from the control group down to the auto
+    // choke group, and divide by the group efficiency factors from the auto choke
+    // group up to (but not including) the control group, as
     // getAutoChokeGroupProductionTargetRate() does during its recursion.
-    Scalar accumulated_efficiency = 1.0;
-    {
-        std::string current = group.name();
-        while (current != control_group_name) {
-            const auto& g = this->schedule_.getGroup(current, this->report_step_);
-            accumulated_efficiency *= g.getGroupEfficiencyFactor();
-            current = g.parent();
+    Scalar target_rate = control_group_target;
+    for (std::string current = group.name(); current != control_group_name;) {
+        const auto& g = this->schedule_.getGroup(current, this->report_step_);
+        const auto& parent = this->schedule_.getGroup(g.parent(), this->report_step_);
+        Scalar sibling_guide_rate = 0.0;
+        for (const std::string& child : parent.groups()) {
+            if (follows_parent(child)) {
+                sibling_guide_rate += guide_rate(guide_rate, child);
+            }
         }
+        if (sibling_guide_rate <= 0) {
+            return false;
+        }
+        target_rate
+            *= guide_rate(guide_rate, current) / sibling_guide_rate / g.getGroupEfficiencyFactor();
+        current = parent.name();
     }
-
-    const Scalar target_rate = control_group_target * group_guide_rate
-                             / control_group_guide_rate / accumulated_efficiency;
 
     // Calculate current rate for this group
     std::vector<Scalar> rates(num_phases, 0.0);

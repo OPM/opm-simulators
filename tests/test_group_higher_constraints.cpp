@@ -1334,6 +1334,57 @@ BOOST_AUTO_TEST_CASE(TestAutoChokeGroupTargetRateBelowShareWithFldSibling)
     checkAlgo(metric_rate(target_rate_si), expected_target);
 }
 
+//! \brief Test the share that decides whether a sub-sea manifold group is below it, through a
+//! group without a guide rate
+//!
+//! PLAT has no guide rate, so it counts with E_PLAT times the guide rates of its FLD children:
+//! 0.9 * 8000 = 7200.  The share of MANI is then 10000 * 7200/(7200 + 2550) / (E_MANI * E_PLAT)
+//! ≈ 10256.41.  MANI produces 11000 and counts as group controlled; at 10000 it is below its
+//! share and does not.
+//!
+//! \code
+//!   FIELD (ORAT = 10000)
+//!   ├── PLAT (E=0.9, FLD, NO GUIDERATE)
+//!   │   ├── MANI (E=0.8, FLD, GUIDERATE=8000, as_choke)
+//!   │   │   ├── WELL-A (RATE=6000, POT=6000, THP)
+//!   │   │   └── WELL-A2 (RATE=5000, then 4000, THP)
+//!   │   └── MANI-2 (E=0.75, IDV, ORAT, GUIDERATE=1500)
+//!   │       └── WELL-B (RATE=2000, POT=2000, GRUP)
+//!   └── PLAT-2 (E=0.85, FLD, GUIDERATE=2550, GCW=1)
+//!       └── WELL-C (RATE=3000, POT=3000, GRUP)
+//! \endcode
+BOOST_AUTO_TEST_CASE(TestAutoChokeGroupShareThroughGroupWithoutGuideRate)
+{
+    commonSetupForAllTests(
+        /*plat_has_guide_rate=*/false,
+        /*mani_control       =*/Opm::Group::ProductionCMode::FLD,
+        /*well_a_control     =*/Opm::Well::ProducerCMode::THP,
+        /*well_a2_control    =*/Opm::Well::ProducerCMode::THP,
+        /*mani2_control      =*/Opm::Group::ProductionCMode::ORAT,
+        /*data_file          =*/"GROUP_HIGHER_CONSTRAINTS_NETWORK.DATA",
+        /*well_a_rate_metric =*/6000.0,
+        /*well_a2_rate_metric=*/5000.0
+    );
+    BOOST_REQUIRE(maniGroup().as_choke());
+    BOOST_REQUIRE(!guideRate().has("PLAT"));
+
+    auto& gsh = groupStateHelper();
+    const auto always_included = std::string("");
+    const auto is_prod = true;
+    const auto phase = Opm::Phase::OIL;
+    BOOST_CHECK_EQUAL(gsh.groupControlledWells("MANI", always_included, is_prod, phase), 2);
+    BOOST_CHECK_EQUAL(gsh.groupControlledWells("PLAT", always_included, is_prod, phase), 2);
+    BOOST_CHECK_EQUAL(gsh.groupControlledWells("FIELD", always_included, is_prod, phase), 3);
+
+    auto& well_a2 = wellState().well("WELL-A2");
+    well_a2.surface_rates[oilPhasePos()] = si_rate(-4000.0);
+    gsh.updateGroupProductionRates(fieldGroup());
+    gsh.updateGroupControlledWells(/*is_production_group=*/true, Opm::Phase::OIL);
+    BOOST_CHECK_EQUAL(gsh.groupControlledWells("MANI", always_included, is_prod, phase), 0);
+    BOOST_CHECK_EQUAL(gsh.groupControlledWells("PLAT", always_included, is_prod, phase), 0);
+    BOOST_CHECK_EQUAL(gsh.groupControlledWells("FIELD", always_included, is_prod, phase), 1);
+}
+
 //! \brief Test updateNONEProductionGroups() for the sub-sea manifold group MANI
 //!
 //! No well targets a group: the wells of MANI are on THP control, WELL-B and WELL-C on
