@@ -694,8 +694,10 @@ getAutoChokeGroupProductionTargetRate(const Group& bottom_group,
                                                                       true,
                                                                       Phase::OIL);
 
+    // The manifold counts at every level, also when it is below its share and
+    // its wells do not count as group controlled.
     auto localFraction = [&](const std::string& child) {
-        return fcalc.localFraction(child, child); //Note child needs to be passed to always include since the global isGrup map is not updated yet.
+        return fcalc.localFraction(child, bottom_group.name());
     };
 
     auto localReduction = [&](const std::string& group_name) {
