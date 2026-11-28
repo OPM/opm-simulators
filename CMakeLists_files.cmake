@@ -726,6 +726,7 @@ list (APPEND TEST_DATA_FILES
   tests/numaquifer_equil_immobile.DATA
   tests/numaquifer_equil_mismatch.DATA
   tests/numaquifer_equil_tolerance.DATA
+  tests/numaquifer_aqucon_rates.DATA
   tests/equil_capillary.DATA
   tests/equil_capillary_overlap.DATA
   tests/equil_capillary_swatinit.DATA

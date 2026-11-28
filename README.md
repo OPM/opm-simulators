@@ -32,6 +32,12 @@
 ## In-Code Documentation
 In addition to providing the [manual](https://opm-project.org/?page_id=955) we also document the source code with Doxygen, using the `make doc` command.
 
+### Numerical aquifer summary output
+
+`ANQR` reports the net surface-volume flow rate through the numerical aquifer's
+`AQUCON` connections. Internal aquifer flow and connections to reservoir cells
+not listed in `AQUCON` are excluded. `ANQT` integrates the same rate over time.
+
 
 ## Reporting Issues
 Issues can either be reported here on [GitHub repository](https://github.com/OPM/opm-simulators/issues), or using the [OPM mailing list](https://opm-project.org/?page_id=358)
