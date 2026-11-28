@@ -1321,3 +1321,57 @@ add_test_compareSeparateECLFiles(
     --matrix-add-well-contributions=true
     --linear-solver=ilu0
 )
+
+# Dual-continuum runs: a matrix cell and its fracture twin are on the same process.
+# The tolerances of the nonlinear and linear solvers are tight, so that the runs agree
+# whatever the partitioning, and the tolerances of the comparison are tight as well.
+opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-parallel-regressionTest.sh "")
+set(dualporo_parallel_args
+  --tolerance-cnv=1e-9
+  --tolerance-cnv-relaxed=1e-9
+  --tolerance-mb=1e-12
+  --linear-solver-reduction=1e-12)
+foreach(model DP DK)
+  add_test_compare_parallel_simulation(
+    CASENAME
+      dualporo_basic_${model}
+    FILENAME
+      ${model}_BASIC
+    DIR
+      dualporo
+    SIMULATOR
+      flow_oilwater
+    ABS_TOL
+      1e-4
+    REL_TOL
+      1e-6
+    MPI_PROCS
+      2
+    TEST_ARGS
+      ${dualporo_parallel_args}
+      --solver-max-time-step-in-days=10
+  )
+endforeach()
+
+# Inactive cells, MINPV and PINCH on a corner-point grid, with and without the coupling.
+foreach(case M1_DP M1_DKM_ALL M1_DP_SIG M1_DK_ALL_SIG)
+  add_test_compare_parallel_simulation(
+    CASENAME
+      dualporo_model1_${case}
+    FILENAME
+      ${case}
+    DIR
+      dualporo_model1
+    SIMULATOR
+      flow_blackoil
+    ABS_TOL
+      1e-4
+    REL_TOL
+      1e-6
+    MPI_PROCS
+      4
+    TEST_ARGS
+      ${dualporo_parallel_args}
+      --solver-max-time-step-in-days=1
+  )
+endforeach()
