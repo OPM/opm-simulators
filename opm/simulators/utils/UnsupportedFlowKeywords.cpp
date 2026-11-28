@@ -419,7 +419,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"NZFIN", {true, std::nullopt}},
         {"OFM", {true, std::nullopt}},
         {"OILAPI", {true, std::nullopt}},
-        {"OLDTRAN", {true, std::nullopt}},
         {"OLDTRANR", {true, std::nullopt}},
         {"OPTIONS", {true, std::nullopt}},
         {"OUTRAD", {true, std::string{"Use the DRV keyword instead"}}},
