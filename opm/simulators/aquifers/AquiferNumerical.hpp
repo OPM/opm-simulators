@@ -74,6 +74,14 @@ public:
         , init_pressure_  (aquifer.numCells(), 0.0)
     {
         this->cell_to_aquifer_cell_idx_.resize(this->simulator_.gridView().size(/*codim=*/0), -1);
+        this->aquifer_connection_cells_.resize(this->cell_to_aquifer_cell_idx_.size(), false);
+
+        for (const auto& connection : aquifer.connections()) {
+            const int compressed_idx = simulator.vanguard().compressedIndex(connection.global_index);
+            if (compressed_idx >= 0) {
+                this->aquifer_connection_cells_[compressed_idx] = true;
+            }
+        }
 
         for (std::size_t idx = 0; idx < aquifer.numCells(); ++idx) {
             const auto* cell = aquifer.getCellPrt(idx);
@@ -306,9 +314,10 @@ private:
 
                 assert(stencil.globalSpaceIndex(i) == cell_index);
 
-                // we do not consider the flux within aquifer cells
-                // we only need the flux to the connections
-                if (this->cell_to_aquifer_cell_idx_[J] > 0) {
+                // ANQR and ANQT only include AQUCON connections, not other
+                // reservoir neighbours or internal aquifer connections.
+                if (!this->aquifer_connection_cells_[J] ||
+                    this->cell_to_aquifer_cell_idx_[J] >= 0) {
                     continue;
                 }
 
@@ -335,6 +344,7 @@ private:
 
     // TODO: maybe unordered_map can also do the work to save memory?
     std::vector<int> cell_to_aquifer_cell_idx_;
+    std::vector<bool> aquifer_connection_cells_;
 };
 
 } // namespace Opm

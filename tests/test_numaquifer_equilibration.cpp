@@ -30,6 +30,7 @@
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/start.hh>
 
+#include <opm/simulators/aquifers/AquiferNumerical.hpp>
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/flow/FlowGenericVanguard.hpp>
 #include <opm/simulators/flow/FlowProblemBlackoil.hpp>
@@ -45,6 +46,7 @@
 #include <dune/common/parallel/mpihelper.hh>
 #endif
 
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <memory>
@@ -232,4 +234,89 @@ BOOST_AUTO_TEST_CASE(ImmobilePhasesAccepted)
     const double dPhi = (fsAqu.pressure(water).value() - fsCell.pressure(water).value())
         - rho * problem.gravity()[2] * (problem.dofCenterDepth(aquIdx) - problem.dofCenterDepth(cellIdx));
     BOOST_CHECK_GT(std::abs(dPhi), Opm::numericalAquiferEquilibrationTolerance);
+}
+
+BOOST_AUTO_TEST_CASE(NumericalAquiferReportsOnlyAquconRates)
+{
+    const auto simulator = initSimulator("numaquifer_aqucon_rates.DATA", /*allowMismatch=*/false);
+    simulator->model().applyInitialSolution();
+    simulator->setTimeStepSize(86400.0);
+
+    const auto& inputAquifer = simulator->vanguard().eclState().aquifer().numericalAquifers().aquifers().at(1);
+    Opm::AquiferNumerical<TypeTag> aquifer(inputAquifer, *simulator);
+    aquifer.initialSolutionApplied();
+
+    using ElementContext = Opm::GetPropType<TypeTag, Opm::Properties::ElementContext>;
+    using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
+    const auto& comm = simulator->gridView().comm();
+    const auto measureRates = [&]() {
+        ElementContext context(*simulator);
+        std::array<double, 3> rates{};
+        for (const auto& elem : elements(simulator->gridView(), Dune::Partitions::interior)) {
+            context.updatePrimaryStencil(elem);
+            const auto cellIdx = context.globalSpaceIndex(0, 0);
+            if (simulator->vanguard().cartesianIndex(cellIdx) != 0) {
+                continue;
+            }
+
+            context.updateStencil(elem);
+            context.updateAllIntensiveQuantities();
+            context.updateAllExtensiveQuantities();
+            const auto& stencil = context.stencil(0);
+            for (std::size_t faceIdx = 0; faceIdx < context.numInteriorFaces(0); ++faceIdx) {
+                const auto& face = stencil.interiorFace(faceIdx);
+                const auto flux = context.extensiveQuantities(faceIdx, 0).volumeFlux(FluidSystem::waterPhaseIdx).value();
+                const auto upstream = flux >= 0.0 ? face.interiorIndex() : face.exteriorIndex();
+                const auto& fs = context.intensiveQuantities(upstream, 0).fluidState();
+                const double rate = flux * fs.invB(FluidSystem::waterPhaseIdx).value() * face.area();
+                switch (simulator->vanguard().cartesianIndex(stencil.globalSpaceIndex(face.exteriorIndex()))) {
+                case 1: rates[0] += rate; break;
+                case 2: rates[1] += rate; break;
+                case 3: rates[2] += rate; break;
+                default: BOOST_FAIL("Unexpected aquifer neighbour");
+                }
+            }
+        }
+
+        for (auto& rate : rates) {
+            rate = comm.sum(rate);
+        }
+        return rates;
+    };
+    const auto [internalRate, unrelatedRate, connectionRate] = measureRates();
+    BOOST_REQUIRE_GT(connectionRate, 0.0);
+    BOOST_REQUIRE_GT(unrelatedRate, 0.0);
+    BOOST_REQUIRE_GT(internalRate, 0.0);
+
+    aquifer.endTimeStep();
+    const auto data = aquifer.aquiferData();
+    BOOST_CHECK_CLOSE(comm.sum(data.get("ANQR")), connectionRate, 1e-10);
+    BOOST_CHECK_CLOSE(comm.sum(data.get("ANQT")), connectionRate * simulator->timeStepSize(), 1e-10);
+
+    // Without AQUCON, even nonzero outward flow must report zero influx.
+    Opm::SingleNumericalAquifer noConnections(inputAquifer.id());
+    for (std::size_t idx = 0; idx < inputAquifer.numCells(); ++idx) {
+        noConnections.addAquiferCell(*inputAquifer.getCellPrt(idx));
+    }
+    Opm::AquiferNumerical<TypeTag> disconnectedAquifer(noConnections, *simulator);
+    disconnectedAquifer.initialSolutionApplied();
+    disconnectedAquifer.endTimeStep();
+    const auto disconnectedData = disconnectedAquifer.aquiferData();
+    BOOST_CHECK_EQUAL(comm.sum(disconnectedData.get("ANQR")), 0.0);
+    BOOST_CHECK_EQUAL(comm.sum(disconnectedData.get("ANQT")), 0.0);
+
+    // Reverse flow to exercise reservoir-side upwinding and signed totals.
+    using Indices = Opm::GetPropType<TypeTag, Opm::Properties::Indices>;
+    const int aquiferCell = simulator->vanguard().compressedIndex(inputAquifer.getCellPrt(0)->global_index);
+    if (aquiferCell >= 0) {
+        simulator->model().solution(0)[aquiferCell][Indices::pressureSwitchIdx] = 150.0e5;
+    }
+    simulator->model().invalidateAndUpdateIntensiveQuantities(0);
+    const auto reverseRate = measureRates()[2];
+    BOOST_REQUIRE_LT(reverseRate, 0.0);
+    aquifer.endTimeStep();
+    const auto reverseData = aquifer.aquiferData();
+    BOOST_CHECK_CLOSE(comm.sum(reverseData.get("ANQR")), reverseRate, 1e-10);
+    BOOST_CHECK_CLOSE(comm.sum(reverseData.get("ANQT")),
+                      (connectionRate + reverseRate) * simulator->timeStepSize(), 1e-10);
 }

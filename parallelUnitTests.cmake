@@ -227,6 +227,18 @@ foreach(NPROC 2 3 4)
     PROCESSORS
       ${NPROC}
   )
+  opm_add_test(test_parallel_numaquifer_aqucon_rates_np${NPROC}
+    EXE_TARGET
+      test_numaquifer_equilibration
+    DRIVER_ARGS
+      -n ${NPROC}
+    TEST_ARGS
+      --run_test=NumericalAquiferReportsOnlyAquconRates
+    WORKING_DIRECTORY
+      ${PROJECT_BINARY_DIR}/tests
+    PROCESSORS
+      ${NPROC}
+  )
 endforeach()
 
 foreach(NPROC 2 3 4)
