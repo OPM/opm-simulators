@@ -59,7 +59,9 @@
 #include <opm/simulators/flow/equil/EquilibrationHelpers.hpp>
 #include <opm/simulators/flow/equil/InitStateEquil.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBuffer.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuView.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_constants.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/models/utils/simulator.hh>
 #include <opm/simulators/flow/FlowProblemBlackoil.hpp>
@@ -92,6 +94,7 @@
 #include <format>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <new>
 #include <string>
@@ -658,6 +661,13 @@ struct TemporaryFile {
 using ProductionTypeTag = Opm::Properties::TTag::FlowGasWaterEnergyProblem;
 using ProductionSimulator = Opm::GetPropType<ProductionTypeTag, Opm::Properties::Simulator>;
 
+template <class IQ>
+__global__ void makeFirstStorageBlockSingular(Opm::gpuistl::GpuView<IQ> iq)
+{
+    using Evaluation = std::remove_cvref_t<decltype(iq[0].porosity())>;
+    const_cast<Evaluation&>(iq[0].porosity()) = Evaluation(0.0);
+}
+
 /// Read \p deckPath and set up a simulator for the production TypeTag, with
 /// its initial solution and CPU intensive quantities.
 static std::unique_ptr<ProductionSimulator> makeProductionSimulator(const std::string& deckPath)
@@ -761,6 +771,78 @@ static void runProductionDispatcherTest(const std::string& deckPath)
                               asDouble(intensiveQuantities[i]->fluidState().density(phaseIdx)), 1e-6);
         }
     }
+
+    // Compare the production resident CPR weights with an independent host
+    // storage-matrix solve on the same state, including normalization.
+    using Evaluation = Opm::GetPropType<ProductionTypeTag, Opm::Properties::Evaluation>;
+    constexpr int numEq = Opm::getPropValue<ProductionTypeTag, Opm::Properties::NumEq>();
+    constexpr int pressureIndex = Indices::pressureSwitchIdx;
+    Opm::gpuistl::GpuVector<double> weights(numCells * numEq);
+    constexpr double dt = 86400.0;
+    dispatcher.computeTrueImpesWeights(weights, dt);
+    std::vector<double> hostWeights(numCells * numEq);
+    weights.copyToHost(hostWeights);
+    for (std::size_t cell = 0; cell < numCells; ++cell) {
+        Dune::FieldVector<Evaluation, numEq> storage;
+        Opm::BlackOilLocalResidualTPFA<ProductionTypeTag>::template computeStorage<Evaluation>(
+            storage, changedReference[cell]);
+        Dune::FieldMatrix<double, numEq, numEq> transpose;
+        Dune::FieldVector<double, numEq> rhs(0.0), expected;
+        rhs[pressureIndex] = 1.0;
+        const double scale = sim->model().dofTotalVolume(cell)
+            * changedReference[cell].extrusionFactor() / dt;
+        for (int eq = 0; eq < numEq; ++eq) {
+            for (int pv = 0; pv < numEq; ++pv) {
+                transpose[pv][eq] = storage[eq].derivative(pv) / scale;
+                if (pv == pressureIndex) {
+                    transpose[pv][eq] *= 50e5;
+                }
+            }
+        }
+        transpose.solve(expected, rhs);
+        expected /= expected.infinity_norm();
+        for (int eq = 0; eq < numEq; ++eq) {
+            BOOST_CHECK_SMALL(hostWeights[cell * numEq + eq] - expected[eq], 1e-10);
+        }
+    }
+    BOOST_CHECK_THROW(dispatcher.computeTrueImpesWeights(weights, 0.0), std::invalid_argument);
+    BOOST_CHECK_THROW(dispatcher.computeTrueImpesWeights(weights, -dt), std::invalid_argument);
+    BOOST_CHECK_THROW(dispatcher.computeTrueImpesWeights(
+                          weights, std::numeric_limits<double>::infinity()), std::invalid_argument);
+    BOOST_CHECK_THROW(dispatcher.computeTrueImpesWeights(
+                          weights, std::numeric_limits<double>::quiet_NaN()), std::invalid_argument);
+    Opm::gpuistl::GpuVector<double> wrongSize(1);
+    BOOST_CHECK_THROW(dispatcher.computeTrueImpesWeights(wrongSize, dt), std::invalid_argument);
+
+    // Use the CPU IQs from the changed current state. In this water/gas
+    // thermal model the analytic pressure residual has no energy contribution.
+    weights = -1.0;
+    dispatcher.computeAnalyticWeights(weights);
+    weights.copyToHost(hostWeights);
+    for (std::size_t cell = 0; cell < numCells; ++cell) {
+        for (const auto phase : activePhases) {
+            const auto component = FluidSystem::canonicalToActiveCompIdx(
+                FluidSystem::solventComponentIndex(phase));
+            const double expected = 1.0 / asDouble(changedReference[cell].fluidState().invB(phase));
+            BOOST_CHECK_CLOSE(hostWeights[cell * numEq + component], expected, 1e-8);
+        }
+        BOOST_CHECK_EQUAL(hostWeights[cell * numEq + Indices::contiEnergyEqIdx], 0.0);
+    }
+    BOOST_CHECK_THROW(dispatcher.computeAnalyticWeights(wrongSize), std::invalid_argument);
+
+    // Zero porosity and its derivatives remove both mass-storage rows, making
+    // this cell's storage block singular. The error must identify the device cell.
+    makeFirstStorageBlockSingular<<<1, 1, 0, Opm::gpuistl::detail::DEFAULT_STREAM>>>(
+        dispatcher.bridge().intensiveQuantitiesView(0));
+    OPM_GPU_SAFE_CALL(cudaGetLastError());
+    BOOST_CHECK_EXCEPTION(dispatcher.computeTrueImpesWeights(weights, dt), std::runtime_error,
+                          [](const std::runtime_error& error) {
+                              return std::string_view{error.what()}.find("GPU true-IMPES pressure weights for cell 0:")
+                                  != std::string_view::npos;
+                          });
+    dispatcher.update(problem, changedSolution, /*timeIdx=*/0);
+    dispatcher.computeTrueImpesWeights(weights, dt);
+
     for (std::size_t i = 0; i < numCells; ++i) {
         intensiveQuantities[i]->fluidState().setDensity(FluidSystem::waterPhaseIdx, -1.0);
     }

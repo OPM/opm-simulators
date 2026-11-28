@@ -27,8 +27,8 @@
 
 #include <opm/grid/utility/ElementChunks.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
-#include <opm/material/common/MathToolbox.hpp>
 #include <opm/models/parallel/threadmanager.hpp>
+#include <opm/simulators/linalg/TrueImpesWeights.hpp>
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
@@ -202,17 +202,8 @@ namespace Amg
                 auto extrusionFactor = localElemCtx.intensiveQuantities(0, /*timeIdx=*/0).extrusionFactor();
                 auto scvVolume = localElemCtx.stencil(/*timeIdx=*/0).subControlVolume(0).volume() * extrusionFactor;
                 auto storage_scale = scvVolume / localElemCtx.simulator().timeStepSize();
-                const double pressure_scale = 50e5;
-
-                // Build the transposed matrix directly to avoid separate transpose step
-                for (int ii = 0; ii < numEq; ++ii) {
-                    for (int jj = 0; jj < numEq; ++jj) {
-                        block_transpose[jj][ii] = storage[ii].derivative(jj)/storage_scale;
-                        if (jj == pressureVarIndex) {
-                            block_transpose[jj][ii] *= pressure_scale;
-                        }
-                    }
-                }
+                detail::formTrueImpesStorageJacobian<numEq>(storage, storage_scale,
+                                                            pressureVarIndex, block_transpose);
                 try {
                     block_transpose.solve(bweights, rhs);
                 }
@@ -265,36 +256,21 @@ namespace Amg
                                      const ElementChunksType& element_chunks,
                                      [[maybe_unused]] bool enable_thread_parallel)
     {
-        // The sequential residual is a linear combination of the
-        // mass balance residuals, with coefficients equal to (for
-        // water, oil, gas):
-        //    1/bw,
-        //    (1/bo - rs/bg)/(1-rs*rv)
-        //    (1/bg - rv/bo)/(1-rs*rv)
-        // These coefficients must be applied for both the residual and
-        // Jacobian.
-        using FluidSystem = typename Model::FluidSystem;
-        using LhsEval = double;
-
-        using PrimaryVariables = typename Model::PrimaryVariables;
         using VectorBlockType = typename Vector::block_type;
-        using Evaluation =
-            typename std::decay_t<decltype(model.localLinearizer(ThreadManager::threadId()).localResidual().residual(0))>::block_type;
-        using Toolbox = MathToolbox<Evaluation>;
-
         const auto& solution = model.solution(/*timeIdx*/ 0);
-        VectorBlockType bweights;
 
         // Use OpenMP to parallelize over element chunks (runtime controlled via if clause)
         OPM_BEGIN_PARALLEL_TRY_CATCH();
 #ifdef _OPENMP
-#pragma omp parallel for private(bweights) if(enable_thread_parallel)
+#pragma omp parallel for if(enable_thread_parallel)
 #endif
         for (std::size_t ci = 0; ci < element_chunks.size(); ++ci) {
             const auto& chunk = element_chunks[ci];
 
             // Each thread gets a unique copy of elemCtx
             ElementContext localElemCtx(elemCtx.simulator());
+            // Extra equations (e.g. energy) have no analytic component weight.
+            VectorBlockType bweights(0.0);
 
             for (const auto& elem : chunk) {
                 localElemCtx.updatePrimaryStencil(elem);
@@ -304,50 +280,7 @@ namespace Amg
                 const auto& intQuants = localElemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
                 const auto& fs = intQuants.fluidState();
 
-                if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                    const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(
-                        FluidSystem::solventComponentIndex(FluidSystem::waterPhaseIdx));
-                    bweights[activeCompIdx]
-                        = Toolbox::template decay<LhsEval>(1 / fs.invB(FluidSystem::waterPhaseIdx));
-                }
-
-                double denominator = 1.0;
-                double rs = Toolbox::template decay<double>(fs.Rs());
-                double rv = Toolbox::template decay<double>(fs.Rv());
-                const auto& priVars = solution[index];
-                if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
-                    rs = 0.0;
-                }
-                if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs) {
-                    rv = 0.0;
-                }
-                // The dissolved gas and vaporised oil terms only exist when both
-                // oil and gas are active.
-                const bool oilAndGas = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
-                    && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
-                if (oilAndGas) {
-                    denominator = Toolbox::template decay<LhsEval>(1 - rs * rv);
-                }
-
-                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-                    const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(
-                        FluidSystem::solventComponentIndex(FluidSystem::oilPhaseIdx));
-                    auto oilWeight = 1 / fs.invB(FluidSystem::oilPhaseIdx);
-                    if (oilAndGas) {
-                        oilWeight -= rs / fs.invB(FluidSystem::gasPhaseIdx);
-                    }
-                    bweights[activeCompIdx] = Toolbox::template decay<LhsEval>(oilWeight / denominator);
-                }
-                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                    const unsigned activeCompIdx = FluidSystem::canonicalToActiveCompIdx(
-                        FluidSystem::solventComponentIndex(FluidSystem::gasPhaseIdx));
-                    auto gasWeight = 1 / fs.invB(FluidSystem::gasPhaseIdx);
-                    if (oilAndGas) {
-                        gasWeight -= rv / fs.invB(FluidSystem::oilPhaseIdx);
-                    }
-                    bweights[activeCompIdx] = Toolbox::template decay<LhsEval>(gasWeight / denominator);
-                }
-
+                detail::analyticWeights(intQuants.getFluidSystem(), fs, solution[index], bweights);
                 weights[index] = bweights;
             }
         }

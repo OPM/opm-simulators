@@ -18,6 +18,8 @@
 #define OPM_ISTLSOLVERGPUISTL_HEADER_INCLUDED
 
 #include <dune/istl/operators.hh>
+#include <algorithm>
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -25,6 +27,7 @@
 #include <opm/simulators/linalg/AbstractISTLSolver.hpp>
 #include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 #include <opm/simulators/linalg/ISTLSolver.hpp>
+#include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 
 #include <opm/simulators/linalg/gpuistl/GpuSparseMatrixWrapper.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
@@ -419,9 +422,9 @@ private:
     }
 
     // Weights to make approximate pressure equations.
-    std::function<GPUVector&()> getWeightsCalculator()
+    std::function<GPUVector()> getWeightsCalculator()
     {
-        std::function<GPUVector&()> weightsCalculator;
+        std::function<GPUVector()> weightsCalculator;
 
         using namespace std::string_literals;
 
@@ -451,49 +454,12 @@ private:
                         return *m_weights;
                     };
                 }
-            } else if (weightsType == "trueimpes") {
-                // Create CPU vector for the weights and initialize GPU vector
-                m_cpuWeights.resize(this->matrixPtr()->N());
-                m_pinnedWeightsMemory = std::make_unique<PinnedMemoryHolder<real_type>>(
-                    const_cast<real_type*>(&m_cpuWeights[0][0]), m_cpuWeights.dim());
-                m_weights.emplace(m_cpuWeights);
-
-                const bool enableThreadParallel = m_parameters.cpr_weights_thread_parallel_;
-                // CPU implementation wrapped for GPU
-                weightsCalculator = [this, enableThreadParallel]() -> GPUVector& {
-                    // Use the CPU implementation to calculate the weights
-                    ElementContext elemCtx(m_simulator);
-                    Amg::getTrueImpesWeights(pressureIndex,
-                                             m_cpuWeights,
-                                             elemCtx, m_simulator.model(),
-                                             m_element_chunks,
-                                             enableThreadParallel);
-
-                    // Copy CPU vector to GPU vector using main stream and asynchronous transfer
-                    m_weights->copyFromHostAsync(m_cpuWeights);
-                    return *m_weights;
-                };
-            } else if (weightsType == "trueimpesanalytic") {
-                // Create CPU vector for the weights and initialize GPU vector
-                m_cpuWeights.resize(this->matrixPtr()->N());
-                m_pinnedWeightsMemory = std::make_unique<PinnedMemoryHolder<real_type>>(
-                    const_cast<real_type*>(&m_cpuWeights[0][0]), m_cpuWeights.dim());
-                m_weights.emplace(m_cpuWeights);
-                const bool enableThreadParallel = m_parameters.cpr_weights_thread_parallel_;
-                // CPU implementation wrapped for GPU
-                weightsCalculator = [this, enableThreadParallel]() -> GPUVector& {
-                    // Use the CPU implementation to calculate the weights
-                    ElementContext elemCtx(m_simulator);
-                    Amg::getTrueImpesWeightsAnalytic(pressureIndex,
-                                                     m_cpuWeights,
-                                                     elemCtx, m_simulator.model(),
-                                                     m_element_chunks,
-                                                     enableThreadParallel);
-
-                    // Copy CPU vector to GPU vector using main stream and asynchronous transfer
-                    m_weights->copyFromHostAsync(m_cpuWeights);
-                    return *m_weights;
-                };
+            } else if (weightsType == "trueimpes" || weightsType == "trueimpesanalytic") {
+                const auto method = weightsType == "trueimpesanalytic" ? Amg::TrueImpesMethod::Analytic
+                                                                        : Amg::TrueImpesMethod::Storage;
+                return InPlaceCprWeights<GPUVector>{[this, method](GPUVector& weights) {
+                    updateTrueImpesWeights(weights, method);
+                }};
             } else {
                 OPM_THROW(std::invalid_argument,
                           "Weights type " + weightsType
@@ -502,6 +468,45 @@ private:
             }
         }
         return weightsCalculator;
+    }
+
+    void updateTrueImpesWeights(GPUVector& weights, Amg::TrueImpesMethod method)
+    {
+        const auto rows = this->matrixPtr()->N();
+        const auto size = rows * this->matrixPtr()->blockSize();
+        if (weights.dim() != size) {
+            weights.resize(size);
+        }
+        auto& model = m_simulator.model();
+        const auto dt = m_simulator.timeStepSize();
+        if constexpr (requires { model.computeGpuTrueImpesWeights(weights, method, dt); }) {
+            if (model.computeGpuTrueImpesWeights(weights, method, dt)) {
+                return;
+            }
+        }
+
+        // CPU properties supply host weights for the GPU solver.
+        if (m_cpuWeights.size() != rows) {
+            m_pinnedWeightsMemory.reset();
+            m_cpuWeights.resize(rows);
+        }
+        if (!m_pinnedWeightsMemory && rows > 0) {
+            m_pinnedWeightsMemory = std::make_unique<PinnedMemoryHolder<real_type>>(
+                &m_cpuWeights[0][0], m_cpuWeights.dim());
+        }
+        ElementContext elemCtx(m_simulator);
+        const bool enableThreadParallel = m_parameters.cpr_weights_thread_parallel_;
+        if (method == Amg::TrueImpesMethod::Analytic) {
+            Amg::getTrueImpesWeightsAnalytic(pressureIndex, m_cpuWeights, elemCtx,
+                                            m_simulator.model(), m_element_chunks, enableThreadParallel);
+        } else {
+            Amg::getTrueImpesWeights(pressureIndex, m_cpuWeights, elemCtx,
+                                    m_simulator.model(), m_element_chunks, enableThreadParallel);
+        }
+        if (size > 0) {
+            // Copy CPU vector to GPU vector using main stream and asynchronous transfer
+            weights.copyFromHostAsync(m_cpuWeights);
+        }
     }
 
     void updateMatrix(const Matrix& M)
@@ -515,7 +520,7 @@ private:
                 const_cast<real_type*>(&M[0][0][0][0]),
                 M.nonzeroes() * M[0][0].N() * M[0][0].M()
             );
-            std::function<GPUVector&()> weightsCalculator = getWeightsCalculator();
+            std::function<GPUVector()> weightsCalculator = getWeightsCalculator();
             m_gpuSolver = std::make_unique<SolverType>(
                 *m_matrix, isParallel(), m_propertyTree, pressureIndex, weightsCalculator, m_forceSerial, m_comm.get());
         } else {
@@ -568,9 +573,9 @@ private:
     std::unique_ptr<PinnedMemoryHolder<real_type>> m_pinnedMatrixMemory;
     std::unique_ptr<PinnedMemoryHolder<real_type>> m_pinnedRhsMemory;
     std::unique_ptr<PinnedMemoryHolder<real_type>> m_pinnedXMemory;
-    std::unique_ptr<PinnedMemoryHolder<real_type>> m_pinnedWeightsMemory;
 
     Vector m_cpuWeights;
+    std::unique_ptr<PinnedMemoryHolder<real_type>> m_pinnedWeightsMemory;
     std::optional<GPUVector> m_weights;
     std::optional<GPUVectorInt> m_diagonalIndices;
 

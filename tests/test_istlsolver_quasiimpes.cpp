@@ -23,13 +23,20 @@
 
 #include "SimulatorFixture.hpp"
 
+#include <opm/input/eclipse/EclipseState/Runspec.hpp>
+#include <opm/material/densead/Math.hpp>
+#include <opm/material/fluidstates/BlackOilFluidState.hpp>
+#include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
+#include <opm/material/fluidsystems/PhaseUsageInfo.hpp>
 #include <opm/simulators/flow/FlowProblemBlackoil.hpp>
 #include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
 #include <opm/simulators/linalg/ISTLSolver.hpp>
+#include <opm/simulators/linalg/TrueImpesWeights.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 
 #include <array>
 #include <cstddef>
+#include <limits>
 #include <string>
 
 namespace
@@ -202,4 +209,46 @@ BOOST_AUTO_TEST_CASE(QuasiImpesWeightsFollowMatrixValuesWhenPreconditionerIsReus
             }
         }
     }
+}
+
+BOOST_AUTO_TEST_CASE(AnalyticImpesWeightsUseActiveComponentOrderAndPrimaryVariableMeaning)
+{
+    using PrimaryVariables = Opm::GetPropType<TypeTag, Opm::Properties::PrimaryVariables>;
+    using GasMeaning = PrimaryVariables::GasMeaning;
+    using Indices = Opm::BlackOilDefaultFluidSystemIndices;
+    struct PhaseMapping : Opm::PhaseUsageInfo<Indices>
+    {
+        static int solventComponentIndex(int phase) { return Indices::phaseToComponentIdx(phase); }
+    };
+
+    auto check = []<class Scalar>(bool oil, bool gas, GasMeaning meaning,
+                                  const std::array<Scalar, 3>& expected) {
+        PhaseMapping phases;
+        phases.initFromPhases(Opm::Phases{oil, gas, /*water=*/true});
+        using Eval = Opm::DenseAd::Evaluation<Scalar, 3>;
+        Opm::BlackOilFluidState<Eval, PhaseMapping> fs(phases);
+        fs.setInvB(phases.waterPhaseIdx, Eval{2});
+        // A read from a missing phase must not contribute to the result.
+        const auto missing = std::numeric_limits<Scalar>::quiet_NaN();
+        fs.setInvB(phases.oilPhaseIdx, Eval{oil ? Scalar{1} : missing});
+        fs.setInvB(phases.gasPhaseIdx, Eval{gas ? Scalar{4} : missing});
+        fs.setRs(Eval{0.5});
+        fs.setRv(Eval{0.125});
+        PrimaryVariables pv;
+        pv.setPrimaryVarsMeaningGas(meaning);
+        std::array<Scalar, 3> weights{};
+        Opm::Amg::detail::analyticWeights(phases, fs, pv, weights);
+        for (std::size_t i = 0; i < weights.size(); ++i) {
+            BOOST_CHECK_SMALL(weights[i] - expected[i], 4 * std::numeric_limits<Scalar>::epsilon());
+        }
+    };
+
+    // Canonical component order is oil, water, gas. Removing oil shifts
+    // both water and gas to lower active component indices.
+    check(true, true, GasMeaning::Sg, std::array{14.0/15, 0.5, 2.0/15});
+    check(true, true, GasMeaning::Rs, std::array{0.875, 0.5, 0.25});
+    check(true, true, GasMeaning::Rv, std::array{1.0, 0.5, 0.125});
+    check(true, false, GasMeaning::Rs, std::array{1.0, 0.5, 0.0});
+    check(false, true, GasMeaning::Rv, std::array{0.5, 0.25, 0.0});
+    check(true, true, GasMeaning::Sg, std::array{14.0f/15, 0.5f, 2.0f/15});
 }

@@ -29,6 +29,7 @@
 #define EWOMS_FV_BASE_INTENSIVE_QUANTITIES_HH
 
 #include <opm/material/common/Valgrind.hpp>
+#include <opm/common/utility/gpuDecorators.hpp>
 
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
@@ -71,7 +72,7 @@ public:
      * thought as pipes with a cross section of 1 m^2 and 2D problems
      * are assumed to extend 1 m to the back.
      */
-    Scalar extrusionFactor() const
+    OPM_HOST_DEVICE Scalar extrusionFactor() const
     { return extrusionFactor_; }
 
     /*!

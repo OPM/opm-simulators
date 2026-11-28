@@ -43,6 +43,7 @@
 #include <opm/material/fluidmatrixinteractions/EclMultiplexerMaterialParams.hpp>
 
 #if HAVE_CUDA
+#include <opm/simulators/linalg/TrueImpesWeights.hpp>
 #include <opm/simulators/linalg/gpuistl/GpuBlackoilIntensiveQuantitiesDispatcher.hpp>
 #include <memory>
 #include <variant>
@@ -82,6 +83,8 @@ class FIBlackOilModel : public BlackOilModel<TypeTag>
     static constexpr bool avoidElementContext = getPropValue<TypeTag, Properties::AvoidElementContext>();
 
 public:
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+
     explicit FIBlackOilModel(Simulator& simulator)
         : BlackOilModel<TypeTag>(simulator)
         , element_chunks_(this->gridView_,
@@ -294,6 +297,28 @@ public:
         if constexpr (Opm::gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
             return useGpuIntensiveQuantitiesDispatcher_ && gpuIntensiveQuantitiesDispatcher_
                    && gpuIntensiveQuantitiesDispatcher_->hasDeviceModelView();
+        }
+        return false;
+    }
+
+    bool computeGpuTrueImpesWeights(gpuistl::GpuVector<Scalar>& weights,
+                                    Amg::TrueImpesMethod method, Scalar timeStepSize) const
+    {
+        if constexpr (gpuistl::GpuBlackoilIntensiveQuantitiesDispatcherSupport<TypeTag>::value) {
+            if (useGpuIntensiveQuantitiesDispatcher_) {
+                if (this->gridView_.comm().size() != 1) {
+                    OPM_THROW(std::logic_error, "Resident true-IMPES weights require a single MPI rank");
+                }
+                if (!hasGpuPropertyAssemblyBridge()) {
+                    OPM_THROW(std::logic_error, "Resident true-IMPES weights require a current GPU property bridge");
+                }
+                if (method == Amg::TrueImpesMethod::Analytic) {
+                    gpuIntensiveQuantitiesDispatcher_->computeAnalyticWeights(weights);
+                } else {
+                    gpuIntensiveQuantitiesDispatcher_->computeTrueImpesWeights(weights, timeStepSize);
+                }
+                return true;
+            }
         }
         return false;
     }
