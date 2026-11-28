@@ -51,6 +51,7 @@
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/grid/cpgrid/LgrOutputHelpers.hpp>
 #include <opm/simulators/utils/ParallelRestart.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
 
@@ -177,7 +178,29 @@ public:
                     ? &simulator.vanguard().equilCartesianIndexMapper()
                     : nullptr),
                    Parameters::Get<Parameters::EnableAsyncEclOutput>(),
-                   Parameters::Get<Parameters::EnableEsmry>())
+                   Parameters::Get<Parameters::EnableEsmry>(),
+                   // Refined I/O-rank reference grid for the cell-data gather
+                   // (equals equilGrid unless this is a parallel LGR run). Only
+                   // the CpGrid vanguard provides eclOutputGrid(); other grid
+                   // backends (ALUGrid, polyhedral) have no LGR refinement, so
+                   // fall back to the equilGrid -- guarded at compile time so
+                   // those backends still build.
+                   ((simulator.vanguard().grid().comm().rank() == 0)
+                    ? [&simulator]() -> const EquilGrid* {
+                          if constexpr (requires { simulator.vanguard().eclOutputGrid(); })
+                              return &simulator.vanguard().eclOutputGrid();
+                          else
+                              return &simulator.vanguard().equilGrid();
+                      }()
+                    : nullptr),
+                   ((simulator.vanguard().grid().comm().rank() == 0)
+                    ? [&simulator]() -> const Dune::CartesianIndexMapper<EquilGrid>* {
+                          if constexpr (requires { simulator.vanguard().eclOutputCartesianIndexMapper(); })
+                              return &simulator.vanguard().eclOutputCartesianIndexMapper();
+                          else
+                              return &simulator.vanguard().equilCartesianIndexMapper();
+                      }()
+                    : nullptr))
         , simulator_(simulator)
     {
 #if HAVE_MPI
@@ -577,6 +600,51 @@ public:
         }
     }
 
+    /// The restart file keeps one solution section per grid level, so a refined
+    /// run has to read them all and put the leaf back together -- the inverse of
+    /// the split the writer applies. Returns nothing when the grid has no
+    /// levels, leaving the ordinary single-section path in charge.
+    std::optional<data::Solution>
+    loadRefinedRestartSolution_(const std::vector<RestartKey>& solutionKeys,
+                                const int restartStepIdx)
+    {
+        // The reference grid whose leaf ordering the global indices refer to:
+        // collectGrid_ on the I/O rank (the full refined leaf in a parallel LGR
+        // run), and the grid itself in serial. Assembling on the *local* grid
+        // would size the solution by this rank's own leaf and then index it
+        // globally.
+        const auto comm = this->simulator_.vanguard().gridView().comm();
+
+        if constexpr (! std::is_same_v<EquilGrid, Dune::CpGrid>) {
+            return std::nullopt;
+        }
+        else {
+            // Decided collectively: only the I/O rank holds the reference grid,
+            // so every rank has to be told whether this run is refined, and
+            // every rank has to reach the broadcast below.
+            const auto* refGrid = this->collectGrid_;
+            const int localLevels = (refGrid == nullptr) ? 0 : refGrid->maxLevel();
+
+            if (comm.max(localLevels) == 0) {
+                return std::nullopt;    // no refinement: ordinary single section
+            }
+
+            auto leaf = data::Solution{ /* si = */ true };
+
+            if ((refGrid != nullptr) && this->collectOnIORank_.isIORank()) {
+                const auto levels =
+                    this->eclIO_->loadRestartSolutionLevels(solutionKeys, restartStepIdx);
+                if (! levels.empty()) {
+                    Opm::Lgr::assembleSolutionFromLevelGrids(*refGrid, levels, leaf);
+                }
+            }
+
+            broadcastSolution(leaf, comm);
+
+            return leaf;
+        }
+    }
+
     void beginRestart()
     {
         const auto enablePCHysteresis = simulator_.problem().materialLawManager().enablePCHysteresis();
@@ -643,9 +711,15 @@ public:
                                               /*log = */      false,
                                               /*forceRestartFieldAllocation = */true);
 
-            const auto restartSolution =
+            auto restartSolution =
                 loadParallelRestartSolution(this->eclIO_.get(),
                                             solutionKeys, gridView.comm(), 0);
+
+            if (auto refined = this->loadRefinedRestartSolution_(solutionKeys, 0);
+                refined.has_value() && !refined->empty())
+            {
+                restartSolution = std::move(refined.value());
+            }
 
             if (!restartSolution.empty()) {
                 for (auto elemIdx = 0*numElements; elemIdx < numElements; ++elemIdx) {
@@ -682,11 +756,24 @@ public:
         }
 
         {
-            const auto restartValues =
+            auto restartValues =
                 loadParallelRestart(this->eclIO_.get(),
                                     this->actionState(),
                                     this->summaryState(),
                                     solutionKeys, extraKeys, gridView.comm());
+
+            // Wells, groups, aquifers and the extra vectors are global and come
+            // from the first section; only the solution is per level.
+            {
+                const auto restartStepIdx = this->simulator_.vanguard()
+                    .eclState().getInitConfig().getRestartStep();
+
+                if (auto refined = this->loadRefinedRestartSolution_(solutionKeys, restartStepIdx);
+                    refined.has_value() && !refined->empty())
+                {
+                    restartValues.solution = std::move(refined.value());
+                }
+            }
 
             for (auto elemIdx = 0*numElements; elemIdx < numElements; ++elemIdx) {
                 const auto globalIdx = this->collectOnIORank_.localIdxToGlobalIdx(elemIdx);

@@ -23,12 +23,15 @@
 #include <config.h>
 #include <opm/simulators/wells/BlackoilWellModelWBP.hpp>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 
 #include <opm/material/fluidsystems/BlackOilDefaultFluidSystemIndices.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 
+#include <algorithm>
 #include <cassert>
 
 namespace Opm {
@@ -76,6 +79,20 @@ initializeWBPCalculationService()
 
     auto wellID = std::size_t{0};
     for (const auto& well : well_model_.eclWells()) {
+        // The calculator takes connections as level-zero cells, which an
+        // LGR connection's index is not; LGR-aware WBP is not implemented.
+        const auto& conns = well.getConnections();
+        if (std::any_of(conns.begin(), conns.end(),
+                        [](const auto& c) { return c.get_lgr_level() > 0; })) {
+            this->wbpCalcMap_[wellID].skipped_ = true;
+            if (this->warnedLgrWells_.insert(well.name()).second) {
+                OpmLog::warning("Well " + well.name() + " is completed in an LGR; "
+                                "its block average pressures (WBP, WBP4, WBP5, WBP9) "
+                                "are not computed and report zero.");
+            }
+            ++wellID;
+            continue;
+        }
         this->wbpCalcMap_[wellID].wbpCalcIdx_ = this->wbpCalculationService_
             .createCalculator(well,
                               well_model_.parallelWellInfo(wellID),
@@ -102,6 +119,9 @@ computeWellBlockAveragePressures(const Scalar gravity) const
 
     const auto numWells = well_model_.numLocalWells();
     for (auto wellID = 0*numWells; wellID < numWells; ++wellID) {
+        if (this->wbpCalcMap_[wellID].skipped_) {
+            continue;
+        }
         const auto calcIdx = this->wbpCalcMap_[wellID].wbpCalcIdx_;
         const auto& well = well_model_.eclWells()[wellID];
 
