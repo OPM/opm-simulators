@@ -932,6 +932,27 @@ add_test_compare_parallel_simulation(
 
 add_test_compare_parallel_simulation(
   CASENAME
+    network_autochk_groupguiderates
+  FILENAME
+    NETWORK_MODEL5_STDW_AUTOCHK_GROUPGUIDERATES
+  SIMULATOR
+    flow
+  DEV_SIMULATOR
+    flow_blackoil
+  ABS_TOL
+    ${abs_tol}
+  REL_TOL
+    ${coarse_rel_tol_parallel}
+  DIR
+    network
+  MPI_PROCS
+    2
+  TEST_ARGS
+    --enable-tuning=true
+)
+
+add_test_compare_parallel_simulation(
+  CASENAME
     numerical_aquifer_3d_1aqu
   FILENAME
     3D_1AQU_3CELLS
