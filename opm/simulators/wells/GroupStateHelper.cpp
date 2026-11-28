@@ -729,8 +729,13 @@ getAutoChokeGroupProductionTargetRate(const Group& bottom_group,
                                                                       true,
                                                                       Phase::OIL);
 
+    // The manifold counts at every level, also when it is below its share and
+    // its wells do not count as group controlled.
+    bool has_share = true;
     auto localFraction = [&](const std::string& child) {
-        return fcalc.localFraction(child, child); //Note child needs to be passed to always include since the global isGrup map is not updated yet.
+        const Scalar fraction = fcalc.localFraction(child, bottom_group.name());
+        has_share = has_share && fraction > 0.0;
+        return fraction;
     };
 
     auto localReduction = [&](const std::string& group_name) {
@@ -744,18 +749,32 @@ getAutoChokeGroupProductionTargetRate(const Group& bottom_group,
     const std::size_t local_reduction_level = this->getLocalReductionLevel_(
         chain, /*is_production_group=*/true, Phase::OIL);
 
-    // Delegate to applyReductionsAndFractions_ with no addback.  Addback is not
-    // needed because autochoke wells are excluded from reductions via the
-    // !group.as_choke() check in updateGroupTargetReductionRecursive_().
+    // Autochoke wells are excluded from reductions via the !group.as_choke()
+    // check in updateGroupTargetReductionRecursive_(). An autochoke group
+    // below its share has no group controlled wells, though, and its rate is
+    // then reduced above it like that of a group under individual control:
+    // add it back, or the group would be chasing its own rate.
+    const bool addback = this->groupControlledWells(bottom_group.name(),
+                                                    /*always_included_child=*/"",
+                                                    /*is_production_group=*/true,
+                                                    /*injection_phase=*/Phase::OIL) == 0;
+    const Scalar current_rate_available = addback
+        ? tcalc.calcModeRateFromRates(this->groupState().production_rates(bottom_group.name()))
+        : Scalar(0.0);
     const Scalar target = this->applyReductionsAndFractions_(chain,
                                                               orig_target,
-                                                              /*current_rate_available=*/Scalar(0.0),
+                                                              current_rate_available,
                                                               local_reduction_level,
                                                               /*is_production_group=*/true,
                                                               /*injection_phase=*/Phase::OIL,
                                                               localReduction,
                                                               localFraction,
-                                                              /*do_addback=*/false);
+                                                              addback);
+    // Without a guide rate share, e.g. without a guide rate of its own next to
+    // group controlled siblings, the manifold follows no target.
+    if (!has_share) {
+        return std::make_pair(Scalar(0.0), Group::ProductionCMode::NONE);
+    }
     // Avoid negative target rates coming from too large local reductions.
     const Scalar target_rate = std::max(Scalar(0.0), target / efficiencyFactor);
 
@@ -1536,7 +1555,8 @@ updateNONEProductionGroups()
         return;
     }
 
-    const auto targeted = this->collectTargetedProductionGroups_();
+    auto targeted = this->collectTargetedProductionGroups_();
+    targeted.merge(this->collectManifoldTargetGroups_());
 
     const std::size_t num_gpc = prod_group_controls.size();
     std::vector<std::string> gnames;
@@ -2163,6 +2183,57 @@ collectTargetedProductionGroups_() const
                                 "group target assigned.", ws.name),
                     this->deferredLogger());
             }
+        }
+    }
+    return targeted;
+}
+
+template <typename Scalar, typename IndexTraits>
+Group::ProductionCMode
+GroupStateHelper<Scalar, IndexTraits>::
+getManifoldControlMode(const Group& manifold) const
+{
+    const auto cmode = this->groupState().production_control(manifold.name());
+    return cmode == Group::ProductionCMode::NONE
+        ? manifold.productionControls(this->summary_state_).cmode
+        : cmode;
+}
+
+// Called from updateNONEProductionGroups().
+// - For each sub-sea manifold group in the production network, finds the group
+//   whose target the manifold's common THP honours by the control modes the
+//   THP solve takes it from: getManifoldControlMode() for the manifold, and
+//   above the manifold the current modes, as getAutoChokeGroupProductionTargetRate()
+//   does.
+template <typename Scalar, typename IndexTraits>
+std::unordered_set<std::string>
+GroupStateHelper<Scalar, IndexTraits>::
+collectManifoldTargetGroups_() const
+{
+    std::unordered_set<std::string> targeted;
+    const auto& network = this->schedule_[this->report_step_].network();
+    if (!network.active()) {
+        return targeted;
+    }
+    const auto& group_state = this->groupState();
+    const auto no_target = [](const Group::ProductionCMode cmode) {
+        return cmode == Group::ProductionCMode::FLD || cmode == Group::ProductionCMode::NONE;
+    };
+    for (const auto& node : network.node_names()) {
+        if (!network.node(node).as_choke() || !this->schedule_.hasGroup(node, this->report_step_)) {
+            continue;
+        }
+        const Group* group = &this->schedule_.getGroup(node, this->report_step_);
+        if (!no_target(this->getManifoldControlMode(*group))) {
+            targeted.insert(node);
+            continue;
+        }
+        do {
+            group = &this->schedule_.getGroup(group->parent(), this->report_step_);
+        } while (no_target(group_state.production_control(group->name()))
+                 && group->productionGroupControlAvailable());
+        if (!no_target(group_state.production_control(group->name()))) {
+            targeted.insert(group->name());
         }
     }
     return targeted;
@@ -3048,9 +3119,9 @@ GroupStateHelper<Scalar, IndexTraits>::isAutoChokeGroupUnderperforming_(const Gr
     // formula. This is an approximation that ignores intermediate reductions.
     // A more accurate calculation would use getAutoChokeGroupProductionTargetRate(),
     // but that requires reduction rates not yet available during
-    // updateGroupControlledWells() (circular dependency). The efficiency factor is however accounted for
-    // below meaning that the current target rate will be correct for the special case where the control
-    // group has no reductions and the auto choke group is a direct child of the control group.
+    // updateGroupControlledWells() (circular dependency). The guide rate fractions and efficiency
+    // factors are however accounted for at each level below the control group, meaning that the
+    // current target rate will be correct when there are no reductions on the way down.
     // TODO: The issue with missing handling of reductions should be fixed by refactoring the auto choke
     // target calculation below to use the more accurate
     // getAutoChokeGroupProductionTargetRate() function.
@@ -3061,41 +3132,54 @@ GroupStateHelper<Scalar, IndexTraits>::isAutoChokeGroupUnderperforming_(const Gr
                                                                    control_group};
     const Scalar control_group_target = this->getProductionGroupTarget(control_group);
 
-    // Sum guide rates of the control group's FLD children. The control group's
-    // own guide rate (from GCONPROD) is NOT used here — it governs the control
-    // group's share of its parent's target, not how its own target is distributed.
-    Scalar control_group_guide_rate = 0.0;
-    for (const std::string& child : control_group.groups()) {
-        const auto child_ctrl = this->groupState().production_control(child);
-        if (child_ctrl == Group::ProductionCMode::FLD
-            || child_ctrl == Group::ProductionCMode::NONE) {
-            if (this->guide_rate_.has(child)) {
-                control_group_guide_rate += this->guide_rate_.get(
-                    child, this->getProductionGuideTargetMode(control_group),
-                    this->getProductionGroupRateVector(child));
+    // The control group's own guide rate (from GCONPROD) is NOT used here — it
+    // governs the control group's share of its parent's target, not how its own
+    // target is distributed. A group without a guide rate of its own counts
+    // with the sum of its FLD children's, as in FractionCalculator::guideRate().
+    const auto target_mode = this->getProductionGuideTargetMode(control_group);
+    const auto follows_parent = [this](const std::string& name) {
+        const auto cmode = this->groupState().production_control(name);
+        return cmode == Group::ProductionCMode::FLD || cmode == Group::ProductionCMode::NONE;
+    };
+    const auto guide_rate = [&](const auto& self, const std::string& name) -> Scalar {
+        if (this->guide_rate_.has(name)) {
+            // A group has no rates before its first group data update, e.g.
+            // after a chopped first time step.
+            return this->groupState().has_production_rates(name)
+                ? this->guide_rate_.get(name, target_mode, this->getProductionGroupRateVector(name))
+                : Scalar(0.0);
+        }
+        const auto& g = this->schedule_.getGroup(name, this->report_step_);
+        Scalar sum = 0.0;
+        for (const std::string& child : g.groups()) {
+            if (follows_parent(child)) {
+                sum += self(self, child);
             }
         }
-    }
+        return g.getGroupEfficiencyFactor() * sum;
+    };
 
-    if (control_group_guide_rate <= 0) {
-        return false;
-    }
-
-    // Accumulate group efficiency factors from the autochoke group up to (but not
-    // including) the control group. This matches what
+    // Take the share level by level from the control group down to the auto
+    // choke group, and divide by the group efficiency factors from the auto choke
+    // group up to (but not including) the control group, as
     // getAutoChokeGroupProductionTargetRate() does during its recursion.
-    Scalar accumulated_efficiency = 1.0;
-    {
-        std::string current = group.name();
-        while (current != control_group_name) {
-            const auto& g = this->schedule_.getGroup(current, this->report_step_);
-            accumulated_efficiency *= g.getGroupEfficiencyFactor();
-            current = g.parent();
+    Scalar target_rate = control_group_target;
+    for (std::string current = group.name(); current != control_group_name;) {
+        const auto& g = this->schedule_.getGroup(current, this->report_step_);
+        const auto& parent = this->schedule_.getGroup(g.parent(), this->report_step_);
+        Scalar sibling_guide_rate = 0.0;
+        for (const std::string& child : parent.groups()) {
+            if (follows_parent(child)) {
+                sibling_guide_rate += guide_rate(guide_rate, child);
+            }
         }
+        if (sibling_guide_rate <= 0) {
+            return false;
+        }
+        target_rate
+            *= guide_rate(guide_rate, current) / sibling_guide_rate / g.getGroupEfficiencyFactor();
+        current = parent.name();
     }
-
-    const Scalar target_rate = control_group_target * group_guide_rate
-                             / control_group_guide_rate / accumulated_efficiency;
 
     // Calculate current rate for this group
     std::vector<Scalar> rates(num_phases, 0.0);

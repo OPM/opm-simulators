@@ -1136,6 +1136,10 @@ BOOST_AUTO_TEST_CASE(TestAutoChokeGroupProductionTargetRate)
 //! local_reduction_level=0 < ii=1), avoiding double-counting of reductions that were
 //! already propagated into FIELD's reduction via case 1.
 //!
+//! FIELD's reduction then includes MANI's own rate.  That rate is added back, so that
+//! MANI's target does not shrink as MANI produces more: otherwise a manifold whose
+//! target follows from its own rate settles at a fraction of what it could deliver.
+//!
 //! \code
 //!   FIELD (ORAT = 10000, GCW=1)
 //!   ├── PLAT (E=0.9, FLD, GUIDERATE=9500, GCW=0)
@@ -1232,26 +1236,276 @@ BOOST_AUTO_TEST_CASE(TestAutoChokeGroupTargetRateWithUnderperformance)
     // chain = [FIELD, PLAT, MANI], efficiencyFactor = E_MANI * E_PLAT = 0.72
     // local_reduction_level = 0 (PLAT has guide rate but GCW=0 → doesn't qualify)
     //
+    // MANI GCW=0 → add back MANI's own rate at the local reduction level,
+    // weighted by the efficiencies down to it: 0.72 * 5000 = 3600
+    //
+    // MANI is the always-included child at every level, and counts for itself and
+    // for PLAT although both have GCW=0.
+    //
     // ii=0 (FIELD):
     //   local_reduction_level(0) >= ii(0) → true → apply reduction
     //   reduction(FIELD) = 4950
-    //   target = 10000 - 4950 = 5050
-    //   localFraction("PLAT") = 1.0  (PLAT GCW=0 → excluded from sum,
-    //     but PLAT-2 is the only active sibling → num_active=1 → return 1.0)
-    //   target = 5050 * 1.0 = 5050
+    //   target = 10000 - 4950 + 3600 = 8650
+    //   localFraction("PLAT") = 9500/12050  (PLAT counts through MANI, PLAT-2 is FLD)
+    //   target = 8650 * 9500/12050 ≈ 6819.50
     //
     // ii=1 (PLAT):
     //   local_reduction_level(0) >= ii(1) → false → skip reduction
     //   (PLAT's reduction was already propagated into FIELD's via case 1)
-    //   localFraction("MANI") = 1.0  (MANI GCW=0, MANI-2 ORAT → num_active=0,
-    //     total=0, potentials=0 → return 1.0)
-    //   target = 5050 * 1.0 = 5050
+    //   localFraction("MANI") = 1.0  (MANI counts, MANI-2 ORAT → num_active=1 → return 1.0)
+    //   target = 6819.50 * 1.0 = 6819.50
     //
-    // Final: max(0, 5050 / 0.72) ≈ 7013.89
+    // Final: max(0, 6819.50 / 0.72) ≈ 9471.53
     //
     const double target_rate_metric = metric_rate(target_rate_si);
-    const double expected_target = 5050.0 / 0.72;  // ≈ 7013.89
+    const double plat_fraction = platGuideRateMetric()
+                               / (platGuideRateMetric() + plat2GuideRateMetric()); // 9500/12050
+    const double expected_target = (5050.0 + 0.72 * maniTotalRateMetric()) * plat_fraction
+                                 / 0.72;  // ≈ 9471.53
     checkAlgo(target_rate_metric, expected_target);
+}
+
+//! \brief Test getAutoChokeGroupProductionTargetRate() for a sub-sea manifold group below its
+//! share, with a sibling under group control
+//!
+//! MANI is below its share, so its wells do not count as group controlled (GCW=0).  It still
+//! takes its own guide rate share at PLAT, rather than everything MANI-2 leaves.
+//!
+//! \code
+//!   FIELD (ORAT = 10000, GCW=2)
+//!   ├── PLAT (E=0.9, FLD, GUIDERATE=9500, GCW=1)
+//!   │   ├── MANI (E=0.8, FLD, GUIDERATE=8000, GCW=0, as_choke, underperforming)
+//!   │   │   ├── WELL-A (RATE=3000, POT=3000, THP)
+//!   │   │   └── WELL-A2 (RATE=2000, POT=2000, THP)
+//!   │   └── MANI-2 (E=0.75, FLD, GUIDERATE=1500, GCW=1)
+//!   │       └── WELL-B (RATE=2000, POT=2000, GRUP)
+//!   └── PLAT-2 (E=0.85, FLD, GUIDERATE=2550, GCW=1)
+//!       └── WELL-C (RATE=3000, POT=3000, GRUP)
+//! \endcode
+BOOST_AUTO_TEST_CASE(TestAutoChokeGroupTargetRateBelowShareWithFldSibling)
+{
+    commonSetupForAllTests(
+        /*plat_has_guide_rate=*/true,
+        /*mani_control       =*/Opm::Group::ProductionCMode::FLD,
+        /*well_a_control     =*/Opm::Well::ProducerCMode::THP,
+        /*well_a2_control    =*/Opm::Well::ProducerCMode::THP,
+        /*mani2_control      =*/Opm::Group::ProductionCMode::FLD,
+        /*data_file          =*/"GROUP_HIGHER_CONSTRAINTS_NETWORK.DATA",
+        /*well_a_rate_metric =*/3000.0,
+        /*well_a2_rate_metric=*/2000.0
+    );
+    BOOST_REQUIRE(maniGroup().as_choke());
+
+    auto& gs = groupState();
+    auto& gsh = groupStateHelper();
+    {
+        const auto always_included = std::string("");
+        const auto is_prod = true;
+        const auto phase = Opm::Phase::OIL;
+        BOOST_CHECK_EQUAL(gsh.groupControlledWells("MANI", always_included, is_prod, phase), 0);
+        BOOST_CHECK_EQUAL(gsh.groupControlledWells("PLAT", always_included, is_prod, phase), 1);
+        BOOST_CHECK_EQUAL(gsh.groupControlledWells("FIELD", always_included, is_prod, phase), 2);
+    }
+
+    // reduction(PLAT): MANI (GCW=0) → case 1 → E_MANI * 5000 = 4000, MANI-2 has a guide rate
+    // reduction(FIELD): PLAT and PLAT-2 have guide rates and GCW > 0 → 0
+    const double plat_red_metric = eMani() * maniTotalRateMetric();  // 4000
+    checkRate(metric_rate(gs.production_reduction_rates("PLAT")[oilPhasePos()]), plat_red_metric);
+    checkRate(metric_rate(gs.production_reduction_rates("FIELD")[oilPhasePos()]), 0.0);
+
+    auto [target_rate_si, control_mode] = gsh.getAutoChokeGroupProductionTargetRate(
+        maniGroup(), maniGroup(), resvCoeff(), /*efficiencyFactor=*/1.0);
+    BOOST_CHECK(control_mode == Opm::Group::ProductionCMode::ORAT);
+
+    // chain = [FIELD, PLAT, MANI], efficiencyFactor = E_MANI * E_PLAT = 0.72
+    // local_reduction_level = 1 (PLAT has a guide rate and GCW=1)
+    //
+    // ii=0 (FIELD): target = 10000 * 9500/12050 ≈ 7883.82
+    // ii=1 (PLAT):  target = 7883.82 - 4000 + E_MANI * 5000 (add-back) = 7883.82
+    //               localFraction("MANI") = 8000/9500  (MANI counts with its own guide rate)
+    //
+    // Final: 7883.82 * 8000/9500 / 0.72 ≈ 9220.83, MANI's guide rate share of FIELD's target
+    const double plat_fraction = platGuideRateMetric()
+                               / (platGuideRateMetric() + plat2GuideRateMetric()); // 9500/12050
+    const double mani_fraction = maniGuideRateMetric()
+                               / (maniGuideRateMetric() + mani2GuideRateMetric()); // 8000/9500
+    const double expected_target = 10000.0 * plat_fraction * mani_fraction
+                                 / (eMani() * ePlat());  // ≈ 9220.83
+    checkAlgo(metric_rate(target_rate_si), expected_target);
+}
+
+//! \brief Test getAutoChokeGroupProductionTargetRate() for a sub-sea manifold group without a
+//! guide rate share
+//!
+//! Without a guide rate of its own, MANI counts with the guide rates of its group controlled
+//! wells, and its wells are on THP control.  Next to MANI-2, under group control, MANI then has
+//! no share of FIELD's target, and follows no target: its choke is not closed.
+//!
+//! \code
+//!   FIELD (ORAT = 10000, GCW=4)
+//!   ├── PLAT (E=0.9, FLD, GUIDERATE=9500, GCW=3)
+//!   │   ├── MANI (E=0.8, FLD, NO GUIDERATE, GCW=2, as_choke)
+//!   │   │   ├── WELL-A (RATE=6000, POT=6000, THP)
+//!   │   │   └── WELL-A2 (RATE=4000, POT=4000, THP)
+//!   │   └── MANI-2 (E=0.75, FLD, GUIDERATE=1500, GCW=1)
+//!   │       └── WELL-B (RATE=2000, POT=2000, GRUP)
+//!   └── PLAT-2 (E=0.85, FLD, GUIDERATE=2550, GCW=1)
+//!       └── WELL-C (RATE=3000, POT=3000, GRUP)
+//! \endcode
+BOOST_AUTO_TEST_CASE(TestAutoChokeGroupTargetRateWithoutShare)
+{
+    commonSetupForAllTests(
+        /*plat_has_guide_rate=*/true,
+        /*mani_control       =*/Opm::Group::ProductionCMode::FLD,
+        /*well_a_control     =*/Opm::Well::ProducerCMode::THP,
+        /*well_a2_control    =*/Opm::Well::ProducerCMode::THP,
+        /*mani2_control      =*/Opm::Group::ProductionCMode::FLD,
+        /*data_file          =*/"GROUP_HIGHER_CONSTRAINTS_NETWORK.DATA"
+    );
+    BOOST_REQUIRE(maniGroup().as_choke());
+
+    auto& gsh = groupStateHelper();
+    BOOST_CHECK_EQUAL(gsh.groupControlledWells("MANI", "", /*is_production_group=*/true,
+                                               Opm::Phase::OIL), 2);
+    guideRate().erase("MANI");
+    BOOST_REQUIRE(!guideRate().has("MANI"));
+
+    auto [target_rate_si, control_mode] = gsh.getAutoChokeGroupProductionTargetRate(
+        maniGroup(), maniGroup(), resvCoeff(), /*efficiencyFactor=*/1.0);
+    BOOST_CHECK(control_mode == Opm::Group::ProductionCMode::NONE);
+    BOOST_CHECK_EQUAL(target_rate_si, 0.0);
+}
+
+//! \brief Test the share that decides whether a sub-sea manifold group is below it, through a
+//! group without a guide rate
+//!
+//! PLAT has no guide rate, so it counts with E_PLAT times the guide rates of its FLD children:
+//! 0.9 * 8000 = 7200.  The share of MANI is then 10000 * 7200/(7200 + 2550) / (E_MANI * E_PLAT)
+//! ≈ 10256.41.  MANI produces 11000 and counts as group controlled; at 10000 it is below its
+//! share and does not.
+//!
+//! \code
+//!   FIELD (ORAT = 10000)
+//!   ├── PLAT (E=0.9, FLD, NO GUIDERATE)
+//!   │   ├── MANI (E=0.8, FLD, GUIDERATE=8000, as_choke)
+//!   │   │   ├── WELL-A (RATE=6000, POT=6000, THP)
+//!   │   │   └── WELL-A2 (RATE=5000, then 4000, THP)
+//!   │   └── MANI-2 (E=0.75, IDV, ORAT, GUIDERATE=1500)
+//!   │       └── WELL-B (RATE=2000, POT=2000, GRUP)
+//!   └── PLAT-2 (E=0.85, FLD, GUIDERATE=2550, GCW=1)
+//!       └── WELL-C (RATE=3000, POT=3000, GRUP)
+//! \endcode
+BOOST_AUTO_TEST_CASE(TestAutoChokeGroupShareThroughGroupWithoutGuideRate)
+{
+    commonSetupForAllTests(
+        /*plat_has_guide_rate=*/false,
+        /*mani_control       =*/Opm::Group::ProductionCMode::FLD,
+        /*well_a_control     =*/Opm::Well::ProducerCMode::THP,
+        /*well_a2_control    =*/Opm::Well::ProducerCMode::THP,
+        /*mani2_control      =*/Opm::Group::ProductionCMode::ORAT,
+        /*data_file          =*/"GROUP_HIGHER_CONSTRAINTS_NETWORK.DATA",
+        /*well_a_rate_metric =*/6000.0,
+        /*well_a2_rate_metric=*/5000.0
+    );
+    BOOST_REQUIRE(maniGroup().as_choke());
+    BOOST_REQUIRE(!guideRate().has("PLAT"));
+
+    auto& gsh = groupStateHelper();
+    const auto always_included = std::string("");
+    const auto is_prod = true;
+    const auto phase = Opm::Phase::OIL;
+    BOOST_CHECK_EQUAL(gsh.groupControlledWells("MANI", always_included, is_prod, phase), 2);
+    BOOST_CHECK_EQUAL(gsh.groupControlledWells("PLAT", always_included, is_prod, phase), 2);
+    BOOST_CHECK_EQUAL(gsh.groupControlledWells("FIELD", always_included, is_prod, phase), 3);
+
+    auto& well_a2 = wellState().well("WELL-A2");
+    well_a2.surface_rates[oilPhasePos()] = si_rate(-4000.0);
+    gsh.updateGroupProductionRates(fieldGroup());
+    gsh.updateGroupControlledWells(/*is_production_group=*/true, Opm::Phase::OIL);
+    BOOST_CHECK_EQUAL(gsh.groupControlledWells("MANI", always_included, is_prod, phase), 0);
+    BOOST_CHECK_EQUAL(gsh.groupControlledWells("PLAT", always_included, is_prod, phase), 0);
+    BOOST_CHECK_EQUAL(gsh.groupControlledWells("FIELD", always_included, is_prod, phase), 1);
+}
+
+//! \brief Test updateNONEProductionGroups() for the sub-sea manifold group MANI
+//!
+//! No well targets a group: the wells of MANI are on THP control, WELL-B and WELL-C on
+//! individual control.  The group whose target the common THP of MANI honours keeps its
+//! control mode: MANI or PLAT once it has switched from FLD to an ORAT limit, FIELD while
+//! MANI follows its target through PLAT.
+BOOST_AUTO_TEST_CASE(TestAutoChokeGroupKeepsActiveControlMode)
+{
+    commonSetupForAllTests(
+        /*plat_has_guide_rate=*/true,
+        /*mani_control       =*/Opm::Group::ProductionCMode::ORAT,
+        /*well_a_control     =*/Opm::Well::ProducerCMode::THP,
+        /*well_a2_control    =*/Opm::Well::ProducerCMode::THP,
+        /*mani2_control      =*/Opm::Group::ProductionCMode::ORAT,
+        /*data_file          =*/"GROUP_HIGHER_CONSTRAINTS_NETWORK.DATA"
+    );
+
+    auto& gs = groupState();
+    auto& gsh = groupStateHelper();
+    BOOST_REQUIRE(maniGroup().as_choke());
+    BOOST_REQUIRE(maniGroup().productionControls(gsh.summaryState()).cmode
+                  == Opm::Group::ProductionCMode::FLD);
+
+    for (const auto* well : {"WELL-B", "WELL-C"}) {
+        wellState().well(well).production_cmode = Opm::Well::ProducerCMode::ORAT;
+    }
+    auto logger_guard = gsh.pushLogger();
+
+    gsh.updateNONEProductionGroups();
+    BOOST_CHECK(gs.production_control("MANI") == Opm::Group::ProductionCMode::ORAT);
+    BOOST_CHECK(gs.production_control("MANI-2") == Opm::Group::ProductionCMode::NONE);
+
+    gs.production_control("MANI", Opm::Group::ProductionCMode::FLD);
+    gs.production_control("PLAT", Opm::Group::ProductionCMode::ORAT);
+    gsh.updateNONEProductionGroups();
+    BOOST_CHECK(gs.production_control("PLAT") == Opm::Group::ProductionCMode::ORAT);
+
+    gs.production_control("PLAT", Opm::Group::ProductionCMode::FLD);
+    gs.production_control("FIELD", Opm::Group::ProductionCMode::ORAT);
+    gsh.updateNONEProductionGroups();
+    BOOST_CHECK(gs.production_control("MANI") == Opm::Group::ProductionCMode::FLD);
+    BOOST_CHECK(gs.production_control("FIELD") == Opm::Group::ProductionCMode::ORAT);
+}
+
+//! \brief Test getManifoldControlMode() and updateNONEProductionGroups() for a sub-sea
+//! manifold group with an ORAT limit of its own that a limit above has switched to FLD
+//!
+//! The common THP of MANI then follows the target of PLAT, which keeps its control mode.
+//! Once reset to NONE, MANI follows its own ORAT limit again.
+BOOST_AUTO_TEST_CASE(TestAutoChokeGroupSwitchedToFldFollowsAncestor)
+{
+    commonSetupForAllTests(
+        /*plat_has_guide_rate=*/true,
+        /*mani_control       =*/Opm::Group::ProductionCMode::FLD,
+        /*well_a_control     =*/Opm::Well::ProducerCMode::THP,
+        /*well_a2_control    =*/Opm::Well::ProducerCMode::THP,
+        /*mani2_control      =*/Opm::Group::ProductionCMode::FLD,
+        /*data_file          =*/"GROUP_HIGHER_CONSTRAINTS_NETWORK_MANI_ORAT.DATA"
+    );
+
+    auto& gs = groupState();
+    auto& gsh = groupStateHelper();
+    BOOST_REQUIRE(maniGroup().as_choke());
+    BOOST_REQUIRE(maniGroup().productionControls(gsh.summaryState()).cmode
+                  == Opm::Group::ProductionCMode::ORAT);
+
+    for (const auto* well : {"WELL-B", "WELL-C"}) {
+        wellState().well(well).production_cmode = Opm::Well::ProducerCMode::ORAT;
+    }
+    auto logger_guard = gsh.pushLogger();
+
+    gs.production_control("PLAT", Opm::Group::ProductionCMode::ORAT);
+    BOOST_CHECK(gsh.getManifoldControlMode(maniGroup()) == Opm::Group::ProductionCMode::FLD);
+    gsh.updateNONEProductionGroups();
+    BOOST_CHECK(gs.production_control("MANI") == Opm::Group::ProductionCMode::FLD);
+    BOOST_CHECK(gs.production_control("PLAT") == Opm::Group::ProductionCMode::ORAT);
+
+    gs.production_control("MANI", Opm::Group::ProductionCMode::NONE);
+    BOOST_CHECK(gsh.getManifoldControlMode(maniGroup()) == Opm::Group::ProductionCMode::ORAT);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

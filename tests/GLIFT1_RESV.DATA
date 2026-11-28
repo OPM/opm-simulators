@@ -1,0 +1,20 @@
+-- This reservoir simulation deck is made available under the Open Database
+-- License: http://opendatacommons.org/licenses/odbl/1.0/. Any rights in
+-- individual contents of the database are licensed under the Database Contents
+-- License: http://opendatacommons.org/licenses/dbcl/1.0/
+
+-- The model and the first report step are in include/glift_model.inc
+INCLUDE
+  'include/glift_model.inc' /
+
+-- Report step 1: a reservoir volume limit on B-1H
+WCONPROD
+--  Well_name  Status  Ctrl  Orate   Wrate  Grate Lrate   RFV  FBHP   WHP  VFP Glift
+   'B-1H'      OPEN    ORAT  2000  1*     1*    1*  100   100.0  30   1   1*  /
+/
+
+DATES
+ 1 FEB 2020 /
+/
+
+END

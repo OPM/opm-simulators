@@ -69,6 +69,8 @@ protected:
     /// This function is to be used for well groups in an extended network that act as a subsea manifold
     /// The wells of such group should have a common THP and total phase rate(s) obeying (if possible)
     /// the well group constraint set by GCONPROD
+    /// The wells are solved again against that THP, and the group rates updated
+    /// from them. Returns whether the common THP of any group changed.
     bool computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger);
 
     BlackoilWellModel<TypeTag>& well_model_;

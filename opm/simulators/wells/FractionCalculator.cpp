@@ -227,15 +227,25 @@ groupControlledWells(const std::string& group_name,
     // GroupStateHelper::groupControlledWells() honours always_included_child
     // only for wells, where it counts the well for every group above it.  A
     // reservoir-coupling master group excluded from its parent's guide-rate
-    // distribution (effective GCW = 0) must likewise still count when its own
-    // target is computed, i.e. when it is the always-included child: for itself,
-    // so that its own guide rate enters its fraction, and for its ancestors, which
-    // may have no other group-controlled wells and would otherwise drop out of
-    // their own parents' distribution, giving it a zero fraction there.
+    // distribution (effective GCW = 0), or a sub-sea manifold group below its
+    // share, whose wells then do not count as group controlled, must likewise
+    // still count when its own target is computed, i.e. when it is the
+    // always-included child: for itself, so that its own guide rate enters its
+    // fraction, and for its ancestors, which may have no other group-controlled
+    // wells and would otherwise drop out of their own parents' distribution,
+    // giving it a zero fraction there.
     if (num_wells == 0 && !always_included_child.empty()) {
         const auto& helper = this->groupStateHelper();
+        const auto is_manifold = [this](const std::string& name) {
+            if (!schedule_.hasGroup(name, report_step_)) {
+                return false;
+            }
+            const auto& group = schedule_.getGroup(name, report_step_);
+            return group.as_choke() && group.productionGroupControlAvailable();
+        };
         const bool eligible = is_producer_
             ? helper.isMasterGroupEligibleForGuideRate(always_included_child)
+                || is_manifold(always_included_child)
             : helper.isMasterGroupEligibleForInjectionGuideRate(always_included_child,
                                                                 injection_phase_);
         if (eligible) {
